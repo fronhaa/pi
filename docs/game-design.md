@@ -44,7 +44,7 @@ flowchart LR
     A["Sol começa<br/>painéis geram blocos"] --> B["Mensagens da Terra<br/>alertas com atraso"]
     B --> C{Carta hoje?}
     C -- sim --> D["Escolher uma opção<br/>toda opção tem custo"]
-    C -- não --> E["Dividir a energia<br/>vida, blindagem, ciência"]
+    C -- não --> E["Dividir a energia<br/>tocando na estufa, abrigo e rover"]
     D --> E
     E --> F["Noite<br/>tempestade e aquecedores"]
     F --> G["Relatório do sol<br/>causa e efeito"]
@@ -261,7 +261,7 @@ Os quatro papéis são os mesmos das tripulações da CHAPEA, em que o engenheir
 ### Como fica um sol no cooperativo
 
 1. **Vez da Terra:** vê o clima espacial e o relatório do sol anterior, e escolhe uma mensagem.
-2. **Vez de Marte:** lê as mensagens que chegaram; o grupo decide a carta, se houver; cada papel ajusta os seus blocos; o comandante termina o sol.
+2. **Vez de Marte:** lê as mensagens que chegaram; o grupo decide a carta, se houver; cada papel ajusta os seus blocos no seu lugar da base; o comandante termina o sol.
 3. **Relatório para todos:** mostra o resultado e a decisão de cada papel, para o grupo conversar sobre a estratégia.
 
 ### Base na NASA
@@ -304,14 +304,15 @@ Este modo e o modo Terra e Marte funcionam juntos: os dois fazem parte do jogo.
 | Achar problema fora da tela | Uma seta na borda aponta para cada problema fora do enquadramento, com o nome; tocar nela envia o astronauta selecionado | Tab até a seta e Enter |
 | Andar | Tocar no chão; ele anda sozinho até lá | **Setas** ou **WASD**, relativas à câmera |
 | Pular | — | **Espaço** (mostra que a gravidade de Marte é 38% da Terra) |
-| Plano de energia e janelas | Botões | **Tab** e **Enter** |
+| Dividir a energia | Tocar no **+ / −** sobre a estufa, o abrigo ou o rover | **Tab** e **Enter** |
+| Janelas e botão do dia | Botões | **Tab** e **Enter** |
 
 A movimentação usa física (Rapier) com a gravidade de Marte, carregada em segundo plano; enquanto ela carrega, ou se falhar, o jogo continua só com a interface.
 
 ### Como fica um sol com as duas opções
 
 1. **Vez da Terra** (só no cooperativo com Terra): vê o clima espacial e envia uma mensagem.
-2. **Manhã, por turno:** o plano de energia, como hoje. A tripulação continua dentro da base.
+2. **Manhã, por turno:** o plano de energia, tocando nos lugares da base. A tripulação continua dentro da base.
 3. **Dia, em tempo real** (60 a 90 segundos, com pausa): problemas aparecem pela base e a tripulação decide quem vai aonde.
 4. **Noite:** tempestade e aquecedores. O relatório mostra a energia e o que foi ou não consertado.
 
@@ -548,6 +549,81 @@ Uma vez por partida cada um ([regras dos fatos](ciencia-marte.md#regras-deste-do
 | 2 | C (faixa da tripulação) | 3 a 4 h | A (para os status 🌱 e 🔬) |
 | 3 | B (rotina visual) | 2 h | C (para os status 💪 e 😴) |
 
+## Energia no ambiente (especificação)
+
+**Decisão (14/11/2026):** a energia é dividida **tocando nos lugares da base**, não no menu. O painel "Plano de energia" vira **só de visualização**: mostra os blocos, a prévia e os avisos, sem + e −.
+As regras não mudam: 10 blocos por sol (menos com poeira), as mesmas faixas por papel, o que sobra vai para a bateria.
+
+**Por quê:** a criança liga a energia ao lugar que ela alimenta. Ao reforçar o abrigo, ela vê a luz do rover apagar: é a troca do [objetivo 1](#objetivos-de-aprendizagem) acontecendo na cena.
+
+### Onde cada bloco vai
+
+| Parte do plano | Lugar na base | O que a cena mostra | Ícone |
+| --- | --- | --- | --- |
+| Suporte de vida | **Estufa** (cúpula) | Luzes das plantas acendem, uma faixa por bloco | 🌱 |
+| Blindagem | **Abrigo** (sacos de regolito) | Escudo brilhante sobre o abrigo, mais forte com mais blocos | 🛡️ |
+| Ciência | **Rover** | Faróis e painel do rover acendem | 🔬 |
+| Bateria | **Bateria** (já existe o medidor) | Recebe o que sobra, **sem botão**: enche sozinha | 🔋 |
+
+Dos **painéis solares** sai um **cabo** até cada lugar; o cabo acende com a quantidade de blocos. Sobra nenhuma: o cabo da bateria fica apagado.
+
+### Como a criança joga
+
+1. Na manhã (fase de plano), cada lugar da lista tem um **marcador flutuante**: ícone, número de blocos e os botões **−** e **+**.
+2. Tocar em **+** tira um bloco da sobra (bateria) e manda para aquele lugar; **−** devolve para a bateria. Sem bloco sobrando, o **+** fica apagado e o marcador diz "Sem blocos sobrando".
+3. A tripulação **não precisa andar** até lá: dividir energia é decisão de manhã, não tarefa. Andar 10 vezes por sol cansaria uma criança de 7 anos.
+4. A câmera da manhã enquadra os três lugares e a bateria. Lugar fora da tela ganha uma seta na borda (como as dos problemas, `OffscreenArrows`).
+5. **Prévia na hora:** o marcador mostra o efeito desta noite ("Vida 70 → 76"), verde quando sobe, vermelho quando cai, com o mesmo cálculo de hoje (`previewSol`).
+6. O painel do HUD continua mostrando tudo, **sem botões de mudar**. O botão "Começar o dia" / "Terminar o sol" fica no painel (não é divisão de energia).
+7. Durante o dia em tempo real, os marcadores somem; os cabos e luzes continuam mostrando o plano.
+
+### Modo em grupo
+
+- Cada papel só vê **+ e −** no seu lugar: médico na estufa, engenheiro no abrigo, cientista no rover (as mesmas faixas de hoje). Nos outros lugares, o marcador mostra só o número, com "Do Engenheiro de voo" etc.
+- **Protocolo igual:** o toque manda a ação `blocks` que já existe. Nada muda no servidor.
+
+### Acessibilidade (obrigatório)
+
+- Os marcadores são **botões HTML** posicionados sobre a cena (projeção da câmera, como `OffscreenArrows`), não objetos 3D: funcionam com toque, **Tab e Enter** e leitor de tela.
+- Alvo mínimo de 44 × 44 px; o rótulo diz o lugar e a ação ("Mais um bloco para a estufa: suporte de vida").
+- Cor nunca é o único sinal: o marcador sempre mostra o número.
+- Sem física: se o Rapier não carregar, nada muda (os marcadores não dependem dele).
+
+### Textos (PT / EN)
+
+| Chave | PT | EN |
+| --- | --- | --- |
+| `energy.place.life` | Estufa: suporte de vida | Greenhouse: life support |
+| `energy.place.shield` | Abrigo: blindagem | Shelter: shielding |
+| `energy.place.science` | Rover: ciência | Rover: science |
+| `energy.place.battery` | Bateria: recebe o que sobra | Battery: gets what is left |
+| `energy.more` | Mais um bloco para {place} | One more block for {place} |
+| `energy.less` | Um bloco a menos para {place} | One less block for {place} |
+| `energy.none` | Sem blocos sobrando. | No blocks left. |
+| `energy.owner` | Do {role} | {role}'s |
+| `tutorial.energy` | Toque nos lugares da base para mandar energia. | Tap places in the base to send energy. |
+
+O passo do tutorial do sol 1 sobre energia passa a apontar para a estufa, não para o painel.
+
+### Como implementar
+
+| # | Arquivo | O que fazer |
+| --- | --- | --- |
+| 1 | `src/scene/MarsBase.ts` | Pontos de cada lugar (`ENERGY_SPOTS`), cabos dos painéis e luzes que acendem por bloco. Só desenha o plano recebido |
+| 2 | `src/ui/EnergyMarkers.ts` (novo) | Botões projetados sobre a cena, com setas na borda para lugar fora da tela |
+| 3 | `src/ui/Hud.ts` | Plano sem + e −; continua com blocos, prévia, avisos e o botão do dia. `change()` vira pública para os marcadores |
+| 4 | `src/core/Game.ts` | Liga marcadores ao `Hud` (solo) e à ação `blocks` (grupo, só papéis editáveis); câmera da manhã enquadra os lugares |
+| 5 | `src/i18n/strings.ts` | Chaves acima |
+
+**Regra e servidor:** nada muda em `src/sim`, no Go nem no protocolo.
+
+### Pronto quando
+
+- Num sol inteiro, a criança divide a energia **só tocando na cena**, inclusive no celular em pé.
+- Só com teclado (Tab e Enter) dá para dividir tudo.
+- No modo em grupo, cada jogador só muda o seu lugar e todos veem as luzes iguais.
+- O painel do HUD não tem nenhum botão que mude o plano.
+
 ## Dados reais da NASA
 
 As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros conjuntos de dados entram aos poucos, e cada um mostra no jogo um selo honesto do seu estado.
@@ -706,7 +782,7 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 | Barra superior | Nome da missão e local, "Sol N de 15", botões "Dados da NASA" e idioma |
 | Recursos (esquerda) | Bateria, suporte de vida, blindagem, dose (com marcas em 50 e 70) e ciência (com a meta), cada um com barra e botão "?" |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
-| Plano de energia (baixo) | Blocos de energia distribuídos com + e −, dicas como "precisa de 3 para não cair", e o botão "Terminar o sol" |
+| Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |
 | Janelas | Tutorial (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
 
 ### Prévia do plano de energia
@@ -726,7 +802,7 @@ Ao lado de cada linha do plano aparece o resultado previsto para esta noite ("Vi
 - Botões grandes e texto com fonte arredondada (Fredoka), fácil de ler.
 - Cor nunca é o único sinal: barras têm números, e alertas têm ícone e texto.
 - Botões têm rótulo para leitor de tela, e as mensagens são anunciadas.
-- A cena aceita girar e aproximar, mas o jogo inteiro funciona só com a interface.
+- A cena aceita girar e aproximar. Os controles na cena (marcadores de energia, setas, "!") são botões HTML: funcionam com toque, teclado e leitor de tela, mesmo sem a física.
 
 ## Tecnologia e arquitetura
 
