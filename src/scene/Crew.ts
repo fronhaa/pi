@@ -68,14 +68,39 @@ export class Astronaut {
     this.ring.visible = false;
     this.root.add(this.ring);
 
+    // Área de acerto invisível, maior que o boneco: facilita passar o mouse e tocar (crianças, celular).
+    const hit = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 2, 10), new THREE.MeshBasicMaterial({ visible: false }));
+    hit.position.y = 1;
+    hit.userData.isHitArea = true;
+    this.root.add(hit);
+
     this.root.add(this.model);
     this.root.userData.role = role;
     this.root.position.copy(POSTS[role]);
     this.model.rotation.y = Math.PI * 0.85;
   }
 
+  private selected = false;
+  private hovered = false;
+
   setSelected(on: boolean): void {
-    this.ring.visible = on;
+    this.selected = on;
+    this.updateRing();
+  }
+
+  /** Mouse em cima: anel mais claro (ou mais forte, se já selecionado) e o boneco cresce um pouco. */
+  setHovered(on: boolean): void {
+    if (this.hovered === on) return;
+    this.hovered = on;
+    this.model.scale.setScalar(on ? 1.08 : 1);
+    this.updateRing();
+  }
+
+  private updateRing(): void {
+    const m = this.ring.material as THREE.MeshBasicMaterial;
+    this.ring.visible = this.selected || this.hovered;
+    m.opacity = this.selected ? 0.95 : 0.45;
+    this.ring.scale.setScalar(this.hovered ? 1.15 : 1);
   }
 
   /** Respiração/balanço leve quando parado. */

@@ -52,6 +52,9 @@ export class Game {
   private readonly raycaster = new THREE.Raycaster();
   private readonly targetMarker: THREE.Mesh;
   private pointerDown: { x: number; y: number; t: number } | null = null;
+  /** Mouse em cima de um astronauta (hover). */
+  private hoveredRole: Role | null = null;
+  private readonly hoverLabel = document.createElement('div');
 
   // Dia em tempo real: problemas pela base e tempo da tripulação (GDD).
   private phase: 'morning' | 'day' | 'night' = 'morning';
@@ -115,6 +118,7 @@ export class Game {
     this.targetMarker.rotation.x = -Math.PI / 2;
     this.scene.add(this.targetMarker);
     this.setupPointer();
+    this.setupHover();
     this.scene.add(this.markers.root);
     this.tasks = new CrewTasks(() => this.mission, this.crew);
     this.tasks.onChange = () => this.refreshDayHud();
@@ -176,6 +180,73 @@ export class Game {
     }
   }
 
+  /** Primeiro objeto atingido que está visível (astronauta dentro da base fica escondido e não conta). */
+  private firstVisibleHit(objects: THREE.Object3D[]): THREE.Intersection | undefined {
+    return this.raycaster.intersectObjects(objects, true).find((h) => {
+      for (let o: THREE.Object3D | null = h.object; o; o = o.parent) if (!o.visible) return false;
+      return true;
+    });
+  }
+
+  private roleOf(obj: THREE.Object3D): Role | null {
+    for (let o: THREE.Object3D | null = obj; o; o = o.parent) if (o.userData.role) return o.userData.role as Role;
+    return null;
+  }
+
+  /**
+   * Hover: com o mouse em cima de um astronauta, ele ganha destaque e aparece o nome;
+   * em cima de um "!" (de dia), aparece o problema e quem será enviado. Só mouse (toque não tem hover).
+   */
+  private setupHover(): void {
+    const el = this.renderer.domElement;
+    this.hoverLabel.className = 'hover-label';
+    this.hoverLabel.hidden = true;
+    document.body.append(this.hoverLabel);
+    const clear = () => {
+      this.setHovered(null);
+      this.hoverLabel.hidden = true;
+      el.style.cursor = '';
+    };
+    el.addEventListener('pointerleave', clear);
+    el.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse' || e.buttons !== 0 || this.night) {
+        clear();
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      const ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+      this.raycaster.setFromCamera(ndc, this.camera);
+      let text: string | null = null;
+      let role: Role | null = null;
+      const problemHit = this.phase === 'day' ? this.firstVisibleHit(this.markers.pickables) : undefined;
+      if (problemHit) {
+        let o: THREE.Object3D | null = problemHit.object;
+        while (o && o.userData.problemUid === undefined) o = o.parent;
+        const p = o && this.mission.state.problems.find((x) => x.uid === o!.userData.problemUid);
+        if (p) text = `${t(`problem.${p.kind}` as StringKey)} · ${t('hover.send', { name: t(`crew.${this.selected}` as StringKey) })}`;
+      } else {
+        const crewHit = this.firstVisibleHit([this.crew.root]);
+        role = crewHit ? this.roleOf(crewHit.object) : null;
+        if (role) text = role === this.selected ? `${t(`crew.${role}` as StringKey)} · ${t('hover.selected')}` : `${t(`crew.${role}` as StringKey)} · ${t('hover.select')}`;
+      }
+      this.setHovered(role);
+      el.style.cursor = text ? 'pointer' : '';
+      this.hoverLabel.hidden = !text;
+      if (text) {
+        this.hoverLabel.textContent = text;
+        this.hoverLabel.style.left = `${e.clientX + 14}px`;
+        this.hoverLabel.style.top = `${e.clientY + 14}px`;
+      }
+    });
+  }
+
+  private setHovered(role: Role | null): void {
+    if (this.hoveredRole === role) return;
+    if (this.hoveredRole) this.crew.members[this.hoveredRole].setHovered(false);
+    this.hoveredRole = role;
+    if (role) this.crew.members[role].setHovered(true);
+  }
+
   /** Clique/toque: num astronauta seleciona; no chão, manda o selecionado andar até lá. Arrastar gira a câmera. */
   private setupPointer(): void {
     const el = this.renderer.domElement;
@@ -199,11 +270,10 @@ export class Game {
         }
       }
       // 2) Clique num astronauta: seleciona.
-      const hitCrew = this.raycaster.intersectObject(this.crew.root, true)[0];
-      if (hitCrew) {
-        let o: THREE.Object3D | null = hitCrew.object;
-        while (o && !o.userData.role) o = o.parent;
-        if (o) this.select(o.userData.role as Role);
+      const hitCrew = this.firstVisibleHit([this.crew.root]);
+      const clickedRole = hitCrew ? this.roleOf(hitCrew.object) : null;
+      if (clickedRole) {
+        this.select(clickedRole);
         return;
       }
       // 3) Clique no chão: anda até lá (precisa da física).
