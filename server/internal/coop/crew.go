@@ -15,12 +15,14 @@ import (
 // problem_progress/problem_resolve). Por isso o servidor não guarda nada além da última posição.
 
 // CrewPos é a posição de um astronauta no plano XZ (metros). Tx/Tz = destino, se estiver andando.
+// Place: onde ele está ("inside", "airlock" ou "outside"; vazio = "outside", compatível com antes).
 type CrewPos struct {
-	Role Role     `json:"role"`
-	X    float64  `json:"x"`
-	Z    float64  `json:"z"`
-	Tx   *float64 `json:"tx,omitempty"`
-	Tz   *float64 `json:"tz,omitempty"`
+	Role  Role     `json:"role"`
+	X     float64  `json:"x"`
+	Z     float64  `json:"z"`
+	Tx    *float64 `json:"tx,omitempty"`
+	Tz    *float64 `json:"tz,omitempty"`
+	Place string   `json:"place,omitempty"`
 }
 
 // CrewBounds: a tripulação não sai a mais disso do centro da base (mesmo limite da cena).
@@ -39,6 +41,9 @@ func validPos(p CrewPos) bool {
 	if (p.Tx == nil) != (p.Tz == nil) {
 		return false
 	}
+	if p.Place != "" && p.Place != "inside" && p.Place != "airlock" && p.Place != "outside" {
+		return false
+	}
 	return p.Tx == nil || (ok(*p.Tx) && ok(*p.Tz))
 }
 
@@ -55,7 +60,7 @@ func (r *Room) crewLocked(pid string, list []CrewPos) error {
 		if !slices.Contains(MarsRoles, p.Role) || !validPos(p) {
 			return ErrInvalidInput
 		}
-		if r.owners[p.Role] != pid {
+		if !r.controls(pid, p.Role) { // dono do papel, ou quem comanda a EVA dele
 			return ErrNotYourRole
 		}
 	}

@@ -14,7 +14,7 @@ Mars Exploration: Missão Jezero é um jogo de navegador. Nele, uma criança de 
 | Desafio | [Build a Junior Astronaut Mission Trainer](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/), NASA Space Apps Challenge 2026 (14 e 15 de novembro) |
 | Público | Crianças de 7 a 12 anos; também serve para pais e sala de aula |
 | Plataforma | Navegador, sem download e sem conta; computador e celular |
-| Local da missão | Cratera Jezero, Marte |
+| Local da missão | Cratera Jezero, Marte; ou polo sul da Lua, perto da cratera Shackleton ([Base lunar](#base-lunar), só no modo solo) |
 | Duração de uma partida | 15 sóis, cerca de 10 a 15 minutos |
 | Jogadores | 1 no modo solo; de 2 a 5 no modo cooperativo, no mesmo aparelho (planejado) ou **online, cada um no seu aparelho** (servidor Go e cliente prontos: [servidor-coop.md](servidor-coop.md)) |
 | Idiomas | Português e inglês |
@@ -44,7 +44,7 @@ flowchart LR
     A["Sol começa<br/>painéis geram blocos"] --> B["Mensagens da Terra<br/>alertas com atraso"]
     B --> C{Carta hoje?}
     C -- sim --> D["Escolher uma opção<br/>toda opção tem custo"]
-    C -- não --> E["Dividir a energia<br/>vida, blindagem, ciência"]
+    C -- não --> E["Dividir a energia<br/>tocando na estufa, abrigo e rover"]
     D --> E
     E --> F["Noite<br/>tempestade e aquecedores"]
     F --> G["Relatório do sol<br/>causa e efeito"]
@@ -200,6 +200,68 @@ Qualquer mudança nos números deve manter essa forma: as duas estratégias extr
 
 **Com as cartas do rover** (MOXIE e "Caminho do rover", 2026-11-14, 1.000 partidas por estratégia, erupções reais, simuladas e as 6 missões): a forma se mantém em todos os cenários. As estratégias extremas continuam falhando sempre, "ignora a blindagem" não mudou, e a estratégia atenta (que pega o atalho e resgata o rover) termina com 1 estrela um pouco menos vezes (ex.: erupções reais, de 9% para 5%).
 
+## Base lunar
+
+Antes da missão solo, a criança escolhe **Marte** ou **Lua** (tela "Para onde vamos?"; aparece de novo em "Jogar de novo").
+A Lua é a "Missão Shackleton": a base fica no polo sul da Lua, a região que o programa Artemis estuda.
+O loop, os recursos e as cartas são os mesmos; mudam só as regras abaixo, cada uma ligada a uma diferença real.
+A ideia é a criança **comparar os dois lugares**: o mesmo plano que funciona em Marte pode falhar na Lua, e vice-versa.
+
+| Regra | Marte | Lua | Fato real por trás |
+| --- | --- | --- | --- |
+| Turno | sol (24 h 39 min) | dia da Terra (24 h) | Um dia inteiro da Lua dura ~29,5 dias da Terra (mês sinódico) [L1] |
+| Fim do dia | noite: aquecedores gastam 20 de bateria; a cena escurece | **descanso da tripulação**: a base gasta 15 (ar, água, computadores) e a cena não escurece. Só nos dias de sombra há noite de verdade: fria e escura, os aquecedores gastam **30** | No alto de uma borda de cratera do polo sul o Sol não se põe a cada 24 h [L3]; na sombra a superfície chega a cerca de −170 °C [L1] |
+| Dose de todo dia | +1 | **+2** | Sem atmosfera: a Chang'e 4 mediu ~1,37 mSv/dia no chão da Lua [L2], cerca de 2× o que o Curiosity mediu em Marte (~0,67 mSv/dia) |
+| Tempestade solar | intensidade normal | **× 1,2** | Sem ar para frear as partículas. O multiplicador é do jogo (INTERPRETADO) |
+| Atraso das mensagens | 3 a 22 min (real, JPL Horizons nas missões históricas) | **~1,3 s** (chega na hora) | A luz cruza os 384.400 km Terra-Lua em ~1,3 s [L1] |
+| Carta "Sensor quebrado": pedir ajuda à Terra | ciência −10 | **ciência −3** | Mesma razão: a resposta chega em segundos |
+| Poeira | o vento limpa 6%/sol; tempestade de poeira | **sem vento**: a poeira só sai quando um astronauta resolve "Poeira nos painéis" (−20%) | A Lua não tem atmosfera nem vento |
+| Energia do dia | 10 blocos (menos com poeira) | **depende da luz do Sol do dia**: 14 blocos com Sol pleno (100%), vezes a luz de hoje (40% a 100%, de 5 em 5). A luz sobe e desce em ciclos de 5 a 8 dias, com variação de um dia para o outro. Previsão de hoje e dos próximos 2 dias nas mensagens da Terra (não chega sem sinal) | Sem atmosfera, o Sol pleno na Lua é forte: ~1.361 W/m², mais que o dobro do que chega a Marte (~586 W/m²) [L8]. Mas no polo sul o Sol anda rente ao horizonte e passa atrás de morros [L3]: a luz muda dia a dia e **dá para prever** (caminho do Sol + relevo). A curva e o relevo são do jogo (INTERPRETADO) |
+| Evento de energia | tempestade de poeira (painéis cobertos) | **sombra das montanhas**: 3 dias seguidos com só 25% a 35% de luz (~4 blocos), avisados 1 dia antes | No polo sul o Sol fica sempre baixo no horizonte; montanhas e crateras fazem sombra por dias [L3] |
+| Problema da antena | "Antena desalinhada" | **"Terra escondida"**: a Terra sumiu atrás das montanhas e é preciso apontar a antena para o satélite de retransmissão (mesmo efeito: sem mensagens amanhã) | No polo sul a Terra fica baixa no horizonte e o relevo bloqueia o sinal; a NASA planeja satélites de retransmissão (LunaNet) [L7] |
+| Cartas | todas | sem "Fazer oxigênio" (MOXIE) | O MOXIE tira oxigênio do CO₂ do ar de Marte; a Lua não tem ar |
+| 3ª estrela | dose abaixo de 50 | dose abaixo de **70** | A dose de todo dia já é o dobro |
+| Tempestades | missões históricas (CMEs + atraso real) | erupções reais do DONKI sorteadas | O atraso das missões históricas é Terra-Marte; não vale para a Lua |
+| Gravidade (pulo) | 38% da Terra | **1,62 m/s²** (~1/6) [L4] | O mesmo pulo sobe ~6× mais que na Terra |
+
+Textos trocados na Lua (cartas "Gelo na cratera escura", "Rocha misteriosa", "Nave de carga", "Caminho do rover",
+tutorial, ajuda, lições do fim) ficam em `src/i18n/moon.ts`. Fatos reais mostrados uma vez por missão, como em Marte:
+
+- **Dia 2:** sem ar, o Sol na Lua é forte (mais que o dobro da luz de Marte), mas no polo ele anda rente ao chão, atrás dos morros [L3, L8].
+- **Dia 1:** a Chang'e 4 mediu que a radiação de todo dia na Lua é ~2× a de Marte [L2].
+- **Primeiro dia de sombra:** no polo sul, o Sol fica baixo e montanhas fazem sombra por dias [L3].
+- **Rover atolado:** em 1973, o Lunokhod 2 se cobriu de poeira na borda de uma cratera, esquentou e parou [L5].
+- **Problema "Terra escondida":** no polo sul a Terra some atrás das montanhas; por isso a NASA planeja satélites para as mensagens [L7].
+- **Carta do gelo:** em 2009, a LCROSS achou gelo de água numa cratera escura do polo sul (Cabeus) [L6].
+
+Fontes:
+
+- [L1] NASA, Moon Facts: <https://science.nasa.gov/moon/facts/>
+- [L2] Zhang et al. (2020), "First measurements of the radiation dose on the lunar surface", *Science Advances* 6, eaaz1334: <https://doi.org/10.1126/sciadv.aaz1334>
+- [L3] NASA, Artemis e o polo sul lunar (iluminação): <https://www.nasa.gov/humans-in-space/artemis/>; Gläser et al. (2014), *Icarus* 243, iluminação do polo sul com dados do LOLA
+- [L4] NASA NSSDCA, Moon Fact Sheet: <https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html>
+- [L5] NASA NSSDCA, Luna 21/Lunokhod 2: <https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1973-001A>
+- [L6] NASA, LCROSS: <https://science.nasa.gov/mission/lcross/>
+- [L8] NASA NSSDCA, Mars Fact Sheet (irradiância solar: Marte 586,2 W/m², Terra 1.361 W/m²; a Lua recebe o mesmo que a Terra): <https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html>
+- [L7] NASA, LunaNet (comunicação e navegação na Lua): <https://www.nasa.gov/communicating-with-missions/lunanet/>
+
+Números de jogo (dose diária 2, tempestade × 1,2, 4 blocos na sombra, descanso 15, noite fria 30, 14 blocos com Sol pleno, luz de 40% a 100%, 3ª estrela em 70) estão em `CONFIG.moon`
+(`src/sim/config.ts`) e são INTERPRETADOS: o que é real é a diferença entre os lugares, não a escala.
+
+**Equilíbrio na Lua** (`npm run balance`, 2.000 partidas por estratégia, 2026-11-14):
+
+| Estratégia | Erupções reais do DONKI | Erupções simuladas |
+| --- | --- | --- |
+| Só ciência, sem guardar bateria | Perde sempre (suporte de vida) | Perde sempre |
+| Só segurança, sem ciência | Sobrevive sempre, 1 estrela | Sobrevive sempre, 1 estrela |
+| Ignora a blindagem | Perde 100% por radiação | Perde 87% por radiação |
+| Reage aos alertas e guarda reserva | Perde 3% por radiação; 84% 2★, 13% 3★ | Perde 1%; 56% 2★, 41% 3★ |
+
+A forma se mantém (extremos falham, a estratégia atenta vence), e a Lua é um pouco mais difícil que Marte por causa da
+radiação, como na vida real. Os números de Marte não mudaram com a base lunar (mesma saída do `npm run balance`).
+
+**Modo em grupo:** por enquanto só Marte. O servidor cria a missão sem `location`, e a ponte (`src/sim/bridge.ts`) usa Marte.
+
 ## Modo cooperativo
 
 O jogo aceita de 1 a 5 jogadores no mesmo aparelho, com duas camadas de cooperação:
@@ -261,7 +323,7 @@ Os quatro papéis são os mesmos das tripulações da CHAPEA, em que o engenheir
 ### Como fica um sol no cooperativo
 
 1. **Vez da Terra:** vê o clima espacial e o relatório do sol anterior, e escolhe uma mensagem.
-2. **Vez de Marte:** lê as mensagens que chegaram; o grupo decide a carta, se houver; cada papel ajusta os seus blocos; o comandante termina o sol.
+2. **Vez de Marte:** lê as mensagens que chegaram; o grupo decide a carta, se houver; cada papel ajusta os seus blocos no seu lugar da base; o comandante termina o sol.
 3. **Relatório para todos:** mostra o resultado e a decisão de cada papel, para o grupo conversar sobre a estratégia.
 
 ### Base na NASA
@@ -304,14 +366,15 @@ Este modo e o modo Terra e Marte funcionam juntos: os dois fazem parte do jogo.
 | Achar problema fora da tela | Uma seta na borda aponta para cada problema fora do enquadramento, com o nome; tocar nela envia o astronauta selecionado | Tab até a seta e Enter |
 | Andar | Tocar no chão; ele anda sozinho até lá | **Setas** ou **WASD**, relativas à câmera |
 | Pular | — | **Espaço** (mostra que a gravidade de Marte é 38% da Terra) |
-| Plano de energia e janelas | Botões | **Tab** e **Enter** |
+| Dividir a energia | Tocar no **+ / −** sobre a estufa, o abrigo ou o rover | **Tab** e **Enter** |
+| Janelas e botão do dia | Botões | **Tab** e **Enter** |
 
 A movimentação usa física (Rapier) com a gravidade de Marte, carregada em segundo plano; enquanto ela carrega, ou se falhar, o jogo continua só com a interface.
 
 ### Como fica um sol com as duas opções
 
 1. **Vez da Terra** (só no cooperativo com Terra): vê o clima espacial e envia uma mensagem.
-2. **Manhã, por turno:** o plano de energia, como hoje. A tripulação continua dentro da base.
+2. **Manhã, por turno:** o plano de energia, tocando nos lugares da base. A tripulação continua dentro da base.
 3. **Dia, em tempo real** (60 a 90 segundos, com pausa): problemas aparecem pela base e a tripulação decide quem vai aonde.
 4. **Noite:** tempestade e aquecedores. O relatório mostra a energia e o que foi ou não consertado.
 
@@ -367,6 +430,86 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 **Equilíbrio** (`npm run balance`, estratégia atenta resolvendo tudo o que pode): praticamente igual ao de antes. 3★ em ~21% (erupções reais, antes ~19%) e ~45% (simuladas, antes ~43%); nas missões históricas, varia de 0 a +3 pontos. Sobe um pouco porque, no dia da tempestade, ninguém sai e a dose de tarefa fora não soma.
 
 **Próxima entrega (ainda não feita):** dose por tempo fora em vez de +1 por tarefa, e um relógio de oxigênio do traje. Depois, rover pressurizado para o problema distante (mais rápido e sem dose, mas gasta bateria).
+
+### Para onde o astronauta olha
+
+**Decisão (14/11/2026):** os astronautas não ficam encarando a câmera. Eles vivem a base e só se viram para quem controla quando são **tocados**.
+
+**Hoje (a corrigir):** `Game.showCrewInside` chama `Astronaut.faceCamera` em todo quadro para quem está dentro da base (`src/core/Game.ts`), então os quatro ficam sempre olhando para a tela.
+
+| Situação | Para onde olha |
+| --- | --- |
+| Parado dentro, sem ordem | Para a **estação do seu módulo** (bancada, janela, painel). De vez em quando (a cada 4 a 8 s, sorteado) vira devagar para outro ponto do módulo ou para um colega próximo |
+| Parado lá fora, sem ordem | Mantém a direção em que chegou; de vez em quando olha em volta, como dentro |
+| Andando | Para onde anda (já é assim, `setMotion`) |
+| Consertando ou em tarefa (`interact`) | Para o problema ou a estação. **Nunca** se vira para a câmera |
+| Na câmara, em EVA voltando, dormindo ou no abrigo | Não se vira |
+| **Tocado/selecionado e sem tarefa** | Vira **suavemente** para a câmera de quem controla (~0,4 s), fica ~2 s e volta a ficar livre |
+
+**Regras:**
+
+1. **Giro natural:** sempre interpolado (como o `setMotion` já faz), no máximo ~180°/s. Nada de pular de direção.
+2. Só o **corpo inteiro** gira (o modelo chibi não tem cabeça separada); se um dia tiver, a cabeça gira primeiro.
+3. Selecionar de novo o mesmo astronauta repete o olhar. Dar uma ordem durante o olhar cancela e ele vai cumprir.
+4. **Modo em grupo:** a seleção é de cada tela. O astronauta só se vira na tela de **quem o tocou** e só se for dono dele (ou comandar a EVA). Nas outras telas, continua livre. Nada vai para a rede.
+5. É só cena: não muda regra, `src/sim`, servidor nem protocolo.
+
+**Como implementar:**
+
+| # | Arquivo | O que fazer |
+| --- | --- | --- |
+| 1 | `src/scene/Crew.ts` | Trocar `faceCamera` (instantâneo) por um alvo de direção com giro suave: `lookAt(point, seconds)` e `lookFree(dt)` (sorteia pontos de olhar) |
+| 2 | `src/scene/MarsBase.ts` | Um ponto de olhar por módulo (`HABITAT_LOOK`), ao lado de `HABITAT_SPOTS` |
+| 3 | `src/core/Game.ts` | `showCrewInside` deixa de chamar `faceCamera` todo quadro; `select(role)` pede `lookAt(câmera, 2)` se o astronauta não tem tarefa e é controlado por esta tela |
+
+**Pronto quando:** com ninguém tocado, nenhum astronauta fica encarando a câmera; ao tocar num astronauta parado, ele vira devagar para a tela e volta ao que fazia; ao tocar em quem está consertando, ele continua de frente para o conserto.
+
+### Movimentação realista: dentro e fora da base
+
+**Decisão (14/11/2026):** andar tem que parecer Marte (e a Lua, na base lunar). Hoje todos andam a 2,4 m/s, param e viram na hora, e dentro da base **teleportam** entre o módulo e a estufa (`showCrewInside` copia a posição a cada quadro).
+
+**Base científica:** com pouca gravidade, o corpo pesa menos: força nos pés, frequência dos passos e tempo com o pé no chão diminuem, e a pessoa passa a correr mais cedo ([F12](ciencia-marte.md#f12-andar-com-pouca-gravidade-é-diferente)). De traje, as pernas dobram pouco; na Lua, a Apollo pulava ([F13](ciencia-marte.md#f13-na-lua-os-astronautas-pulavam-como-coelhos)). A gravidade já é real ([fisica.md](fisica.md#ajustes-globais)).
+
+| | Dentro da base (sem traje) | Fora (de traje) |
+| --- | --- | --- |
+| Andar | Mais devagar (~1,2 m/s): é um espaço pequeno | Devagar (~1,4 m/s), passos largos e lentos |
+| Distância longa (≥ 15 m, ex.: rover atolado) | — | **Trote saltado** (~2,4 m/s): cada passada tem um pequeno voo |
+| Passos | Cadência mais lenta que na Terra, balanço leve para cima | Cadência ainda mais lenta; corpo um pouco inclinado para a frente |
+| Começar e parar | Rápido, mas não instantâneo | **Embala e freia devagar**: com menos peso, o pé tem menos aderência |
+| Virar | Suave | Mais lento (o traje é pesado) |
+| Chão | — | **Nuvenzinha de poeira** a cada passo e no pouso do pulo ([F8](ciencia-marte.md#f8-a-poeira-tem-que-ficar-lá-fora)) |
+| Entre lugares | **Anda** pelo corredor até a estufa ou a câmara, sem teleporte | Já anda (física) |
+
+**Números:** velocidades, cadência e aceleração são **valores de jogo** (não ganham fonte, regra de [fisica.md](fisica.md#pulo)) e ficam em `src/core/constants.ts`. A aceleração máxima segue a física: com aderência μ (valor de jogo, ~0,6), o pé empurra no máximo μ·g ≈ **2,2 m/s² em Marte** (5,9 na Terra, 1,0 na Lua). Para não frustrar a criança, o tempo para parar fica **abaixo de 1 s** em Marte.
+
+**Na [base lunar](#base-lunar) (modo solo):** a gravidade já troca para a da Lua (`MOON_G`); fora, o trote vira **pulinhos de coelho**, com o cartão de F13.
+
+**Para a criança ver e aprender:**
+
+1. Na primeira caminhada do sol 1, o cartão "Você sabia?" de F12: "Em Marte você pesa menos. Os passos ficam mais lentos e mais leves."
+2. Na primeira caminhada longa de traje (trote saltado), o cartão de F13.
+3. Cada cartão aparece **uma vez por partida**.
+
+**Regras:**
+
+- Só cena e física: não muda regra, `src/sim`, servidor nem protocolo. O tempo dos problemas não muda; a caminhada mais lenta já entra no "tempo da tripulação".
+- Conferir o balanceamento do dia: com 1,4 m/s, o rover atolado leva mais tempo; o trote saltado compensa. O dia ainda precisa dar para resolver tudo em 75 s com boa divisão da tripulação.
+- **Modo em grupo:** as velocidades são as mesmas em todas as telas, então a sincronização (`crew_pos` com destino) continua igual.
+- Sem Rapier: o modo de reserva (`FALLBACK_SPEED` em `CrewTasks`) usa as mesmas velocidades.
+- **Sem pressa obrigatória:** andar mais devagar não pode deixar o jogo cansativo; se em teste com crianças parecer lento, sobe a velocidade, não tira a cadência.
+
+**Como implementar:**
+
+| # | Arquivo | O que fazer |
+| --- | --- | --- |
+| 1 | `src/core/constants.ts` | `WALK_INSIDE`, `WALK_SUIT`, `LOPE_SPEED`, `LOPE_MIN_DIST`, `TRACTION` (μ), `TURN_RATE_SUIT` |
+| 2 | `src/scene/crewMotion.ts` | Velocidade-alvo com aceleração limitada (μ·g) em vez de `setLinvel` instantâneo; trote saltado com impulso vertical pequeno a cada passada quando a distância é longa |
+| 3 | `src/scene/Crew.ts` | `timeScale` do clipe `walk` pela cadência; inclinação de traje; giro com limite por segundo; poeira nos passos (`toon.ts`, cor de `PALETTE`) |
+| 4 | `src/core/Game.ts` | Dentro da base, caminho a pé entre módulo, corredor, estufa e câmara (pontos fixos) em vez de copiar a posição |
+| 5 | `src/i18n/strings.ts` | Textos dos cartões F12 e F13 (PT/EN) |
+| 6 | `docs/fisica.md` | Nova seção da tripulação com as constantes e a conta μ·g |
+
+**Pronto quando:** fora, o astronauta embala, anda de passos largos e freia em menos de 1 s, e trota com pequenos voos até o rover; dentro, anda até a estufa sem teleporte; no modo em grupo, as duas telas mostram a mesma posição; o dia continua dando para resolver tudo.
 
 ### Ordem de construção no hackathon
 
@@ -550,6 +693,81 @@ Uma vez por partida cada um ([regras dos fatos](ciencia-marte.md#regras-deste-do
 | 2 | C (faixa da tripulação) | 3 a 4 h | A (para os status 🌱 e 🔬) |
 | 3 | B (rotina visual) | 2 h | C (para os status 💪 e 😴) |
 
+## Energia no ambiente (especificação)
+
+**Decisão (14/11/2026):** a energia é dividida **tocando nos lugares da base**, não no menu. O painel "Plano de energia" vira **só de visualização**: mostra os blocos, a prévia e os avisos, sem + e −.
+As regras não mudam: 10 blocos por sol (menos com poeira), as mesmas faixas por papel, o que sobra vai para a bateria.
+
+**Por quê:** a criança liga a energia ao lugar que ela alimenta. Ao reforçar o abrigo, ela vê a luz do rover apagar: é a troca do [objetivo 1](#objetivos-de-aprendizagem) acontecendo na cena.
+
+### Onde cada bloco vai
+
+| Parte do plano | Lugar na base | O que a cena mostra | Ícone |
+| --- | --- | --- | --- |
+| Suporte de vida | **Estufa** (cúpula) | Luzes das plantas acendem, uma faixa por bloco | 🌱 |
+| Blindagem | **Abrigo** (sacos de regolito) | Escudo brilhante sobre o abrigo, mais forte com mais blocos | 🛡️ |
+| Ciência | **Rover** | Faróis e painel do rover acendem | 🔬 |
+| Bateria | **Bateria** (já existe o medidor) | Recebe o que sobra, **sem botão**: enche sozinha | 🔋 |
+
+Dos **painéis solares** sai um **cabo** até cada lugar; o cabo acende com a quantidade de blocos. Sobra nenhuma: o cabo da bateria fica apagado.
+
+### Como a criança joga
+
+1. Na manhã (fase de plano), cada lugar da lista tem um **marcador flutuante**: ícone, número de blocos e os botões **−** e **+**.
+2. Tocar em **+** tira um bloco da sobra (bateria) e manda para aquele lugar; **−** devolve para a bateria. Sem bloco sobrando, o **+** fica apagado e o marcador diz "Sem blocos sobrando".
+3. A tripulação **não precisa andar** até lá: dividir energia é decisão de manhã, não tarefa. Andar 10 vezes por sol cansaria uma criança de 7 anos.
+4. A câmera da manhã enquadra os três lugares e a bateria. Lugar fora da tela ganha uma seta na borda (como as dos problemas, `OffscreenArrows`).
+5. **Prévia na hora:** o marcador mostra o efeito desta noite ("Vida 70 → 76"), verde quando sobe, vermelho quando cai, com o mesmo cálculo de hoje (`previewSol`).
+6. O painel do HUD continua mostrando tudo, **sem botões de mudar**. O botão "Começar o dia" / "Terminar o sol" fica no painel (não é divisão de energia).
+7. Durante o dia em tempo real, os marcadores somem; os cabos e luzes continuam mostrando o plano.
+
+### Modo em grupo
+
+- Cada papel só vê **+ e −** no seu lugar: médico na estufa, engenheiro no abrigo, cientista no rover (as mesmas faixas de hoje). Nos outros lugares, o marcador mostra só o número, com "Do Engenheiro de voo" etc.
+- **Protocolo igual:** o toque manda a ação `blocks` que já existe. Nada muda no servidor.
+
+### Acessibilidade (obrigatório)
+
+- Os marcadores são **botões HTML** posicionados sobre a cena (projeção da câmera, como `OffscreenArrows`), não objetos 3D: funcionam com toque, **Tab e Enter** e leitor de tela.
+- Alvo mínimo de 44 × 44 px; o rótulo diz o lugar e a ação ("Mais um bloco para a estufa: suporte de vida").
+- Cor nunca é o único sinal: o marcador sempre mostra o número.
+- Sem física: se o Rapier não carregar, nada muda (os marcadores não dependem dele).
+
+### Textos (PT / EN)
+
+| Chave | PT | EN |
+| --- | --- | --- |
+| `energy.place.life` | Estufa: suporte de vida | Greenhouse: life support |
+| `energy.place.shield` | Abrigo: blindagem | Shelter: shielding |
+| `energy.place.science` | Rover: ciência | Rover: science |
+| `energy.place.battery` | Bateria: recebe o que sobra | Battery: gets what is left |
+| `energy.more` | Mais um bloco para {place} | One more block for {place} |
+| `energy.less` | Um bloco a menos para {place} | One less block for {place} |
+| `energy.none` | Sem blocos sobrando. | No blocks left. |
+| `energy.owner` | Do {role} | {role}'s |
+| `tutorial.energy` | Toque nos lugares da base para mandar energia. | Tap places in the base to send energy. |
+
+O passo do tutorial do sol 1 sobre energia passa a apontar para a estufa, não para o painel.
+
+### Como implementar
+
+| # | Arquivo | O que fazer |
+| --- | --- | --- |
+| 1 | `src/scene/MarsBase.ts` | Pontos de cada lugar (`ENERGY_SPOTS`), cabos dos painéis e luzes que acendem por bloco. Só desenha o plano recebido |
+| 2 | `src/ui/EnergyMarkers.ts` (novo) | Botões projetados sobre a cena, com setas na borda para lugar fora da tela |
+| 3 | `src/ui/Hud.ts` | Plano sem + e −; continua com blocos, prévia, avisos e o botão do dia. `change()` vira pública para os marcadores |
+| 4 | `src/core/Game.ts` | Liga marcadores ao `Hud` (solo) e à ação `blocks` (grupo, só papéis editáveis); câmera da manhã enquadra os lugares |
+| 5 | `src/i18n/strings.ts` | Chaves acima |
+
+**Regra e servidor:** nada muda em `src/sim`, no Go nem no protocolo.
+
+### Pronto quando
+
+- Num sol inteiro, a criança divide a energia **só tocando na cena**, inclusive no celular em pé.
+- Só com teclado (Tab e Enter) dá para dividir tudo.
+- No modo em grupo, cada jogador só muda o seu lugar e todos veem as luzes iguais.
+- O painel do HUD não tem nenhum botão que mude o plano.
+
 ## Dados reais da NASA
 
 As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros conjuntos de dados entram aos poucos, e cada um mostra no jogo um selo honesto do seu estado.
@@ -708,7 +926,7 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 | Barra superior | Nome da missão e local, "Sol N de 15", botões "Dados da NASA" e idioma |
 | Recursos (esquerda) | Bateria, suporte de vida, blindagem, dose (com marcas em 50 e 70) e ciência (com a meta), cada um com barra e botão "?" |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
-| Plano de energia (baixo) | Blocos de energia distribuídos com + e −, dicas como "precisa de 3 para não cair", e o botão "Terminar o sol" |
+| Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |
 | Janelas | Tutorial (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
 
 ### Prévia do plano de energia
@@ -728,7 +946,7 @@ Ao lado de cada linha do plano aparece o resultado previsto para esta noite ("Vi
 - Botões grandes e texto com fonte arredondada (Fredoka), fácil de ler.
 - Cor nunca é o único sinal: barras têm números, e alertas têm ícone e texto.
 - Botões têm rótulo para leitor de tela, e as mensagens são anunciadas.
-- A cena aceita girar e aproximar, mas o jogo inteiro funciona só com a interface.
+- A cena aceita girar e aproximar. Os controles na cena (marcadores de energia, setas, "!") são botões HTML: funcionam com toque, teclado e leitor de tela, mesmo sem a física.
 
 ## Tecnologia e arquitetura
 

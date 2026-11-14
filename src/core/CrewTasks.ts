@@ -64,6 +64,14 @@ export class CrewTasks {
   onResolved: (p: Problem) => void = () => {};
   onEvaStart: (pair: [Role, Role]) => void = () => {};
   onEvaReturn: () => void = () => {};
+  /** A dupla inteira voltou para dentro (a EVA acabou). Modo em grupo: avisa o servidor. */
+  onEvaEnd: () => void = () => {};
+
+  // ---------- modo em grupo (docs/servidor-coop.md, "EVA no modo em grupo") ----------
+  /** Escolhe o parceiro da EVA entre os livres. Sem isso, o primeiro livre. */
+  pickBuddy: ((free: Role[], leader: Role) => Role | undefined) | null = null;
+  /** Há uma dupla lá fora comandada por OUTRO jogador: ninguém daqui sai (máximo uma dupla). */
+  remoteEva = false;
 
   constructor(
     private readonly mission: () => Mission,
@@ -148,6 +156,7 @@ export class CrewTasks {
 
   private assignOutside(role: Role, p: Problem): SendResult {
     if (this.mission().evaBanned) return 'storm';
+    if (this.remoteEva) return 'full';
     if (this.eva) {
       const pair = this.eva.pair;
       // Outro astronauta não pode sair: já tem uma dupla lá fora (máximo 2). Se ela estiver livre, é ela que vai.
@@ -163,7 +172,8 @@ export class CrewTasks {
     }
     const free = this.freeInside();
     const leader = free.includes(role) ? role : free[0];
-    const buddy = free.find((r) => r !== leader);
+    const others = free.filter((r) => r !== leader);
+    const buddy = this.pickBuddy && leader ? this.pickBuddy(others, leader) : others[0];
     if (!leader || !buddy) return 'nobody';
     this.eva = { pair: [leader, buddy], idle: 0, returnAfter: RETURN_WHEN_IDLE };
     this.goOut(leader);
@@ -206,6 +216,19 @@ export class CrewTasks {
     // Largar o trabalho faz perder o progresso (GDD).
     const p = this.mission().state.problems.find((x) => x.uid === a.uid);
     if (p && p.status !== 'done') this.mission().setProblemProgress(a.uid, 0);
+    this.onChange();
+  }
+
+  /**
+   * Modo em grupo: lugar de um astronauta comandado por OUTRO jogador (vem do servidor).
+   * Larga qualquer tarefa local dele; a cena (Game) faz ele sair ou entrar pela porta.
+   */
+  setRemotePlace(role: Role, place: CrewPlace): void {
+    const next: Place = place === 'inside' ? 'inside' : place === 'airlock' ? 'airlockIn' : 'outside';
+    if (this.places[role] === next) return;
+    this.assignments.delete(role);
+    this.airlockLeft.delete(role);
+    this.places[role] = next;
     this.onChange();
   }
 
@@ -279,7 +302,10 @@ export class CrewTasks {
         if (a) this.beginWalk(role, a);
       } else {
         this.places[role] = 'inside';
-        if (this.eva && this.eva.pair.every((r) => this.places[r] === 'inside')) this.eva = null;
+        if (this.eva && this.eva.pair.every((r) => this.places[r] === 'inside')) {
+          this.eva = null;
+          this.onEvaEnd();
+        }
       }
       this.onChange();
     }

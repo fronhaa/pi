@@ -10,19 +10,19 @@ import { MarsBase } from '@/scene/MarsBase';
 import { Crew, ROLES } from '@/scene/Crew';
 import { PROBLEMS } from '@/sim/problems';
 import { Hud } from '@/ui/Hud';
-import { showCard, showEnd, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
-import { formatDate, getLang, setLang, t } from '@/i18n';
+import { showCard, showEnd, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
+import { formatDate, getLang, setLang, setPlace, t } from '@/i18n';
 import { Lobby, showEarthTurn, showModeChoice } from '@/ui/coop';
 import { CoopClient, coopServerUrl } from '@/net/CoopClient';
 import { BLOCK_ROLE, type CoopState, type CrewPos } from '@/net/protocol';
 import { Input } from './Input';
 import { CrewTasks } from './CrewTasks';
-import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
+import { MARS_G, MOON_G, NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
 import { BUNK_SPOTS, ENTRANCES, GREENHOUSE_WORK_SPOT, GYM_STATIONS, HABITAT_SPOTS, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
 import { ProblemMarkers } from '@/scene/ProblemMarkers';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
-import { CONFIG } from '@/sim/config';
+import { CONFIG, type Location } from '@/sim/config';
 import type { StringKey } from '@/i18n';
 
 /** Duração mínima da noite antes do relatório (ms). */
@@ -57,7 +57,7 @@ interface CoopSession {
   progressSent: Map<number, number>;
   historyToastShown: boolean;
   /** Posição da tripulação (só visual): o que este jogador mandou por último, por astronauta. */
-  crewSent: Map<Role, { x: number; z: number; tx?: number; tz?: number }>;
+  crewSent: Map<Role, { x: number; z: number; tx?: number; tz?: number; place?: string }>;
   crewTimer: number;
   /** Destino já aplicado para cada astronauta de outro jogador (evita recalcular a rota à toa). */
   remoteDest: Map<Role, string>;
@@ -69,6 +69,8 @@ const CREW_SEND_EVERY = 0.33;
 const CREW_MIN_MOVE = 0.15;
 /** Astronauta de outro jogador mais longe que isto do lugar certo: corrige de uma vez. */
 const CREW_SNAP = 6;
+/** Velocidade de quem volta da EVA até a porta, na tela dos outros jogadores (m/s). */
+const EVA_RETURN_SPEED = 3;
 
 
 /**
@@ -86,6 +88,8 @@ export class Game {
   private readonly hud: Hud;
 
   private mission!: Mission;
+  /** Onde fica a base (solo). O modo em grupo é sempre em Marte, por enquanto. */
+  private location: Location = 'mars';
   private plan: EnergyPlan = { life: 3, shield: 1, science: 3 };
   private night = false;
   private stormNight = false;
@@ -94,6 +98,10 @@ export class Game {
     ROLES.map((r) => [r, { at: 'post' as 'post' | 'gym' | 'bed', idle: 0, left: 0, station: 0 }]),
   ) as Record<Role, { at: 'post' | 'gym' | 'bed'; idle: number; left: number; station: number }>;
   private exerciseFactShown = false;
+  /** Lua: a noite que está passando é a noite fria da sombra (só ela escurece a cena). */
+  private shadowNight = false;
+  /** Luz do Sol (0–1) do dia que acabou, para a cena durante a noite (o estado já é o do dia seguinte). */
+  private nightSun = 1;
   private nightRes: Resources | null = null;
   private coop: CoopSession | null = null;
 
@@ -172,6 +180,7 @@ export class Game {
         this.hud.render();
       },
       onHowTo: () => showTutorial(() => {}),
+      nightCost: () => (this.coop || !this.mission ? CONFIG.battery.nightCost : this.mission.nightCost()),
     });
 
     this.targetMarker = new THREE.Mesh(
@@ -196,8 +205,17 @@ export class Game {
       if (!this.evaFactShown) this.hud.toast(t('eva.fact'), t('eva.fact.source'));
       else this.hud.toast(t('eva.start', names));
       this.evaFactShown = true;
+      this.coop?.client.send({ t: 'eva', pair: [a, b] });
     };
     this.tasks.onEvaReturn = () => this.hud.toast(t('eva.back'));
+    // Modo em grupo: a EVA é da sala (no máximo uma dupla); o servidor guarda quem a comanda.
+    this.tasks.onEvaEnd = () => this.coop?.client.send({ t: 'eva_end' });
+    this.tasks.pickBuddy = (free) => {
+      if (!this.coop) return free[0];
+      // Parceiro automático: primeiro um astronauta deste jogador; senão, de outro (ele só acompanha).
+      const mine = this.coop.state?.you.roles ?? [];
+      return free.find((r) => mine.includes(r)) ?? free[0];
+    };
     this.tasks.onResolved = (p) => {
       this.markers.remove(p.uid);
       if (p.kind === 'roverStuck') this.base.setRoverStuck(null);
@@ -227,11 +245,29 @@ export class Game {
     void this.loadMotion();
   }
 
+  /** Solo: escolhe Marte ou Lua, cria a missão do lugar e mostra o tutorial. */
+  private startSolo(): void {
+    showPlaceChoice((place) => {
+      this.setLocation(place);
+      this.newMission();
+      showTutorial(() => this.beginSol());
+    });
+  }
+
+  /** Troca o lugar da base: textos, cena e gravidade (as regras vêm da Mission criada depois). */
+  private setLocation(place: Location): void {
+    this.location = place;
+    setPlace(place);
+    this.base.setLocation(place);
+    this.motion?.setGravity(place === 'moon' ? MOON_G : MARS_G);
+    this.hud.render();
+  }
+
   /** Com servidor coop configurado, pergunta: sozinho ou em grupo. Sem servidor, vai direto ao solo. */
   private chooseMode(): void {
     const url = coopServerUrl();
     if (!url) {
-      showTutorial(() => this.beginSol());
+      this.startSolo();
       return;
     }
     const saved = new CoopClient(url).savedSession();
@@ -239,7 +275,7 @@ export class Game {
       this.startCoop(url, saved); // recarregou a página no meio de uma partida em grupo
       return;
     }
-    showModeChoice(() => showTutorial(() => this.beginSol()), () => this.startCoop(url));
+    showModeChoice(() => this.startSolo(), () => this.startCoop(url));
   }
 
   /** Carrega o Rapier em segundo plano. Se falhar, o jogo continua só com a interface (GDD). */
@@ -263,6 +299,7 @@ export class Game {
         canControl: (role) => this.canControl(role),
       });
       this.input.reset();
+      this.motion.setGravity(this.location === 'moon' ? MOON_G : MARS_G);
       this.motion.enabled = !this.night && !this.paused;
       // A tripulação está dentro (escondida); quem estiver numa EVA sai pela porta.
       this.tasks.attachMotion(this.motion);
@@ -414,13 +451,35 @@ export class Game {
   }
 
   /** Solo: todos os astronautas. Em grupo: só os dos papéis deste jogador. */
+  /**
+   * Solo: todos os astronautas. Em grupo: os dos papéis deste jogador; durante uma EVA, a dupla é
+   * de quem a comanda (o parceiro pode ser de outro jogador, que só vê ele acompanhar).
+   */
   private canControl(role: Role): boolean {
-    return !this.coop || (this.coop.state?.you.roles ?? []).includes(role);
+    const s = this.coop?.state;
+    if (!this.coop) return true;
+    if (!s) return false;
+    if (s.eva && s.eva.pair.includes(role)) return s.eva.by === s.you.id;
+    return s.you.roles.includes(role);
   }
 
   private ownerText(role: Role): string {
-    const owner = this.coop?.state?.players.find((p) => p.roles.includes(role));
+    const s = this.coop?.state;
+    if (s?.eva && s.eva.pair.includes(role) && s.eva.by !== s.you.id) {
+      const by = s.players.find((p) => p.id === s.eva!.by);
+      if (by) return t('coop.crew.inEva', { n: by.number });
+    }
+    const owner = s?.players.find((p) => p.roles.includes(role));
     return owner ? t('coop.crew.ofPlayer', { n: owner.number }) : t('coop.crew.pickYours');
+  }
+
+  /** EVA proibida hoje? Em grupo, pelo estado do servidor, com a MESMA regra da simulação (Mission.evaBanned). */
+  private evaBannedNow(): boolean {
+    if (!this.coop) return this.mission.evaBanned;
+    const view = this.coop.view;
+    if (!view) return false;
+    const rule = Object.getOwnPropertyDescriptor(Mission.prototype, 'evaBanned')!.get!;
+    return rule.call({ state: view }) as boolean;
   }
 
   /** E: consertar o problema mais perto · P: pausar o dia · 1–4 sem física: escolher astronauta. */
@@ -551,7 +610,7 @@ export class Game {
       remaining: coopDay ? coopDay.remaining : Math.max(0, Math.ceil(CONFIG.problems.daySeconds - this.dayElapsed)),
       paused: this.paused,
       selected: this.selected,
-      evaBanned: this.mission.evaBanned,
+      evaBanned: this.evaBannedNow(),
       evaActive: this.tasks.evaActive,
       crew: ROLES.map((role) => ({ role, place: this.tasks.placeOf(role) })),
       problems: s.problems
@@ -564,9 +623,10 @@ export class Game {
 
   private newMission(): void {
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-    // Missão histórica real, se houver; senão, erupções reais sorteadas; senão, simuladas.
-    const historical = pickHistorical(this.missions.missions, seed, isFirstGame());
-    this.mission = new Mission(seed, this.flares.flares, historical);
+    // Marte: missão histórica real, se houver; senão, erupções reais sorteadas; senão, simuladas.
+    // Lua: erupções reais sorteadas (o atraso das missões históricas é Terra-Marte; não serve para a Lua).
+    const historical = this.location === 'mars' ? pickHistorical(this.missions.missions, seed, isFirstGame()) : null;
+    this.mission = new Mission(seed, this.flares.flares, historical, this.location);
     this.hud.setState(this.mission.state);
     this.updateScene();
   }
@@ -595,6 +655,8 @@ export class Game {
     const m = this.mission;
     if (!m.isPlanValid(plan) || m.state.pendingCard) return;
     const stormTonight = m.stormToday !== undefined;
+    this.shadowNight = m.shadowLeft() > 0;
+    this.nightSun = m.sunlightToday() / 100;
     const report = m.endSol(plan);
     this.playNight(report, stormTonight, m.state, () => {
       if (m.state.outcome.status === 'playing') this.beginSol();
@@ -649,10 +711,14 @@ export class Game {
   private finish(): void {
     markPlayed();
     this.hud.setState(this.mission.state);
-    showEnd(this.mission.state, () => {
-      this.newMission();
-      this.beginSol();
-    });
+    // Jogar de novo: escolhe o lugar outra vez (dá para experimentar Marte e Lua e comparar).
+    showEnd(this.mission.state, () =>
+      showPlaceChoice((place) => {
+        this.setLocation(place);
+        this.newMission();
+        this.beginSol();
+      }),
+    );
   }
 
   private updateScene(): void {
@@ -662,14 +728,18 @@ export class Game {
       alert: !this.night && s.messages.some((m) => m.kind === 'stormAlert' || m.kind === 'stormToday'),
       night: this.night,
       stormNight: this.stormNight,
-      earthMessage: !this.night && s.messages.some((m) => m.kind !== 'dustNow'),
+      earthMessage: !this.night && s.messages.some((m) => m.kind !== 'dustNow' && m.kind !== 'shadowNow'),
       scienceBlocks: this.plan.science,
+      // De noite, o estado já é o do dia seguinte: a sombra que vale é a da noite que está passando.
+      shadow: this.night ? this.shadowNight : s.messages.some((m) => m.kind === 'shadowNow'),
+      sunlight: this.night ? this.nightSun : this.coop ? 1 : this.mission.sunlightToday() / 100,
     });
   }
 
   // ---------- modo em grupo ----------
 
   private startCoop(url: string, saved?: { code: string; token: string }): void {
+    if (this.location !== 'mars') this.setLocation('mars'); // o servidor coop roda só Marte, por enquanto
     const client = new CoopClient(url);
     const lobby = new Lobby({
       create: () => client.create(),
@@ -695,6 +765,8 @@ export class Game {
         else lobby.renderEntry();
       } else {
         this.hud.toast(t(`coop.err.${code}`));
+        // Outra tela abriu uma EVA antes, ou a EVA está proibida: a dupla daqui volta.
+        if (code === 'eva_busy' || code === 'eva_banned') this.tasks.returnNow();
       }
     };
     client.onStatus = (status) => {
@@ -790,6 +862,9 @@ export class Game {
       note,
     });
 
+    // EVA de outra tela: ninguém daqui sai (máximo uma dupla na sala).
+    this.tasks.remoteEva = !!s.eva && s.eva.by !== s.you.id;
+
     // Tripulação: começa com o astronauta deste jogador selecionado e com os outros onde estão.
     if (this.motion && !this.canControl(this.selected)) {
       const mine = (['commander', 'engineer', 'medic', 'scientist'] as Role[]).find((r) => this.canControl(r));
@@ -880,6 +955,7 @@ export class Game {
     const find = (uid: number): Problem | undefined => state.problems.find((x) => x.uid === uid);
     return {
       state,
+      evaBanned: this.evaBannedNow(),
       setProblemProgress: (uid: number, progress: number) => {
         const p = find(uid);
         if (p && p.status !== 'done') p.progress = progress;
@@ -909,12 +985,15 @@ export class Game {
     if (m?.lastReport && m.reportCard) cardSols.set(m.lastReport.sol, m.reportCard as CardId);
     return {
       seed: 0,
+      location: 'mars',
       historical: null,
       sol: m?.sol ?? e?.sol ?? 1,
       res: m?.res ?? e?.res ?? this.mission.state.res,
       blocks: m?.blocks ?? 0,
       storms: m?.storms ?? [],
       dustStormSol: 0,
+      shadowSol: 0,
+      sunlight: [],
       dustHold: 0,
       cardSols,
       pendingCard: m?.pendingCard ?? null,
@@ -940,19 +1019,29 @@ export class Game {
     const list: CrewPos[] = [];
     let newDest = false;
     for (const role of ['commander', 'engineer', 'medic', 'scientist'] as Role[]) {
-      if (!this.canControl(role) || this.motion.isInside(role)) continue;
+      if (!this.canControl(role)) continue;
+      // Onde está (dentro, câmara, fora): os outros fazem ele sair e entrar pela porta.
+      const place = this.tasks.placeOf(role);
+      const last = c.crewSent.get(role);
+      const placeChanged = !last || last.place !== place;
+      if (place !== 'outside') {
+        if (placeChanged) {
+          list.push({ role, x: last?.x ?? 0, z: last?.z ?? 0, place });
+          newDest = true;
+        }
+        continue;
+      }
       const p = this.motion.positionOf(role);
       const d = this.motion.targetOf(role);
-      const entry: CrewPos = { role, x: round(p.x), z: round(p.z), ...(d ? { tx: round(d.x), tz: round(d.z) } : {}) };
-      const last = c.crewSent.get(role);
+      const entry: CrewPos = { role, x: round(p.x), z: round(p.z), place, ...(d ? { tx: round(d.x), tz: round(d.z) } : {}) };
       const destChanged = !last || last.tx !== entry.tx || last.tz !== entry.tz;
       const moved = !last || Math.hypot(entry.x - last.x, entry.z - last.z) > CREW_MIN_MOVE;
-      if (destChanged && last) newDest = true;
-      if (moved || destChanged) list.push(entry);
+      if ((destChanged || placeChanged) && last) newDest = true;
+      if (moved || destChanged || placeChanged) list.push(entry);
     }
     if (list.length === 0 || (!newDest && c.crewTimer < CREW_SEND_EVERY)) return;
     c.crewTimer = 0;
-    for (const e of list) c.crewSent.set(e.role as Role, { x: e.x, z: e.z, tx: e.tx, tz: e.tz });
+    for (const e of list) c.crewSent.set(e.role as Role, { x: e.x, z: e.z, tx: e.tx, tz: e.tz, place: e.place });
     c.client.send({ t: 'crew_pos', list });
   }
 
@@ -962,7 +1051,17 @@ export class Game {
     if (!c || !this.motion || this.night) return;
     for (const e of list) {
       const role = e.role as Role;
-      if (this.canControl(role) || this.motion.isInside(role)) continue;
+      if (this.canControl(role)) continue;
+      // Dentro ou na câmara: anda até a porta e some (a cena mostra quem está dentro pelo casco).
+      const place = e.place ?? 'outside';
+      this.tasks.setRemotePlace(role, place);
+      if (place !== 'outside') {
+        c.remoteDest.delete(role);
+        if (!this.motion.isInside(role)) this.motion.enter(role, ENTRANCES.habitat, EVA_RETURN_SPEED);
+        continue;
+      }
+      // Saiu: aparece na porta (câmara de descompressão) e segue para onde o dono mandou.
+      if (this.motion.isInside(role)) this.motion.exit(role, ENTRANCES.habitat);
       const cur = this.motion.positionOf(role);
       const far = Math.hypot(cur.x - e.x, cur.z - e.z);
       if (far > CREW_SNAP) this.motion.teleport(role, e.x, e.z);

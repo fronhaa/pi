@@ -11,7 +11,7 @@ import { CONFIG } from '../src/sim/config.ts';
 import { Mission } from '../src/sim/mission.ts';
 import { PROBLEMS } from '../src/sim/problems.ts';
 import { parseMissions } from '../src/sim/historical.ts';
-import type { EnergyPlan, Flare, HistoricalMission, Problem } from '../src/sim/types.ts';
+import type { EnergyPlan, Flare, HistoricalMission, Location, Problem } from '../src/sim/types.ts';
 
 type Strategy = {
   name: string;
@@ -89,7 +89,9 @@ const strategies: Strategy[] = [
       // Reforça a blindagem até ~85 no aviso e no dia do impacto; fora disso, só repõe o desgaste.
       const alert = s.messages.some((x) => x.kind === 'stormAlert' || x.kind === 'stormToday');
       const life = s.res.life < 55 ? 4 : 3;
-      const keep = s.res.battery < 30 ? 3 : s.res.battery < 60 ? 2 : 1;
+      // Lua: no aviso de sombra (dias de pouca luz), guarda bateria a mais.
+      const shadowSoon = s.messages.some((x) => x.kind === 'shadowAlert');
+      const keep = shadowSoon ? 4 : s.res.battery < 30 ? 3 : s.res.battery < 60 ? 2 : 1;
       const shieldTarget = alert ? 85 : 30;
       const shieldBlocks = Math.max(0, Math.ceil((shieldTarget - s.res.shield + CONFIG.shield.decay) / CONFIG.shield.perBlock));
       const shield = alert ? Math.min(shieldBlocks, 5) : Math.min(shieldBlocks, 1);
@@ -113,10 +115,10 @@ const strategies: Strategy[] = [
   },
 ];
 
-function run(strategy: Strategy, flares: Flare[], historical: HistoricalMission | null = null) {
+function run(strategy: Strategy, flares: Flare[], historical: HistoricalMission | null = null, location: Location = 'mars') {
   const tally = { lostLife: 0, lostDose: 0, stars: [0, 0, 0, 0] };
   for (let seed = 1; seed <= N; seed++) {
-    const m = new Mission(seed, flares, historical);
+    const m = new Mission(seed, flares, historical, location);
     while (m.state.outcome.status === 'playing') {
       if (m.state.pendingCard) {
         m.answerCard(strategy.card(m));
@@ -140,15 +142,17 @@ function run(strategy: Strategy, flares: Flare[], historical: HistoricalMission 
 
 const pct = (n: number) => `${((n / N) * 100).toFixed(0)}%`.padStart(4);
 
-for (const [label, flares] of [['erupções reais do DONKI', loadRealFlares()], ['erupções simuladas', []]] as const) {
+const realFlares = loadRealFlares();
+for (const location of ['mars', 'moon'] as const) for (const [label, flares] of [['erupções reais do DONKI', realFlares], ['erupções simuladas', []]] as const) {
   if (label.includes('reais') && flares.length === 0) {
     console.log('(sem public/data/donki-flares.json; pulando dados reais)\n');
     continue;
   }
-  console.log(`\n${N} partidas por estratégia, ${label}${flares.length ? ` (${flares.length})` : ''}\n`);
+  const where = location === 'moon' ? 'LUA' : 'Marte';
+  console.log(`\n[${where}] ${N} partidas por estratégia, ${label}${flares.length ? ` (${flares.length})` : ''}\n`);
   console.log('Estratégia'.padEnd(38), 'vida 0', 'dose', ' 1★ ', ' 2★ ', ' 3★');
   for (const s of strategies) {
-    const t = run(s, flares as Flare[]);
+    const t = run(s, flares as Flare[], null, location);
     console.log(s.name.padEnd(38), pct(t.lostLife).padStart(6), pct(t.lostDose), pct(t.stars[1]), pct(t.stars[2]), pct(t.stars[3]));
   }
 }

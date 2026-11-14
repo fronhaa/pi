@@ -23,6 +23,7 @@ type Action struct {
 	UID      int       `json:"uid,omitempty"`
 	Progress float64   `json:"progress,omitempty"`
 	List     []CrewPos `json:"list,omitempty"` // crew_pos
+	Pair     []Role    `json:"pair,omitempty"` // eva: [líder, parceiro]
 }
 
 var (

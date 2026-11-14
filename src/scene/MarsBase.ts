@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { PALETTE, toonMaterial, toonMesh } from '@/render/toon';
-import { CONFIG } from '@/sim/config';
+import { MOON_PALETTE, PALETTE, toonMaterial, toonMesh } from '@/render/toon';
+import { CONFIG, type Location } from '@/sim/config';
 import type { Resources } from '@/sim/types';
 
 /** O que a cena precisa saber do jogo para mostrar o estado (GDD, "A cena tem que mostrar o estado do jogo"). */
@@ -11,6 +11,10 @@ export interface SceneState {
   stormNight: boolean;
   earthMessage: boolean;
   scienceBlocks: number;
+  /** Lua: dia de sombra das montanhas (a luz do Sol fica fraca). */
+  shadow?: boolean;
+  /** Lua: luz do Sol de hoje (0–1). O Sol passa atrás dos morros e a cena fica mais clara ou mais escura. */
+  sunlight?: number;
 }
 
 /**
@@ -136,12 +140,15 @@ export const PROBLEM_SPOTS = {
   tornBag: new THREE.Vector3(SHELTER_CENTER.x, 0, SHELTER_CENTER.z + 3.9),
 } as const;
 
-const SKY_DAY = new THREE.Color(0xe8b98c);
-const SKY_DUST = new THREE.Color(0xc99a6e);
-const SKY_ALERT = new THREE.Color(0xd9866a);
-const SKY_NIGHT = new THREE.Color(0x1c1724);
+/** Céu por lugar: em Marte, rosado com poeira; na Lua, sem ar, o céu é preto até de dia. */
+const SKIES: Record<Location, { day: THREE.Color; dust: THREE.Color; alert: THREE.Color; night: THREE.Color }> = {
+  mars: { day: new THREE.Color(0xe8b98c), dust: new THREE.Color(0xc99a6e), alert: new THREE.Color(0xd9866a), night: new THREE.Color(0x1c1724) },
+  moon: { day: new THREE.Color(MOON_PALETTE.sky), dust: new THREE.Color(MOON_PALETTE.sky), alert: new THREE.Color(0x3a1418), night: new THREE.Color(0x050609) },
+};
+const SKY_DAY = SKIES.mars.day;
 const PANEL_CLEAN = new THREE.Color(PALETTE.panel);
-const PANEL_DUSTY = new THREE.Color(PALETTE.dust);
+/** Cores de terreno que mudam na Lua (as outras, como prédios e plantas, são as mesmas). */
+const TERRAIN_KEYS = ['soil', 'rock', 'lit', 'dust'] as const;
 const PLANT_OK = new THREE.Color(PALETTE.plant);
 const PLANT_DEAD = new THREE.Color(PALETTE.plantDead);
 
@@ -178,6 +185,12 @@ export class MarsBase {
   private readonly dustParticles: THREE.Points;
 
   private state: SceneState | null = null;
+  private location: Location = 'mars';
+  /** Materiais de terreno (chão, pedras, mesas, abrigo) com a cor de Marte, para trocar na Lua. */
+  private readonly terrainMats: { mat: THREE.MeshToonMaterial; key: (typeof TERRAIN_KEYS)[number] }[] = [];
+  private readonly mesas: THREE.Object3D[] = [];
+  /** Só na Lua: a Terra grande no horizonte e crateras em volta da base. */
+  private readonly moonOnly = new THREE.Group();
   /** Rover atolado: fica parado e inclinado neste ponto até alguém resolver. */
   private roverStuckAt: THREE.Vector3 | null = null;
   private nightAmount = 0;
@@ -240,6 +253,83 @@ export class MarsBase {
     this.stars = this.buildStars();
     this.earthDot = this.buildEarth();
     this.dustParticles = this.buildDustParticles();
+    this.buildMoonExtras();
+    this.collectTerrainMaterials();
+  }
+
+  /** Guarda os materiais com cores de terreno de Marte (para a troca de lugar). */
+  private collectTerrainMaterials(): void {
+    const marsHex = new Map<number, (typeof TERRAIN_KEYS)[number]>(TERRAIN_KEYS.map((k) => [PALETTE[k], k]));
+    this.root.traverse((o) => {
+      const mat = (o as THREE.Mesh).material;
+      if (!(mat instanceof THREE.MeshToonMaterial) || o.parent === this.moonOnly) return;
+      const key = marsHex.get(mat.color.getHex());
+      if (key) this.terrainMats.push({ mat, key });
+    });
+  }
+
+  /**
+   * Lua: a Terra grande e baixa no horizonte (no polo sul da Lua ela fica sempre perto do horizonte)
+   * e algumas crateras longe da trilha do rover. Escondido em Marte.
+   */
+  private buildMoonExtras(): void {
+    const earth = new THREE.Group();
+    earth.add(new THREE.Mesh(new THREE.SphereGeometry(7, 24, 16), new THREE.MeshBasicMaterial({ color: MOON_PALETTE.earth, fog: false })));
+    const rng = mulberry(19);
+    for (let i = 0; i < 7; i++) {
+      const land = i < 3;
+      const blob = new THREE.Mesh(
+        new THREE.SphereGeometry(land ? 2.6 : 1.8, 12, 8),
+        new THREE.MeshBasicMaterial({ color: land ? MOON_PALETTE.earthLand : PALETTE.white, fog: false }),
+      );
+      const a = rng() * Math.PI * 1.2 - 0.6;
+      const b = rng() * 1.4 - 0.7;
+      blob.position.set(Math.sin(a) * 6.7, Math.sin(b) * 6.7, Math.cos(a) * Math.cos(b) * 6.7);
+      blob.scale.set(1, land ? 0.7 : 0.35, 0.45);
+      blob.lookAt(0, 0, 0);
+      earth.add(blob);
+    }
+    earth.position.set(-75, 16, -150);
+    earth.lookAt(0, 0, 0);
+    this.moonOnly.add(earth);
+
+    const craterRng = mulberry(23);
+    for (let i = 0; i < 9; i++) {
+      const angle = craterRng() * Math.PI * 2;
+      const dist = 42 + craterRng() * 40;
+      const r = 3 + craterRng() * 6;
+      const x = Math.cos(angle) * dist;
+      const z = Math.sin(angle) * dist;
+      const rim = toonMesh(new THREE.TorusGeometry(r, r * 0.22, 6, 20), MOON_PALETTE.rock, 0.02);
+      rim.rotation.x = -Math.PI / 2;
+      rim.scale.z = 0.45;
+      rim.position.set(x, terrainHeight(x, z) + 0.1, z);
+      rim.castShadow = false;
+      this.moonOnly.add(rim);
+      const floor = new THREE.Mesh(new THREE.CircleGeometry(r, 20), toonMaterial(MOON_PALETTE.soil));
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.set(x, terrainHeight(x, z) + 0.05, z);
+      floor.receiveShadow = true;
+      this.moonOnly.add(floor);
+    }
+    this.moonOnly.visible = false;
+    this.root.add(this.moonOnly);
+  }
+
+  /** Marte ou Lua: troca céu, luz e cores do terreno. Os prédios da base são os mesmos (só visual). */
+  setLocation(place: Location): void {
+    this.location = place;
+    const moon = place === 'moon';
+    for (const { mat, key } of this.terrainMats) mat.color.setHex(moon ? MOON_PALETTE[key] : PALETTE[key]);
+    // Na Lua, as mesas de Marte viram bordas de cratera baixas.
+    for (const m of this.mesas) m.scale.y = moon ? 0.45 : 1;
+    this.moonOnly.visible = moon;
+    this.earthDot.visible = !moon; // da Lua a Terra é grande (moonOnly); de Marte, um pontinho
+    this.hemi.groundColor.setHex(moon ? MOON_PALETTE.soil : PALETTE.soil);
+    this.sun.color.setHex(moon ? 0xffffff : 0xfff0dc);
+    // Polo sul da Lua: o Sol fica sempre baixo no horizonte, com sombras compridas.
+    this.sun.position.set(-30, moon ? 16 : 40, moon ? 34 : 20);
+    (this.dustParticles.material as THREE.PointsMaterial).color.setHex(moon ? MOON_PALETTE.dust : PALETTE.dust);
   }
 
   // ---------- construção ----------
@@ -283,6 +373,7 @@ export class MarsBase {
       const mz = Math.sin(angle) * dist;
       mesa.position.set(mx, terrainHeight(mx, mz) - 1, mz);
       mesa.rotation.y = rng() * Math.PI;
+      this.mesas.push(mesa);
       this.root.add(mesa);
     }
   }
@@ -826,7 +917,8 @@ export class MarsBase {
     this.state = state;
     const r = state.res;
     const dustK = r.dust / CONFIG.dust.max;
-    for (const p of this.panels) p.material.color.copy(PANEL_CLEAN).lerp(PANEL_DUSTY, Math.min(1, dustK * 1.2));
+    const panelDusty = new THREE.Color(this.location === 'moon' ? MOON_PALETTE.dust : PALETTE.dust);
+    for (const p of this.panels) p.material.color.copy(PANEL_CLEAN).lerp(panelDusty, Math.min(1, dustK * 1.2));
     const lifeK = THREE.MathUtils.clamp((r.life - 15) / 45, 0, 1);
     for (const p of this.plants) p.material.color.copy(PLANT_DEAD).lerp(PLANT_OK, lifeK);
     const bags = Math.min(this.sandbags.length, Math.floor(r.shield / 8));
@@ -951,21 +1043,29 @@ export class MarsBase {
     if (!s) return;
 
     this.nightAmount = THREE.MathUtils.damp(this.nightAmount, s.night ? 1 : 0, 2.5, dt);
-    const n = this.nightAmount;
+    const moon = this.location === 'moon';
+    // Na Lua (polo sul) o Sol não se põe a cada 24 h: o descanso da tripulação quase não escurece a cena.
+    // Só a noite fria da sombra das montanhas fica escura de verdade.
+    const n = moon && !s.shadow ? this.nightAmount * 0.12 : this.nightAmount;
     const dustK = s.res.dust / CONFIG.dust.max;
 
-    const sky = SKY_DAY.clone().lerp(SKY_DUST, dustK);
-    if (s.alert) sky.lerp(SKY_ALERT, 0.45);
-    sky.lerp(SKY_NIGHT, n);
+    const skies = SKIES[this.location];
+    const sky = skies.day.clone().lerp(skies.dust, dustK);
+    if (s.alert) sky.lerp(skies.alert, 0.45);
+    sky.lerp(skies.night, n);
     (this.scene.background as THREE.Color).copy(sky);
     const fog = this.scene.fog as THREE.Fog;
     fog.color.copy(sky);
-    fog.near = THREE.MathUtils.lerp(45, 14, dustK);
-    fog.far = THREE.MathUtils.lerp(140, 70, dustK);
+    // Na Lua não há ar: quase sem névoa (só esconde a borda do mapa) e a poeira não sobe no céu.
+    fog.near = moon ? 150 : THREE.MathUtils.lerp(45, 14, dustK);
+    fog.far = moon ? 300 : THREE.MathUtils.lerp(140, 70, dustK);
 
-    this.sun.intensity = THREE.MathUtils.lerp(2.2 * (1 - dustK * 0.5), 0.15, n);
-    this.hemi.intensity = THREE.MathUtils.lerp(1.3, 0.35, n);
-    (this.stars.material as THREE.PointsMaterial).opacity = n;
+    // Na Lua a poeira fica nos painéis, mas não escurece o céu (não há vento para levantá-la).
+    const skyDust = moon ? 0 : dustK;
+    this.sun.intensity = THREE.MathUtils.lerp((moon ? 2.6 : 2.2) * (1 - skyDust * 0.5) * (moon ? 0.2 + 0.8 * (s.sunlight ?? 1) : 1), 0.15, n);
+    this.hemi.intensity = THREE.MathUtils.lerp(moon ? 1.05 : 1.3, 0.35, n);
+    // Sem ar, as estrelas aparecem até de dia na Lua.
+    (this.stars.material as THREE.PointsMaterial).opacity = moon ? Math.max(0.75, n) : n;
     (this.earthDot.material as THREE.MeshBasicMaterial).opacity = n;
     this.windows.color.setHex(PALETTE.window).multiplyScalar(0.6 + n * 0.8);
     for (const mat of this.windowGlass) {
@@ -979,7 +1079,7 @@ export class MarsBase {
     this.antennaTip.material.color.setHex(s.earthMessage && Math.sin(time * 4) > 0 ? 0x9fe3ff : PALETTE.tech);
 
     const dp = this.dustParticles;
-    (dp.material as THREE.PointsMaterial).opacity = THREE.MathUtils.lerp(0, 0.7, Math.min(1, dustK * 1.5)) * (1 - n * 0.6);
+    (dp.material as THREE.PointsMaterial).opacity = moon ? 0 : THREE.MathUtils.lerp(0, 0.7, Math.min(1, dustK * 1.5)) * (1 - n * 0.6);
     dp.position.x = ((time * 3) % 20) - 10;
 
     if (this.roverStuckAt) {
