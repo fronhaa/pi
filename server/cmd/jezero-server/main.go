@@ -6,6 +6,7 @@
 //	PORT             porta HTTP (padrão 8080)
 //	FLARES_PATH      erupções reais do DONKI (padrão data/donki-flares.json; sem arquivo = simuladas)
 //	ALLOWED_ORIGINS  hosts que podem conectar, separados por vírgula (padrão "localhost:*,127.0.0.1:*")
+//	WEB_DIR          pasta com o jogo já compilado (dist/); se existir, é servido em "/" (padrão web)
 package main
 
 import (
@@ -38,6 +39,11 @@ func main() {
 	hub := coop.NewHub(flares)
 	mux := http.NewServeMux()
 	mux.Handle("/ws", &coop.WSHandler{Hub: hub, OriginPatterns: origins, Log: log})
+	// O próprio servidor pode servir o jogo: um endereço só para o jogo e o coop (mesma origem).
+	if dir := env("WEB_DIR", "web"); dirExists(dir) {
+		mux.Handle("/", http.FileServer(http.Dir(dir)))
+		log.Info("servindo o jogo", "dir", dir)
+	}
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "rooms": hub.Count(), "realFlares": len(flares)})
@@ -87,6 +93,11 @@ func healthcheck(port string) int {
 		return 1
 	}
 	return 0
+}
+
+func dirExists(path string) bool {
+	st, err := os.Stat(path)
+	return err == nil && st.IsDir()
 }
 
 func env(key, def string) string {

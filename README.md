@@ -15,6 +15,8 @@ npm install
 npm run dev        # abre em http://localhost:5173
 ```
 
+**Em grupo (online):** cada um no seu aparelho, com papéis (Terra, comandante, engenheiro, médico, cientista). Precisa do servidor coop: veja [docs/servidor-coop.md](docs/servidor-coop.md).
+
 Como jogar: a cada sol, distribua os blocos de energia com **+** e **−** (mouse, toque ou teclado com Tab e Enter)
 e clique em **Terminar o sol**. Leia as mensagens da Terra: elas avisam das tempestades solares.
 

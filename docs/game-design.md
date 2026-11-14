@@ -16,7 +16,7 @@ Mars Exploration: Missão Jezero é um jogo de navegador. Nele, uma criança de 
 | Plataforma | Navegador, sem download e sem conta; computador e celular |
 | Local da missão | Cratera Jezero, Marte |
 | Duração de uma partida | 15 sóis, cerca de 10 a 15 minutos |
-| Jogadores | 1 no modo solo; de 2 a 5 no modo cooperativo, no mesmo aparelho (planejado) ou **online, cada um no seu aparelho** (servidor Go pronto, cliente em integração: [servidor-coop.md](servidor-coop.md)) |
+| Jogadores | 1 no modo solo; de 2 a 5 no modo cooperativo, no mesmo aparelho (planejado) ou **online, cada um no seu aparelho** (servidor Go e cliente prontos: [servidor-coop.md](servidor-coop.md)) |
 | Idiomas | Português e inglês |
 | Protótipo atual | [Missão Jezero, versão jogável](https://claude.ai/artifact/N2MTXT1A145mwDge8USXFC) |
 
@@ -245,7 +245,7 @@ Os quatro papéis são os mesmos das tripulações da CHAPEA, em que o engenheir
 | Terra e Marte com 2 jogadores, mesmo aparelho | Hackathon | 4 a 6 h |
 | Tempo da tripulação e movimentação (seção seguinte) | Hackathon | 6 a 8 h |
 | Sala de aula, de 3 a 5 jogadores com papéis | Evolução | 4 h ou mais |
-| Online, cada jogador no seu aparelho | **Servidor pronto** ([servidor-coop.md](servidor-coop.md), [ADR 0005](decisoes/0005-servidor-coop-em-go-com-as-regras.md)); falta a tela de sala e a ligação do cliente | Cliente: 4 a 6 h |
+| Online, cada jogador no seu aparelho | **Pronto** ([servidor-coop.md](servidor-coop.md), [ADR 0005](decisoes/0005-servidor-coop-em-go-com-as-regras.md)): sala com código, papéis, vez da Terra, energia dividida por papel | Feito |
 
 ### Pronto quando
 

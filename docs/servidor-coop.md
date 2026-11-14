@@ -1,5 +1,7 @@
 # Servidor do modo cooperativo (Go)
 
+**Para jogar em grupo agora:** abra o link do servidor (seção [Onde está rodando](#onde-está-rodando)). Uma pessoa toca em **Jogar em grupo → Criar sala** e passa o código de 4 letras; as outras tocam em **Jogar em grupo**, digitam o código e escolhem um papel; quem criou a sala toca em **Começar a missão**.
+
 O servidor em [`server/`](../server) manda nas partidas cooperativas online: guarda as salas, aplica as **mesmas regras do jogo solo** e manda para cada jogador só o que o papel dele pode ver.
 Decisão e alternativas: [ADR 0005](decisoes/0005-servidor-coop-em-go-com-as-regras.md). Regras do coop: [game-design.md](game-design.md#modo-cooperativo).
 
@@ -20,7 +22,19 @@ flowchart LR
 | `server/internal/sim/` | Porta das regras de `src/sim/` (mesmos números, mesmo sorteio). **Precisa ficar idêntica ao TS.** |
 | `server/internal/coop/` | Modo coop: `game.go` (regras puras: papéis, vez da Terra, mensagens com atraso), `room.go` (sala, permissões, o que cada um vê), `hub.go` (salas abertas), `ws.go` (WebSocket). |
 | `server/cmd/jezero-server/` | O programa: lê variáveis de ambiente, sobe o HTTP. |
-| `server/Dockerfile`, `server/compose.yaml` | Container para o VPS. |
+| `server/Dockerfile`, `server/compose.yaml` | Container para o VPS. A imagem também compila e **serve o jogo**: um endereço só para jogo e coop. |
+| `src/net/` | Cliente: `CoopClient.ts` (conexão, reconexão automática com token) e `protocol.ts` (tipos iguais aos do Go). |
+| `src/ui/coop.ts` | Telas: escolher o modo, sala de espera (código, papéis, começar) e a vez da Terra. |
+
+## Cliente (o jogo no navegador)
+
+- O botão **Jogar em grupo** só aparece se o jogo souber o endereço do servidor, nesta ordem:
+  1. `?coop=wss://…` na URL (útil com link temporário);
+  2. `VITE_COOP_URL` no build: um `wss://…` fixo, ou `same-origin` (o jogo foi servido pelo próprio servidor coop; é o que a imagem Docker usa).
+- Sem endereço, o jogo funciona só no modo solo, como antes.
+- No modo em grupo, o jogo **não roda regras**: mostra o que o servidor manda e repassa decisões. A noite, o relatório e a tela final são os mesmos do solo.
+- Cada jogador só mexe na parte da energia do seu papel; os outros botões ficam travados. "Terminar o sol" só para o comandante.
+- Se a internet cair ou a página recarregar, o jogo volta sozinho para a mesma sala e o mesmo papel (token guardado na aba, `sessionStorage`).
 
 ## Regras do coop implementadas no servidor
 
@@ -80,6 +94,38 @@ curl localhost:8080/healthz                          # {"ok":true,"rooms":0,"rea
 | `PORT` | `8080` | Porta HTTP |
 | `FLARES_PATH` | `data/donki-flares.json` | Erupções reais do DONKI (sem o arquivo, usa simuladas) |
 | `ALLOWED_ORIGINS` | `localhost:*,127.0.0.1:*` | Hosts de onde o jogo pode conectar, separados por vírgula. Em produção, o host onde o jogo está publicado (ex.: `fronhaa.github.io`) |
+
+## Link temporário (Cloudflare Quick Tunnel)
+
+Para testar e demonstrar sem domínio próprio, o `compose.yaml` tem um túnel opcional do Cloudflare, sem conta:
+
+```bash
+docker compose --profile tunnel up -d
+docker compose logs tunnel | grep trycloudflare.com    # o link do jogo
+```
+
+- O link (`https://<palavras>.trycloudflare.com`) abre o **jogo** e já conecta no coop.
+- O link **muda** sempre que o container do túnel reinicia. Depois de reiniciar, pegue o link novo.
+- Não tem garantia de disponibilidade: bom para hackathon e testes; para uso contínuo, use domínio próprio (abaixo).
+
+## Onde está rodando
+
+| O quê | Valor (14/11/2026) |
+| --- | --- |
+| Máquina | Workspace Coder `sisgeon/devs` (acesso: `coder ssh devs`) |
+| Docker | Container separado `dind-devs` (variável `DOCKER_HOST`); a porta 8080 já é de outro serviço |
+| Pasta | `~/jezero-coop` (cópia de `server/`, `src/`, `public/` e arquivos do Vite) |
+| Containers | `jezero-coop` (porta `18095` no `dind-devs`) e `jezero-coop-tunnel` |
+| Link | Ver no túnel: `docker logs jezero-coop-tunnel 2>&1 \| grep trycloudflare.com` |
+
+Atualizar com o código da `main` (do seu computador, na raiz do repositório):
+
+```bash
+git archive main | coder ssh devs -- 'rm -rf ~/jezero-coop.new && mkdir ~/jezero-coop.new && tar -x -C ~/jezero-coop.new && rm -rf ~/jezero-coop && mv ~/jezero-coop.new ~/jezero-coop'
+coder ssh devs -- 'cd ~/jezero-coop/server && COOP_BIND=0.0.0.0 COOP_PORT=18095 ALLOWED_ORIGINS="*.trycloudflare.com,localhost:*" docker compose up -d --build jezero-coop'
+```
+
+Assim só o `jezero-coop` é recriado; o túnel continua de pé e **o link não muda**.
 
 ## Subir no VPS (container)
 

@@ -37,6 +37,7 @@ interface ──decisões──► simulação ──estado──► interface e
 | [`src/i18n/`](../src/i18n) | Textos em PT e EN (`strings.ts`). O TypeScript obriga toda chave a existir nos dois idiomas. |
 | [`src/data/`](../src/data) | Carregamento dos dados da NASA para o jogo. Coleta: [dados.md](dados.md). |
 | [`src/render/`](../src/render) | Materiais cel-shading, contorno e paleta da Art Bible. |
+| [`src/net/`](../src/net) | Cliente do modo em grupo: conexão com o servidor coop e tipos do protocolo. Ver [servidor-coop.md](servidor-coop.md). |
 | [`server/`](../server) | **Servidor do coop online (Go)**: salas por WebSocket e as mesmas regras de `src/sim` (porta com teste de paridade). Guia: [servidor-coop.md](servidor-coop.md). |
 | [`src/core/`](../src/core) | `Game.ts` (orquestra tudo, clique na cena), `Input.ts` (teclado), `Physics.ts` (Rapier, só via `crewMotion`), `constants.ts` (gravidade de Marte com fonte). |
 | [`public/data/`](../public/data) | Dados servidos ao jogo: erupções do DONKI (`donki-flares.json`) e missões históricas (`missions.json`, ainda não lidas pelo jogo). Gerados por scripts; não edite à mão. |
