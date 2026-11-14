@@ -46,7 +46,7 @@ Cor nova? Adicione em `PALETTE` **e** nesta tabela, dizendo a origem.
 
 ### Base lunar (`MOON_PALETTE`)
 
-Na Lua (`MarsBase.setLocation('moon')`), só as cores de **terreno** mudam: os materiais que usam `soil`, `rock`, `lit` e
+Na Lua (`BaseScene.setLocation('moon')`, cenário em [`src/scenarios/moon.ts`](../src/scenarios/moon.ts)), só as cores de **terreno** mudam: os materiais que usam `soil`, `rock`, `lit` e
 `dust` (chão, pedras, mesetas, abrigo, sacos) trocam para os cinzas abaixo. Prédios, trajes e plantas ficam iguais.
 
 | Nome | Hex | Uso |
@@ -73,8 +73,9 @@ A luz do Sol da cena acompanha a luz do dia (`SceneState.sunlight`, 0–1): de 2
 
 ## A cena mostra o estado do jogo
 
-A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()` e `MarsBase.update()`
-([`src/scene/MarsBase.ts`](../src/scene/MarsBase.ts)); a cena nunca muda regras.
+A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()` e `BaseScene.update()`
+([`src/scene/BaseScene.ts`](../src/scene/BaseScene.ts)), que repassam às partes de [`src/scene/base/`](../src/scene/base)
+(`structures.ts`: painéis, plantas, sacos, bateria, alarme; `Sky.ts`: céu e luz; `Habitat.ts`: janelas; `Rover.ts`); a cena nunca muda regras.
 
 ## Escala e modelos
 
@@ -84,7 +85,7 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
   (`ROLE_COLORS`). Animações: `walk` ao andar, `jump` no Espaço, `interact` ao consertar. Até carregar (ou se falhar),
   fica o boneco simples de cápsulas.
 - Base e rover: `research-base.glb` e `rover.glb` (ver [rover-e-base-de-pesquisa.md](rover-e-base-de-pesquisa.md)),
-  carregados por `MarsBase.loadModels()` com `src/render/sceneryModel.ts`. A base fica em `HABITAT_POSITION`, com a porta
+  carregados por `BaseScene.loadModels()` com `src/render/sceneryModel.ts`. A base fica em `HABITAT_POSITION`, com a porta
   do airlock (`ENTRANCES.habitat`) virada para a câmera. O rover usa a mesma lógica de andar, parar e desviar; as rodas
   `wheel_0..5` giram pela distância e, ao parar para estudar, tocam `scan` e `drill`. Até carregar (ou se falhar), ficam
   o módulo e o rover simples.

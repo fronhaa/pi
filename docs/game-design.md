@@ -435,7 +435,7 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 
 **Decisão (14/11/2026):** os astronautas não ficam encarando a câmera. Eles vivem a base e só se viram para quem controla quando são **tocados**.
 
-**Hoje (a corrigir):** `Game.showCrewInside` chama `Astronaut.faceCamera` em todo quadro para quem está dentro da base (`src/core/Game.ts`), então os quatro ficam sempre olhando para a tela.
+**Hoje (a corrigir):** `CrewRoutine.update` chama `Astronaut.faceCamera` em todo quadro para quem está dentro da base (`src/scene/crewRoutine.ts`), então os quatro ficam sempre olhando para a tela.
 
 | Situação | Para onde olha |
 | --- | --- |
@@ -459,8 +459,8 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 | # | Arquivo | O que fazer |
 | --- | --- | --- |
 | 1 | `src/scene/Crew.ts` | Trocar `faceCamera` (instantâneo) por um alvo de direção com giro suave: `lookAt(point, seconds)` e `lookFree(dt)` (sorteia pontos de olhar) |
-| 2 | `src/scene/MarsBase.ts` | Um ponto de olhar por módulo (`HABITAT_LOOK`), ao lado de `HABITAT_SPOTS` |
-| 3 | `src/core/Game.ts` | `showCrewInside` deixa de chamar `faceCamera` todo quadro; `select(role)` pede `lookAt(câmera, 2)` se o astronauta não tem tarefa e é controlado por esta tela |
+| 2 | `src/scene/base/layout.ts` | Um ponto de olhar por módulo (`HABITAT_LOOK`), ao lado de `HABITAT_SPOTS` |
+| 3 | `src/scene/crewRoutine.ts` e `src/core/Game.ts` | `CrewRoutine` deixa de chamar `faceCamera` todo quadro; `select(role)` pede `lookAt(câmera, 2)` se o astronauta não tem tarefa e é controlado por esta tela |
 
 **Pronto quando:** com ninguém tocado, nenhum astronauta fica encarando a câmera; ao tocar num astronauta parado, ele vira devagar para a tela e volta ao que fazia; ao tocar em quem está consertando, ele continua de frente para o conserto.
 
@@ -505,8 +505,8 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 | 1 | `src/core/constants.ts` | `WALK_INSIDE`, `WALK_SUIT`, `LOPE_SPEED`, `LOPE_MIN_DIST`, `TRACTION` (μ), `TURN_RATE_SUIT` |
 | 2 | `src/scene/crewMotion.ts` | Velocidade-alvo com aceleração limitada (μ·g) em vez de `setLinvel` instantâneo; trote saltado com impulso vertical pequeno a cada passada quando a distância é longa |
 | 3 | `src/scene/Crew.ts` | `timeScale` do clipe `walk` pela cadência; inclinação de traje; giro com limite por segundo; poeira nos passos (`toon.ts`, cor de `PALETTE`) |
-| 4 | `src/core/Game.ts` | Dentro da base, caminho a pé entre módulo, corredor, estufa e câmara (pontos fixos) em vez de copiar a posição |
-| 5 | `src/i18n/strings.ts` | Textos dos cartões F12 e F13 (PT/EN) |
+| 4 | `src/scene/crewRoutine.ts` | Dentro da base, caminho a pé entre módulo, corredor, estufa e câmara (pontos fixos) em vez de copiar a posição |
+| 5 | `src/i18n/strings/nasa.ts` | Textos dos cartões F12 e F13 (PT/EN) |
 | 6 | `docs/fisica.md` | Nova seção da tripulação com as constantes e a conta μ·g |
 
 **Pronto quando:** fora, o astronauta embala, anda de passos largos e freia em menos de 1 s, e trota com pequenos voos até o rover; dentro, anda até a estufa sem teleporte; no modo em grupo, as duas telas mostram a mesma posição; o dia continua dando para resolver tudo.
@@ -588,10 +588,10 @@ Valores **iniciais, a balancear** (ver [Balanceamento](#balanceamento-das-tarefa
 | 4 | `src/sim/problems.ts` (`scheduleProblems`) | Depois de sortear e ordenar os problemas, **acrescentar** as duas tarefas com `spawnAt: 0`, **sem** usar o gerador aleatório (não muda o sorteio do resto) |
 | 5 | `src/sim/mission.ts` (`resolveProblem`) | Se for opcional: aplicar o efeito (vida com `clamp` no máximo; ciência sem teto), linha `report.task.*`, **sem** dose |
 | 6 | `src/sim/mission.ts` (`endSol`) | Opcionais não feitos ficam **fora** de `failed` e de `carried` (nada acontece) |
-| 7 | `src/scene/MarsBase.ts` | `PROBLEM_SPOTS.harvest` (dentro da cúpula) e `PROBLEM_SPOTS.analysis` (no módulo do laboratório). O astronauta precisa conseguir chegar: confira com `crewPath` |
+| 7 | `src/scene/base/layout.ts` | `PROBLEM_SPOTS.harvest` (dentro da cúpula) e `PROBLEM_SPOTS.analysis` (no módulo do laboratório). O astronauta precisa conseguir chegar: confira com `crewPath` |
 | 8 | `src/scene/ProblemMarkers.ts` | Ícone por tipo: 🌱 e 🔬 nos opcionais, "!" nos problemas |
 | 9 | `src/ui/Hud.ts` (`renderDay`) | Opcionais numa subseção "Se sobrar tempo:", depois dos problemas |
-| 10 | `src/i18n/strings.ts` | Chaves da tabela acima |
+| 10 | `src/i18n/strings/crew.ts` | Chaves da tabela acima |
 | 11 | `scripts/balance.ts` | A estratégia "atenta" faz as tarefas quando sobra astronauta livre |
 | 12 | `npm run build` | Regera o `server/internal/sim/simjs/sim.js`: **o modo em grupo já funciona**, porque as tarefas usam `problem_progress`/`problem_resolve`. Não precisa mexer em Go |
 
@@ -634,11 +634,11 @@ Se a atenta passar de 60%, reduza o efeito (ex.: ciência +3). Se ficar abaixo d
 
 | Arquivo | O que fazer |
 | --- | --- |
-| `src/scene/MarsBase.ts` | Pontos `ROUTINE_SPOTS.treadmill` (dentro do habitat) e `ROUTINE_SPOTS.bunk` |
+| `src/scene/base/layout.ts` | Pontos `ROUTINE_SPOTS.treadmill` (dentro do habitat) e `ROUTINE_SPOTS.bunk` |
 | `src/scene/crewMotion.ts` | Reaproveitar o piloto automático (`walkPath`/`auto`, o mesmo de ir dormir). Expor algo como `startRoutine(role, spot, onArrive)` e cancelar em `moveRole`/setas |
 | `src/scene/Crew.ts` | Animação simples de exercício (balanço no lugar) e de descanso (escondido, como dentro) |
-| `src/core/Game.ts` | Relógio de "sem ordem" por astronauta; só para `canControl(role)` no modo em grupo |
-| `src/i18n/strings.ts` | `fact.exercise` (texto PT/EN do F9) |
+| `src/scene/crewRoutine.ts` | Relógio de "sem ordem" por astronauta; só para `canControl(role)` no modo em grupo |
+| `src/i18n/strings/nasa.ts` | `fact.exercise` (texto PT/EN do F9) |
 
 **Pronto quando:**
 
@@ -753,11 +753,11 @@ O passo do tutorial do sol 1 sobre energia passa a apontar para a estufa, não p
 
 | # | Arquivo | O que fazer |
 | --- | --- | --- |
-| 1 | `src/scene/MarsBase.ts` | Pontos de cada lugar (`ENERGY_SPOTS`), cabos dos painéis e luzes que acendem por bloco. Só desenha o plano recebido |
+| 1 | `src/scene/base/layout.ts` e `src/scene/base/structures.ts` | Pontos de cada lugar (`ENERGY_SPOTS`), cabos dos painéis e luzes que acendem por bloco. Só desenha o plano recebido |
 | 2 | `src/ui/EnergyMarkers.ts` (novo) | Botões projetados sobre a cena, com setas na borda para lugar fora da tela |
 | 3 | `src/ui/Hud.ts` | Plano sem + e −; continua com blocos, prévia, avisos e o botão do dia. `change()` vira pública para os marcadores |
 | 4 | `src/core/Game.ts` | Liga marcadores ao `Hud` (solo) e à ação `blocks` (grupo, só papéis editáveis); câmera da manhã enquadra os lugares |
-| 5 | `src/i18n/strings.ts` | Chaves acima |
+| 5 | `src/i18n/strings/ui.ts` | Chaves acima |
 
 **Regra e servidor:** nada muda em `src/sim`, no Go nem no protocolo.
 
@@ -986,7 +986,7 @@ A interface manda as decisões para a simulação e repassa o estado resultante 
 | --- | --- |
 | Linguagem | TypeScript, sem framework de interface |
 | Simulação | `src/sim/` (`config.ts`, `mission.ts`, `cards.ts`); teste de equilíbrio em `scripts/balance.ts` |
-| Cena | `src/scene/` (`MarsBase.ts`, `Crew.ts`) e `src/render/toon.ts` |
+| Cena | `src/scene/` (`BaseScene.ts`, `base/`, `Crew.ts`), `src/scenarios/` (Marte, Lua) e `src/render/toon.ts` |
 | Interface e textos | `src/ui/` e `src/i18n/` (PT e EN) |
 | 3D | Three.js r187: material toon de 4 faixas, contorno por casco invertido, sombras |
 | Física | Rapier, só sob demanda na etapa de movimentação (fora do pacote principal) |

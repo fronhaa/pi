@@ -24,6 +24,7 @@ e clique em **Terminar o sol**. Leia as mensagens da Terra: elas avisam das temp
 | -------------------- | ----------------------------------------------- |
 | `npm run dev`        | Servidor de desenvolvimento com hot reload      |
 | `npm run typecheck`  | Checa os tipos (rode antes de abrir PR)         |
+| `npm test`           | Testes de unidade das regras (`tests/sim/`)     |
 | `npm run build`      | Gera a versão de produção em `dist/`            |
 | `npm run preview`    | Serve o `dist/` localmente                      |
 | `npm run docs:adr -- "título"` | Cria um novo registro de decisão (ADR) |

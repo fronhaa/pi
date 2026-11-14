@@ -7,7 +7,7 @@ import (
 
 // EVA no modo em grupo (docs/servidor-coop.md, "EVA no modo em grupo").
 //
-// Regra do jogo (src/core/CrewTasks.ts, GDD "EVA: sair da base"): problema de fora exige uma
+// Regra do jogo (src/sim/eva.ts, GDD "EVA: sair da base"): problema de fora exige uma
 // dupla, e só UMA dupla pode estar fora ao mesmo tempo. No grupo, cada tela só via a própria
 // dupla; por isso a EVA vira estado da SALA:
 //   - quem inicia ("eva") precisa ser dono do líder; o parceiro pode ser de outro jogador

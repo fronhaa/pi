@@ -38,4 +38,5 @@ adiciona a linha na tabela abaixo. Preencha, abra PR e discuta lá.
 | [0005](0005-servidor-coop-em-go-com-as-regras.md) | Servidor coop em Go com as regras | Substituído em parte por [0006](0006-servidor-roda-as-regras-do-typescript-goja.md) |
 | [0006](0006-servidor-roda-as-regras-do-typescript-goja.md) | Servidor roda as regras do TypeScript (goja) | Proposto |
 | [0007](0007-base-lunar-como-segundo-lugar-location-na-simulacao-e-textos.md) | Base lunar como segundo lugar: location na simulação e textos por lugar | Proposto |
+| [0008](0008-projeto-dividido-por-areas-cenarios-personagens-e-interacoes.md) | Projeto dividido por áreas: cenários, personagens e interações como dados | Proposto |
 <!-- adr-index:fim (não remova, usado pelo scripts/new-adr.mjs) -->

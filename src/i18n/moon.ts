@@ -2,7 +2,7 @@ import type { StringKey } from './strings';
 
 /**
  * Textos da base lunar (docs/game-design.md, "Base lunar"): substituem os de Marte quando a base fica na Lua.
- * Só entram aqui as chaves que MUDAM; o resto vem de strings.ts. Na Lua o turno é um dia da Terra, não um sol.
+ * Só entram aqui as chaves que MUDAM; o resto vem de src/i18n/strings/. Na Lua o turno é um dia da Terra, não um sol.
  * Toda chave precisa existir nos dois idiomas (o TypeScript confere).
  */
 const pt = {

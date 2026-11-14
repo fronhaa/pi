@@ -9,7 +9,7 @@
 
 ## Checklist
 
-- [ ] `npm run typecheck` passa
+- [ ] `npm run typecheck` e `npm test` passam
 - [ ] Testei no navegador
 - [ ] **Documentação atualizada** (ou não precisa, porque: ___ )
   - [ ] Guia em `docs/` se mudou como um sistema funciona

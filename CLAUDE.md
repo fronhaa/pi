@@ -7,6 +7,7 @@ Jogo 3D cartoon no navegador para o desafio NASA Space Apps 2026 "Junior Astrona
 - **Público: crianças de 7 a 12 anos.** Simplicidade, facilidade e caráter educativo são critério crítico: antes de mexer em texto, interface ou mecânica, leia `docs/publico-e-impacto.md` e passe no checklist dele.
 - Leia `docs/desafio.md` e `docs/game-design.md` (o que estamos construindo e por quê), depois `docs/arquitetura.md`. Para física, `docs/fisica.md`; para visual, `docs/art-bible.md` (direção de arte) e `docs/estilo-visual.md` (como está no código).
 - Siga `docs/convencoes.md` (identificadores em inglês, comentários/docs em português, alias `@/`).
+- **Onde mexer:** `docs/estrutura-do-projeto.md` tem o mapa por área e as receitas (cenário novo em `src/scenarios/`, personagem em `src/sim/crew.ts`, interação em `src/sim/actions.ts`, posições em `src/scene/base/layout.ts`, textos em `src/i18n/strings/<assunto>.ts`). Siga a receita inteira.
 
 - Fato científico em texto do jogo, do professor ou da apresentação: use só o que está em `docs/ciencia-marte.md` (com fonte e trecho original). Fato novo entra lá primeiro, com link oficial aberto e lido.
 
@@ -14,7 +15,8 @@ Jogo 3D cartoon no navegador para o desafio NASA Space Apps 2026 "Junior Astrona
 
 - `src/sim/` é simulação pura: sem DOM, sem Three.js; imports relativos com `.ts`. Todo número de jogo fica em `src/sim/config.ts`; mudou um, rode `npm run balance`.
 - A cena (`src/scene/`) só desenha o estado; a interface (`src/ui/`) só mostra e repassa decisões. Regras nunca ficam nelas.
-- Textos sempre via `t()` de `src/i18n`, com a chave em PT e EN.
+- Decisão que muda a missão é uma `MissionAction` (`src/sim/actions.ts`) mandada por `port.dispatch(...)` (`src/core/session.ts`): o mesmo caminho serve ao solo e ao grupo. Nada de chamar a `Mission` direto da interface.
+- Textos sempre via `t()` de `src/i18n`, com a chave em PT e EN no arquivo do assunto em `src/i18n/strings/`.
 - Honestidade de dados: nunca chamar de "ao vivo" o que é baixado; previsão é previsão; dose do jogo é escala INTERPRETADA.
 - Física (quando voltar): é dona da posição; mova corpos Rapier, nunca `mesh.position` de objetos linkados. `Physics.ts` só via `import()`.
 - Objetos visuais do jogo usam os helpers de `src/render/toon.ts` e cores de `PALETTE`.
@@ -35,7 +37,7 @@ Guia completo: `docs/servidor-coop.md`. Decisões: ADR 0005 e 0006.
 
 - **Regras num lugar só:** o servidor Go (`server/`) roda o próprio `src/sim`, empacotado em `server/internal/sim/simjs/sim.js` (goja). Nunca escreva regra de jogo em Go.
 - **Mudou o protocolo** (ação nova, campo novo para os jogadores)? Mude os dois lados juntos: `src/net/protocol.ts` (cliente) e `server/internal/coop/` (servidor), mais a tabela do protocolo em `docs/servidor-coop.md`.
-- **Mudou algo que roda no dia ou no plano** (`src/core/Game.ts`, `src/ui/Hud.ts`)? Confira o modo em grupo: ali o estado vem do servidor (`this.coop.view`), não de `this.mission`.
+- **Mudou algo que roda no dia ou no plano** (`src/core/Game.ts`, `src/ui/Hud.ts`)? Confira o modo em grupo: ali o estado vem do servidor (`this.coop.view`, em `src/core/coop/CoopMode.ts`), não de `this.mission`. Use `this.port` / `this.current`, que já escolhem.
 - **Crianças / LGPD:** o servidor não guarda nome, conta nem nenhum dado pessoal. Não acrescente.
 - **Verificar o servidor:** `cd server && go vet ./... && go test ./...` (Go 1.27+).
 
@@ -62,5 +64,5 @@ coder ssh devs -- 'docker logs jezero-coop-tunnel 2>&1 | grep -oE "https://[a-z0
 
 ## Verificação
 
-- `npm run typecheck` e `npm run build` devem passar; `npm run balance` se mexer em `src/sim/`.
+- `npm run typecheck`, `npm test` e `npm run build` devem passar; `npm run balance` se mexer em `src/sim/`.
 - Mexeu em `server/` ou no protocolo: `go test ./...` em `server/`.

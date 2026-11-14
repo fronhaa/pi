@@ -297,7 +297,7 @@ Os números entraram a partir do **documento aberto**, não dos resumos das busc
 
 ## Próximos passos (para implementar)
 
-1. Cartões "Você sabia?" no jogo, um por momento da tabela de resumo, com os textos PT/EN acima nas chaves de `src/i18n/strings.ts`. Cada cartão aparece **uma vez por partida**, para não cansar.
+1. Cartões "Você sabia?" no jogo, um por momento da tabela de resumo, com os textos PT/EN acima nas chaves de `src/i18n/strings/nasa.ts`. Cada cartão aparece **uma vez por partida**, para não cansar.
 2. Ajuda "?" da dose e da blindagem com F4 e F5.
 3. Guia do professor ([publico-e-impacto.md](publico-e-impacto.md#guia-para-professor-1-página)) com as notas para adultos (F4: comparação com radiografia).
 4. Texto para os juízes ("A ciência por trás do jogo") a partir da tabela de resumo.
