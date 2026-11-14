@@ -60,11 +60,32 @@ const HABITAT_FLOOR_Y = 1.25;
  * laboratório (perto do console), engenheiro e médico no alojamento (em frente aos beliches).
  */
 export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
-  commander: new THREE.Vector3(HABITAT_POSITION.x - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.45),
-  scientist: new THREE.Vector3(HABITAT_POSITION.x + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.45),
-  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.45),
-  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.45),
+  commander: new THREE.Vector3(HABITAT_POSITION.x - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
+  scientist: new THREE.Vector3(HABITAT_POSITION.x + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
+  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
+  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
 };
+
+/**
+ * Vista em corte (casa de boneca): some a parte da frente e de cima de cada cabine, onde z passa de
+ * CUT_Z e y passa de CUT_Y ao mesmo tempo. O casco fica opaco; a câmera vê o interior sem vidro na frente.
+ */
+const CUT_Z = HABITAT_POSITION.z + 0.3;
+const CUT_Y = HABITAT_FLOOR_Y + 0.3;
+const CUTAWAY_PLANES = [new THREE.Plane(new THREE.Vector3(0, 0, -1), CUT_Z), new THREE.Plane(new THREE.Vector3(0, -1, 0), CUT_Y)];
+
+/** Material de casco com o corte: os dois lados aparecem (de dentro se vê a parede do fundo). */
+function cutawayMaterial<M extends THREE.Material>(mat: M): M {
+  const m = mat.clone();
+  m.clippingPlanes = CUTAWAY_PLANES;
+  m.clipIntersection = true;
+  m.clipShadows = true;
+  m.side = THREE.DoubleSide;
+  m.transparent = false;
+  m.opacity = 1;
+  m.depthWrite = true;
+  return m;
+}
 
 /** Centro de cada beliche em relação ao centro do alojamento. */
 const BUNK_DX = 1.25;
@@ -307,7 +328,8 @@ export class MarsBase {
     const fb = this.habitatFallback;
     const hullGeo = new THREE.CylinderGeometry(1.6, 1.6, 7.2, 20);
     hullGeo.rotateZ(Math.PI / 2);
-    const hull = new THREE.Mesh(hullGeo, toonMaterial(PALETTE.light, { transparent: true, opacity: 0.35, depthWrite: false }));
+    const hull = new THREE.Mesh(hullGeo, cutawayMaterial(toonMaterial(PALETTE.light)));
+    hull.castShadow = true;
     hull.position.y = 2.65;
     fb.add(hull);
     const tower = toonMesh(new THREE.BoxGeometry(1.9, 3.9, 2.4), PALETTE.light);
@@ -359,13 +381,49 @@ export class MarsBase {
       inside.add(floor);
     }
 
-    // Laboratório: bancada com tela (ciência e comunicação com a Terra).
-    const desk = toonMesh(new THREE.BoxGeometry(2.0, 0.8, 0.5), PALETTE.light, 0.04);
-    desk.position.set(0, y + 0.4, BACK_Z - 0.05);
-    inside.add(desk);
-    const screen = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.05), new THREE.MeshBasicMaterial({ color: 0x7fe6ea }));
-    screen.position.set(0, y + 1.15, BACK_Z - 0.25);
-    inside.add(screen);
+    // Laboratório: bancada comprida no fundo, com duas telas (ciência e Terra) e prateleira de amostras.
+    const screenMat = new THREE.MeshBasicMaterial({ color: 0x7fe6ea });
+    const counter = toonMesh(new THREE.BoxGeometry(3.6, 0.8, 0.5), PALETTE.light, 0.03);
+    counter.position.set(0, y + 0.4, BACK_Z - 0.05);
+    inside.add(counter);
+    const counterTop = toonMesh(new THREE.BoxGeometry(3.7, 0.06, 0.56), PALETTE.tech, 0);
+    counterTop.position.set(0, y + 0.83, BACK_Z - 0.05);
+    inside.add(counterTop);
+    for (const sx of [-0.9, 0.9]) {
+      const frame = toonMesh(new THREE.BoxGeometry(0.95, 0.6, 0.06), PALETTE.shadow, 0.03);
+      frame.position.set(sx, y + 1.3, BACK_Z - 0.2);
+      inside.add(frame);
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.48), screenMat);
+      screen.position.set(sx, y + 1.3, BACK_Z - 0.165);
+      inside.add(screen);
+    }
+    const shelf = toonMesh(new THREE.BoxGeometry(0.5, 1.5, 0.4), PALETTE.light, 0.03);
+    shelf.position.set(-2.15, y + 0.75, BACK_Z);
+    inside.add(shelf);
+    const jarColors = [0xc65b36, 0x9a9792, 0x718b9a];
+    for (let i = 0; i < 3; i++) {
+      for (const level of [0.95, 1.35]) {
+        const jar = toonMesh(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 10), jarColors[(i + (level > 1 ? 1 : 0)) % 3], 0);
+        jar.position.set(-2.3 + i * 0.15, y + level, BACK_Z + 0.08);
+        inside.add(jar);
+      }
+    }
+
+    // Alojamento: armários nas pontas e uma mesinha na frente, entre os dois que ficam ali.
+    for (const lx of [QUARTERS_OFFSET_X - 2.38, QUARTERS_OFFSET_X + 2.38]) {
+      const locker = toonMesh(new THREE.BoxGeometry(0.36, 1.6, 0.6), PALETTE.tech, 0.03);
+      locker.position.set(lx, y + 0.8, BACK_Z + 0.05);
+      inside.add(locker);
+    }
+    const table = toonMesh(new THREE.CylinderGeometry(0.32, 0.32, 0.06, 16), PALETTE.light, 0.03);
+    table.position.set(QUARTERS_OFFSET_X, y + 0.7, 0.3);
+    inside.add(table);
+    const leg = toonMesh(new THREE.CylinderGeometry(0.05, 0.05, 0.68, 8), PALETTE.tech, 0);
+    leg.position.set(QUARTERS_OFFSET_X, y + 0.34, 0.3);
+    inside.add(leg);
+    const mug = toonMesh(new THREE.CylinderGeometry(0.06, 0.05, 0.12, 10), PALETTE.accent, 0);
+    mug.position.set(QUARTERS_OFFSET_X + 0.1, y + 0.79, 0.3);
+    inside.add(mug);
 
     // Alojamento: dois beliches encostados no fundo, cada um com duas camas.
     for (const bx of [QUARTERS_OFFSET_X - BUNK_DX, QUARTERS_OFFSET_X + BUNK_DX]) {
@@ -476,29 +534,28 @@ export class MarsBase {
       o.position.divideScalar(HABITAT_SCALE);
     }
 
+    // Vista em corte: casco, faixas e janelas da frente somem na parte da frente e de cima (CUTAWAY_PLANES).
+    // O contorno dessas peças sai (ele é compartilhado e não aceita o corte).
+    const cut = new Map<THREE.Material, THREE.Material>();
     for (const module of [m.root, ...extras]) {
-      // Casco translúcido (como a cúpula), para ver a tripulação lá dentro. Sem contorno e sem sombra,
-      // senão o interior fica escuro.
-      const shell = module.getObjectByName('hull_shell') as THREE.Mesh | undefined;
-      if (shell) {
-        const mat = (shell.material as THREE.MeshToonMaterial).clone();
-        mat.transparent = true;
-        mat.opacity = 0.35;
-        mat.depthWrite = false;
-        shell.material = mat;
-        shell.castShadow = false;
-        for (const c of [...shell.children]) if (c.userData.isOutline) shell.remove(c);
-      }
+      module.getObjectByName('hull')?.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh || mesh.userData.isOutline) return;
+        const src = mesh.material as THREE.Material;
+        let mat = cut.get(src);
+        if (!mat) {
+          mat = cutawayMaterial(src);
+          cut.set(src, mat);
+        }
+        mesh.material = mat;
+        for (const c of [...mesh.children]) if (c.userData.isOutline) mesh.remove(c);
+      });
     }
-    // Vidros das janelas (o clone divide o material com o laboratório): acendem à noite.
+    // Vidros das janelas (as do fundo continuam; as da frente caem no corte): acendem à noite.
     m.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (mesh.isMesh && (mesh.material as THREE.Material).name === 'window') {
         const mat = mesh.material as THREE.MeshToonMaterial;
-        // Vidro meio transparente: as janelas ficam na altura da cabeça e escondiam a tripulação.
-        mat.transparent = true;
-        mat.opacity = 0.45;
-        mat.depthWrite = false;
         if (!this.windowGlass.includes(mat)) this.windowGlass.push(mat);
       }
     });
