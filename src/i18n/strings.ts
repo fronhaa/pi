@@ -162,6 +162,15 @@ const pt = {
   'data.close': 'Fechar',
 
   'scene.loadingPhysics': 'Carregando a física de Marte…',
+  'crew.commander': 'Comandante',
+  'crew.engineer': 'Engenheiro de voo',
+  'crew.medic': 'Oficial médico',
+  'crew.scientist': 'Cientista',
+  'crew.selected': 'Astronauta: {name}',
+  'crew.hint.keys': 'Setas ou WASD: andar · Espaço: pular · 1 a 4: trocar · ou clique no chão',
+  'crew.hint.touch': 'Toque num astronauta e depois no chão para ele andar',
+  'crew.fact.gravity': 'Em Marte a gravidade é só 38% da que temos na Terra: o mesmo pulo sobe cerca de 2,6 vezes mais alto!',
+  'crew.fact.source': 'Fonte: NASA/JPL',
   'a11y.helpFor': 'O que é {name}?',
   'a11y.close': 'Fechar',
 } as const;
@@ -328,6 +337,15 @@ const en: Record<StringKey, string> = {
   'data.close': 'Close',
 
   'scene.loadingPhysics': 'Loading Mars physics…',
+  'crew.commander': 'Commander',
+  'crew.engineer': 'Flight engineer',
+  'crew.medic': 'Medical officer',
+  'crew.scientist': 'Scientist',
+  'crew.selected': 'Astronaut: {name}',
+  'crew.hint.keys': 'Arrows or WASD: walk · Space: jump · 1 to 4: switch · or click the ground',
+  'crew.hint.touch': 'Tap an astronaut, then the ground, to make them walk',
+  'crew.fact.gravity': 'On Mars gravity is only 38% of Earth’s: the same jump goes about 2.6 times higher!',
+  'crew.fact.source': 'Source: NASA/JPL',
   'a11y.helpFor': 'What is {name}?',
   'a11y.close': 'Close',
 };

@@ -8,7 +8,10 @@ import { MarsBase } from '@/scene/MarsBase';
 import { Crew } from '@/scene/Crew';
 import { Hud } from '@/ui/Hud';
 import { showCard, showEnd, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
-import { getLang, setLang } from '@/i18n';
+import { getLang, setLang, t } from '@/i18n';
+import { Input } from './Input';
+import type { CrewMotion } from '@/scene/crewMotion';
+import type { Role } from '@/scene/MarsBase';
 
 /** Duração da animação da noite antes do relatório (ms). */
 const NIGHT_MS = 2200;
@@ -32,6 +35,13 @@ export class Game {
   private night = false;
   private stormNight = false;
   private nightRes: Resources | null = null;
+
+  // Movimentação da tripulação: física carregada sob demanda (ADR 0004).
+  private readonly input = new Input();
+  private motion: CrewMotion | null = null;
+  private readonly raycaster = new THREE.Raycaster();
+  private readonly targetMarker: THREE.Mesh;
+  private pointerDown: { x: number; y: number; t: number } | null = null;
 
   private constructor(
     container: HTMLElement,
@@ -73,6 +83,14 @@ export class Game {
       onHowTo: () => showTutorial(() => {}),
     });
 
+    this.targetMarker = new THREE.Mesh(
+      new THREE.RingGeometry(0.25, 0.4, 20),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }),
+    );
+    this.targetMarker.rotation.x = -Math.PI / 2;
+    this.scene.add(this.targetMarker);
+    this.setupPointer();
+
     this.newMission();
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -81,12 +99,67 @@ export class Game {
 
   static async create(container: HTMLElement): Promise<Game> {
     const flares = await loadFlares();
-    return new Game(container, flares);
+    const game = new Game(container, flares);
+    // Só em desenvolvimento: leitura do estado para testes automáticos no navegador.
+    if (import.meta.env.DEV) Object.assign(window, { __jezero: game });
+    return game;
   }
 
   start(): void {
     this.renderer.setAnimationLoop((t) => this.frame(t));
     showTutorial(() => this.beginSol());
+    void this.loadMotion();
+  }
+
+  /** Carrega o Rapier em segundo plano. Se falhar, o jogo continua só com a interface (GDD). */
+  private async loadMotion(): Promise<void> {
+    this.hud.setCrew('loading');
+    try {
+      const { createCrewMotion } = await import('@/scene/crewMotion');
+      this.motion = await createCrewMotion({
+        crew: this.crew,
+        obstacles: this.base.obstacles,
+        input: this.input,
+        camera: this.camera,
+        onSelect: (role) => this.hud.setCrew('ready', role),
+        onFirstJump: () => this.hud.toast(t('crew.fact.gravity'), t('crew.fact.source')),
+      });
+      this.input.reset();
+      this.motion.enabled = !this.night;
+      this.hud.setCrew('ready', this.motion.selected);
+    } catch (err) {
+      console.warn('Física indisponível; o jogo segue só com a interface.', err);
+      this.hud.setCrew('off');
+    }
+  }
+
+  /** Clique/toque: num astronauta seleciona; no chão, manda o selecionado andar até lá. Arrastar gira a câmera. */
+  private setupPointer(): void {
+    const el = this.renderer.domElement;
+    el.addEventListener('pointerdown', (e) => (this.pointerDown = { x: e.clientX, y: e.clientY, t: performance.now() }));
+    el.addEventListener('pointerup', (e) => {
+      const d = this.pointerDown;
+      this.pointerDown = null;
+      if (!d || !this.motion || !this.motion.enabled) return;
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6 || performance.now() - d.t > 500) return;
+      const rect = el.getBoundingClientRect();
+      const ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+      this.raycaster.setFromCamera(ndc, this.camera);
+      const hitCrew = this.raycaster.intersectObject(this.crew.root, true)[0];
+      if (hitCrew) {
+        let o: THREE.Object3D | null = hitCrew.object;
+        while (o && !o.userData.role) o = o.parent;
+        if (o) this.motion.select(o.userData.role as Role);
+        return;
+      }
+      const ground = this.scene.getObjectByName('ground');
+      const hit = ground && this.raycaster.intersectObject(ground, false)[0];
+      if (hit) {
+        this.motion.moveTo(hit.point);
+        this.targetMarker.position.set(hit.point.x, hit.point.y + 0.05, hit.point.z);
+        (this.targetMarker.material as THREE.MeshBasicMaterial).opacity = 0.9;
+      }
+    });
   }
 
   // ---------- fluxo da missão ----------
@@ -126,6 +199,7 @@ export class Game {
     this.stormNight = stormTonight;
     this.nightRes = report.after;
     this.crew.setSheltered(stormTonight);
+    if (this.motion) this.motion.enabled = false;
     this.hud.showNight(report.after, report.sol);
     this.updateScene();
 
@@ -135,6 +209,7 @@ export class Game {
         this.stormNight = false;
         this.nightRes = null;
         this.crew.setSheltered(false);
+        if (this.motion) this.motion.enabled = true;
         this.hud.setBusy(false);
         if (m.state.outcome.status === 'playing') this.beginSol();
         else this.finish();
@@ -179,11 +254,16 @@ export class Game {
 
   private frame(time: number): void {
     this.timer.update(time);
-    const dt = Math.min(this.timer.getDelta(), 0.1);
+    const rawDt = this.timer.getDelta();
+    const dt = Math.min(rawDt, 0.1); // animações
+
     const t = this.timer.getElapsed();
     this.controls.update();
     this.base.update(dt, t);
-    this.crew.update(dt);
+    if (this.motion) this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)
+    else this.crew.update(dt);
+    const marker = this.targetMarker.material as THREE.MeshBasicMaterial;
+    marker.opacity = Math.max(0, marker.opacity - dt * 0.8);
     this.renderer.render(this.scene, this.camera);
   }
 }

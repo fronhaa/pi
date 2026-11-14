@@ -220,6 +220,17 @@ Este modo e o modo Terra e Marte funcionam juntos: os dois fazem parte do jogo.
 
 **Controle, sem joystick.** A criança toca no astronauta e depois no problema. Ele anda até lá, trabalha e fica ocupado até terminar. No modo solo, um jogador comanda os quatro. No cooperativo, cada jogador de Marte é dono do astronauta do seu papel; com menos de 4 jogadores em Marte, alguém comanda mais de um.
 
+**Dois jeitos de controlar, ao mesmo tempo** (decisão de 14/11/2026, sem menu de configuração):
+
+| Ação | Clique / toque | Teclado |
+| --- | --- | --- |
+| Escolher astronauta | Tocar nele | Teclas **1 a 4** (comandante, engenheiro de voo, oficial médico, cientista) |
+| Andar | Tocar no chão; ele anda sozinho até lá | **Setas** ou **WASD**, relativas à câmera |
+| Pular | — | **Espaço** (mostra que a gravidade de Marte é 38% da Terra) |
+| Plano de energia e janelas | Botões | **Tab** e **Enter** |
+
+A movimentação usa física (Rapier) com a gravidade de Marte, carregada em segundo plano; enquanto ela carrega, ou se falhar, o jogo continua só com a interface.
+
 ### Como fica um sol com as duas opções
 
 1. **Vez da Terra** (só no cooperativo com Terra): vê o clima espacial e envia uma mensagem.

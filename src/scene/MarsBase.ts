@@ -13,11 +13,14 @@ export interface SceneState {
   scienceBlocks: number;
 }
 
-/** Posto de cada papel na base (GDD, "Tempo da tripulação"). */
+/**
+ * Posto de cada papel na base (GDD, "Tempo da tripulação"): engenheiro no abrigo, médico perto da estufa,
+ * cientista perto do rover, comandante perto da antena. Precisam ficar FORA das caixas de `obstacles`.
+ */
 export const POSTS = {
-  commander: new THREE.Vector3(5.2, 0, 1.8),
-  engineer: new THREE.Vector3(-10.5, 0, 6.5),
-  medic: new THREE.Vector3(-1.5, 0, -0.8),
+  commander: new THREE.Vector3(4.6, 0, 2.7),
+  engineer: new THREE.Vector3(-9.0, 0, 8.4),
+  medic: new THREE.Vector3(3.4, 0, -2.6),
   scientist: new THREE.Vector3(10.5, 0, 9.5),
 } as const;
 
