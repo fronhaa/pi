@@ -253,3 +253,25 @@ export function scaleUV(geo: THREE.BufferGeometry, su: number, sv = 1): THREE.Bu
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
   return geo;
 }
+
+/** Plaquinha avulsa com um texto (fora do atlas LABELS, para não mudar as UVs dos outros blocos). Faixa colorida à esquerda. */
+export function signTexture(text: string, stripe = '#e8792b'): THREE.CanvasTexture {
+  const CW = 256;
+  const CH = 96;
+  const [c, g] = canvas(CW, CH);
+  g.clearRect(0, 0, CW, CH);
+  g.fillStyle = '#46424a';
+  g.beginPath();
+  g.roundRect(6, 6, CW - 12, CH - 12, 18);
+  g.fill();
+  g.fillStyle = stripe;
+  g.beginPath();
+  g.roundRect(20, 22, 14, CH - 44, 6);
+  g.fill();
+  g.fillStyle = '#f3f1ee';
+  g.font = 'bold 46px "Arial Black", "Helvetica Neue", Arial, sans-serif';
+  g.textBaseline = 'middle';
+  g.textAlign = 'center';
+  g.fillText(text, CW / 2 + 12, CH / 2 + 2, CW - 70);
+  return toTexture(c, `sign_${text.toLowerCase()}`);
+}
