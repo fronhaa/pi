@@ -37,7 +37,7 @@ interface ──decisões──► simulação ──estado──► interface e
 | [`src/i18n/`](../src/i18n) | Textos em PT e EN (`strings.ts`). O TypeScript obriga toda chave a existir nos dois idiomas. |
 | [`src/data/`](../src/data) | Carregamento dos dados da NASA para o jogo: `missions.ts` (missões históricas, padrão) e `flares.ts` (erupções, reserva). Coleta: [dados.md](dados.md). |
 | [`src/render/`](../src/render) | Materiais cel-shading, contorno e paleta da Art Bible. |
-| [`src/core/`](../src/core) | `Game.ts` (orquestra tudo, clique na cena), `Input.ts` (teclado), `Physics.ts` (Rapier, só via `crewMotion`), `constants.ts` (gravidade de Marte com fonte). |
+| [`src/core/`](../src/core) | `Game.ts` (orquestra tudo, clique na cena), `CrewTasks.ts` (tempo da tripulação e EVA: quem está dentro, na câmara ou fora), `Input.ts` (teclado), `Physics.ts` (Rapier, só via `crewMotion`), `constants.ts` (gravidade de Marte com fonte). |
 | [`public/data/`](../public/data) | Dados servidos ao jogo: erupções do DONKI (`donki-flares.json`) e missões históricas (`missions.json`). Gerados por scripts; não edite à mão. |
 | [`scripts/`](../scripts) | `balance.ts` (equilíbrio), `fetch-donki.mjs` e `fetch-missions.mjs` (dados, ver [dados.md](dados.md) e [apis-nasa.md](apis-nasa.md)), `new-adr.mjs` (docs). |
 

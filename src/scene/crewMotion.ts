@@ -3,7 +3,7 @@ import { Physics, RAPIER } from '@/core/Physics';
 import { FIXED_DT, MAX_FRAME_DT } from '@/core/constants';
 import type { Input } from '@/core/Input';
 import { ROLES, type Crew } from './Crew';
-import { POSTS, type Role } from './MarsBase';
+import type { Role } from './MarsBase';
 import { findPath } from './crewPath';
 
 /**
@@ -150,19 +150,34 @@ export class CrewMotion {
     for (const role of ROLES) if (!this.insideRoles.has(role)) this.hide(role);
   }
 
-  /** Manhã: todos saem pela porta e voltam andando aos seus postos. O jogador pode assumir a qualquer momento. */
-  comeOut(door: THREE.Vector3): void {
-    ROLES.forEach((role, i) => {
-      if (!this.insideRoles.has(role)) return;
-      this.insideRoles.delete(role);
-      const body = this.bodies[role];
-      // Saem um ao lado do outro, para não nascerem dentro um do outro.
-      const x = door.x + (i - 1.5) * 0.8;
-      body.setTranslation({ x, y: CENTER_Y + 0.02, z: door.z + 0.3 }, true);
-      body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      body.setEnabled(true);
-      this.opts.crew.members[role].root.visible = true;
-      this.walkPath(role, POSTS[role], WALK_SPEED);
+  isInside(role: Role): boolean {
+    return this.insideRoles.has(role);
+  }
+
+  /**
+   * EVA: o astronauta sai pela câmara de descompressão e aparece em frente à porta.
+   * Cada papel sai num ponto ao lado, para a dupla não nascer um dentro do outro.
+   */
+  exit(role: Role, door: THREE.Vector3): void {
+    if (!this.insideRoles.has(role)) return;
+    this.insideRoles.delete(role);
+    const body = this.bodies[role];
+    const i = ROLES.indexOf(role);
+    body.setTranslation({ x: door.x + (i - 1.5) * 0.8, y: CENTER_Y + 0.02, z: door.z + 0.3 }, true);
+    body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    body.setEnabled(true);
+    this.opts.crew.members[role].root.visible = true;
+  }
+
+  /** Fim da EVA: anda até a porta e entra (some). */
+  enter(role: Role, door: THREE.Vector3, speed: number, onInside?: () => void): void {
+    if (this.insideRoles.has(role)) {
+      onInside?.();
+      return;
+    }
+    this.walkPath(role, door, speed, () => {
+      this.hide(role);
+      onInside?.();
     });
   }
 
