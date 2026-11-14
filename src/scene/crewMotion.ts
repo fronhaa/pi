@@ -276,6 +276,7 @@ export class CrewMotion {
         }
         if (input.wasPressed('Space') && !focusOnControl() && this.isGrounded(body)) {
           body.setLinvel({ x: vel.x, y: JUMP_SPEED, z: vel.z }, true);
+          this.opts.crew.members[role].jump();
           if (!this.jumped) {
             this.jumped = true;
             this.opts.onFirstJump?.();

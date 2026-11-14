@@ -104,6 +104,11 @@ export class CrewTasks {
     return undefined;
   }
 
+  /** Este astronauta está parado consertando algo (não andando nem na câmara)? */
+  isRoleWorking(role: Role): boolean {
+    return this.assignments.get(role)?.phase === 'working' && this.places[role] !== 'airlockOut';
+  }
+
   isWorking(uid: number): boolean {
     const r = this.workerOf(uid);
     return r !== undefined && this.assignments.get(r)!.phase === 'working';

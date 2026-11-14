@@ -121,6 +121,7 @@ export class Game {
 
     this.base = new MarsBase(this.scene);
     this.scene.add(this.crew.root);
+    void this.crew.loadChibi();
     // A tripulação fica dentro da base por padrão; só aparece lá fora numa EVA (GDD).
     this.crew.setSheltered(true);
 
@@ -912,6 +913,7 @@ export class Game {
     }
     this.markers.update(t, this.camera);
     this.updateOffscreen();
+    for (const r of ROLES) this.crew.members[r].setWorking(this.phase === 'day' && this.tasks.isRoleWorking(r));
     if (this.motion) this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)
     else this.crew.update(dt);
     const marker = this.targetMarker.material as THREE.MeshBasicMaterial;
