@@ -23,6 +23,9 @@
 | F5 | A NASA tem limite de radiação para a vida toda | 600 mSv na carreira; 250 mSv por evento solar | [NASA-STD-3001, brief OCHMO-TB-020](https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf) | Barra de dose e tela final | 2 e 4 |
 | F6 | Aviso e abrigo protegem | Alerta de radiação é exigência; abrigo com água e materiais leves; regolito também blinda | [NASA-STD-3001, brief OCHMO-TB-020](https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf) | Mensagem da Terra, abrigo de regolito, sacos de blindagem | 2 e 3 |
 | F7 | Quem está fora volta quando chega o alerta | Encerrar a saída em até 2 h após o alerta dá proteção muito alta | [NASA-STD-3001, brief OCHMO-TB-020](https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf), p. 9–10 | Noite de tempestade (a tripulação corre para o abrigo) | 2 e 3 |
+| F9 | Exercício todo dia | Tripulações da Estação Espacial se exercitam em média 2 h por dia; sem isso, os ossos perdem ~1% da densidade por mês | [NASA: Counteracting Bone and Muscle Loss in Microgravity (2023)](https://www.nasa.gov/missions/station/iss-research/counteracting-bone-and-muscle-loss-in-microgravity/) | Astronauta livre se exercitando dentro da base | Contexto (rotina) |
+| F10 | A estufa dá comida fresca e bem-estar | A horta da Estação (Veggie) acrescenta comida fresca à dieta e ajuda no bem-estar | [NASA: Growing Plants in Space (2023)](https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/) | Colheita na estufa | 1 e 2 (suporte de vida) |
+| F11 | A rotina de uma tripulação em Marte | Na simulação CHAPEA: caminhadas em Marte, robôs, manutenção do habitat, exercício e cultivo | [NASA: CHAPEA Mission 2](https://www.nasa.gov/humans-in-space/chapea/chapea-mission-2/) e [NASA: missão 1 (2023)](https://www.nasa.gov/missions/analog-field-testing/chapea/first-chapea-crew-begins-378-day-mission/) | Tutorial do dia / guia do professor | Contexto (papéis) |
 | F8 | A poeira não pode entrar | Poeira fina; 0,3 a 0,5% de perclorato no solo (tireoide); entra pelos trajes e câmaras | [NASA/SP-20260005907, Martian Dust Exposure Limits (2026)](https://www.nasa.gov/wp-content/uploads/2026/07/martian-dust-exposure-limits-sp-20260005907.pdf) | Problema fora da base (câmara de descompressão, +1 de dose) | 2. Proteção custa |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
@@ -86,11 +89,33 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Criança (EN):** "Mars dust is very fine and not good to breathe. The airlock helps keep it outside."
 - **No jogo:** quando um astronauta termina um conserto fora da base (passa pela câmara e soma +1 de dose).
 
+### F9. Astronautas se exercitam todo dia
+
+- **Fato:** as tripulações da Estação Espacial se exercitam **em média 2 horas por dia** (bicicleta, esteira e um aparelho que imita levantar peso). Sem a gravidade, os ossos que sustentam o peso ficam **cerca de 1% menos densos por mês** se nada for feito. ([NASA](https://www.nasa.gov/missions/station/iss-research/counteracting-bone-and-muscle-loss-in-microgravity/))
+- **Criança (PT):** "Astronautas fazem exercício todo dia, umas 2 horas. Assim os ossos e os músculos continuam fortes."
+- **Criança (EN):** "Astronauts exercise every day, about 2 hours. That keeps their bones and muscles strong."
+- **No jogo:** a primeira vez que um astronauta livre vai se exercitar dentro da base (especificação em `game-design.md`, "Atividades dentro da base").
+- **Atenção:** o dado é da Estação Espacial, em órbita da Terra (sem gravidade). Em Marte há gravidade de 38%; não diga que é "igual em Marte".
+
+### F10. A estufa dá comida fresca
+
+- **Fato:** a horta da Estação Espacial (Veggie) serve para estudar plantas no espaço e **acrescenta comida fresca à dieta** dos astronautas, além de ajudar no **bem-estar**. Já cresceram três tipos de alface, couve-chinesa, mostarda, couve e flores (zínias). ([NASA](https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/))
+- **Criança (PT):** "No espaço, astronautas já plantaram alface e flores. Comida fresca deixa a tripulação mais forte e feliz."
+- **Criança (EN):** "In space, astronauts have grown lettuce and flowers. Fresh food keeps the crew strong and happy."
+- **No jogo:** na primeira colheita da estufa.
+
+### F11. A rotina de uma tripulação em Marte
+
+- **Fato:** na CHAPEA, a simulação de Marte da NASA em Houston, a tripulação faz **caminhadas simuladas em Marte, operações com robôs, manutenção do habitat, exercício físico e cultivo de plantas** (sistema hidropônico, com colheitas de verdade). ([NASA, missão 2](https://www.nasa.gov/humans-in-space/chapea/chapea-mission-2/); [NASA, missão 1](https://www.nasa.gov/missions/analog-field-testing/chapea/first-chapea-crew-begins-378-day-mission/))
+- **Criança (PT):** "Numa base em Marte, cada dia tem conserto, ciência, plantas e exercício. É trabalho em equipe!"
+- **Criança (EN):** "On a Mars base, every day has repairs, science, plants and exercise. It is teamwork!"
+- **No jogo:** dica do primeiro dia em tempo real e guia do professor. É a base real das atividades dentro da base.
+
 ## Ligação com os objetivos de aprendizagem
 
 | Objetivo ([GDD](game-design.md#objetivos-de-aprendizagem)) | Fatos que reforçam |
 | --- | --- |
-| 1. Energia é limitada e a noite cobra a conta | F2 |
+| 1. Energia é limitada e a noite cobra a conta | F2, F10 |
 | 2. Proteção custa caro, mas falta de proteção custa a missão | F4, F5, F6, F7, F8 |
 | 3. A Terra está longe | F6 (o alerta vem da Terra, com atraso) |
 | 4. Jogar só no seguro também falha | F5 (o limite existe, mas a missão também precisa de ciência) |
@@ -112,7 +137,7 @@ Chamadas feitas com chave própria do `api.nasa.gov`. Detalhes de cada API: [api
 
 Ideias boas que só entram com link oficial aberto:
 
-- Rotina da tripulação da CHAPEA (horas de exercício e de sono por dia). Combina com o oficial médico.
+- Horas de sono e de descanso de uma tripulação (para um cartão sobre descanso). Por enquanto, o descanso aparece no jogo só como comportamento visual, sem texto educativo.
 - Proporção de tempo que a tripulação passa dentro e fora da base.
 - Duração das saídas e saídas sempre em dupla.
 - Composição exata do ar (95% CO₂) e pressão em relação à Terra (menos de 1%): a página de fatos da NASA só diz "fina" e "principalmente CO₂".
@@ -176,7 +201,32 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
   - p. 19 (tabela): perclorato "0.2–0.4 wt% in dusty soils".
   - p. 28 (tabela de riscos): "Perchlorate Risk — Potential thyroid effects; multiple exposure routes".
 
-### 5. APIs do `api.nasa.gov` (chamadas reais)
+### 5. NASA: Counteracting Bone and Muscle Loss in Microgravity (01/12/2023)
+
+- **Link:** <https://www.nasa.gov/missions/station/iss-research/counteracting-bone-and-muscle-loss-in-microgravity/>
+- **Usado em:** F9
+- **Trechos:**
+  - "For every month in space, astronauts' weight-bearing bones become roughly 1% less dense if they don't take precautions to counter this loss."
+  - "Crews exercise for an average of two hours a day."
+
+### 6. NASA: Growing Plants in Space (08/12/2023)
+
+- **Link:** <https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/>
+- **Usado em:** F10
+- **Trechos:**
+  - "Veggie's purpose is to help NASA study plant growth in microgravity, while adding fresh food to the astronauts' diet and enhancing happiness and well-being on the orbiting laboratory."
+  - "To date, Veggie has successfully grown a variety of plants, including three types of lettuce, Chinese cabbage, mizuna mustard, red Russian kale and zinnia flowers."
+
+### 7. NASA: CHAPEA, missões 1 e 2
+
+- **Links:** missão 2 (página atualizada em 09/11/2026) <https://www.nasa.gov/humans-in-space/chapea/chapea-mission-2/>; missão 1 (10/07/2023) <https://www.nasa.gov/missions/analog-field-testing/chapea/first-chapea-crew-begins-378-day-mission/>
+- **Usado em:** F11
+- **Trechos:**
+  - Missão 2: "The crew are completing a variety of activities designed to replicate life and work on a long-duration mission on Mars, including high-tempo simulated Marswalks, robotic operations, habitat maintenance, physical exercise, and crop cultivation."
+  - Missão 2 (legenda de foto): "showcases vegetables collected during a recent harvest from the hydroponic crop growth system"
+  - Missão 1: "crew members will carry out different types of mission activities, including simulated spacewalks, robotic operations, habitat maintenance, personal hygiene, exercise, and crop growth."
+
+### 8. APIs do `api.nasa.gov` (chamadas reais)
 
 - **Quando:** 14/11/2026, por volta das 17:36 UTC (horário devolvido pelo próprio DONKI).
 - **Como:** `curl` em cada endpoint com `api_key=<chave>`, registrando o código HTTP, o cabeçalho `X-RateLimit-Remaining` (a chave foi aceita) e o começo da resposta.
@@ -188,17 +238,20 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
   - `https://api.nasa.gov/insight_weather/?feedtype=json&ver=1.0` → 200, mas o sol mais recente é o 675 (`First_UTC` 2020-10-19)
   - `https://api.nasa.gov/mars-photos/api/v1/rovers/perseverance/photos?sol=100` → 404, página "No such app"
 
-### 6. Buscas feitas (para achar as fontes acima)
+### 9. Buscas feitas (para achar as fontes acima)
 
 | Busca | Domínios | Levou a |
 | --- | --- | --- |
 | "NASA-STD-3001 career radiation limit 600 mSv astronauts" | nasa.gov, nap.nationalacademies.org | Fonte 3 |
 | "Curiosity RAD radiation dose Mars surface 0.67 millisieverts per day" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 2 |
 | "Phoenix lander perchlorate Mars soil percent toxic NASA" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 4 |
+| "astronauts exercise two hours a day space station bone muscle loss NASA" | nasa.gov | Fonte 5 |
+| "NASA Veggie plant growth system space station astronauts grow food" | nasa.gov | Fonte 6 |
+| "CHAPEA crew will grow vegetables exercise simulated spacewalks robotic operations NASA" | nasa.gov | Fonte 7 |
 
 Os números entraram a partir do **documento aberto**, não dos resumos das buscas. Um exemplo: o resumo da busca dizia "0,4 a 0,5%" de perclorato, mas o PDF diz "0,3 a 0,5%" (p. 16), e é esse que está aqui.
 
-### 7. Fontes internas do projeto
+### 10. Fontes internas do projeto
 
 - [apis-nasa.md](apis-nasa.md): o Marcelo testou cada API com CORS em 14/11/2026. Já registrava que a API de fotos foi aposentada e que o `FLR` devolve 404.
 - [game-design.md](game-design.md): duração do sol, missões históricas, papéis da CHAPEA.
