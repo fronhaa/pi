@@ -7,6 +7,7 @@ Ela vive junto com o código, então é versionada, revisada em PR e nunca fica 
 
 | Documento | Para quem / quando ler |
 | --- | --- |
+| [design-do-jogo.md](design-do-jogo.md) | Todo mundo. GDD da Missão Jezero: regras, loop, cooperativo, dados da NASA, backlog. |
 | [arquitetura.md](arquitetura.md) | Todo mundo, no primeiro dia. Pastas, loop do jogo, quem é dono de quê. |
 | [fisica.md](fisica.md) | Quem vai criar objetos, personagens ou fases. |
 | [estilo-visual.md](estilo-visual.md) | Artistas e devs mexendo em materiais, modelos ou cores. |
