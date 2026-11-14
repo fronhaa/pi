@@ -279,6 +279,7 @@ Este modo e o modo Terra e Marte funcionam juntos: os dois fazem parte do jogo.
 | Ação | Clique / toque | Teclado |
 | --- | --- | --- |
 | Escolher astronauta | Tocar nele | Teclas **1 a 4** (comandante, engenheiro de voo, oficial médico, cientista) |
+| Ver quem é (mouse) | Passar o mouse: destaque, cursor de mãozinha e o nome do papel; sobre um “!”, o problema e quem será enviado | — |
 | Andar | Tocar no chão; ele anda sozinho até lá | **Setas** ou **WASD**, relativas à câmera |
 | Pular | — | **Espaço** (mostra que a gravidade de Marte é 38% da Terra) |
 | Plano de energia e janelas | Botões | **Tab** e **Enter** |
