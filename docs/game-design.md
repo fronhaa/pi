@@ -14,7 +14,7 @@ Mars Exploration: Missão Jezero é um jogo de navegador. Nele, uma criança de 
 | Desafio | [Build a Junior Astronaut Mission Trainer](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/), NASA Space Apps Challenge 2026 (14 e 15 de novembro) |
 | Público | Crianças de 7 a 12 anos; também serve para pais e sala de aula |
 | Plataforma | Navegador, sem download e sem conta; computador e celular |
-| Local da missão | Cratera Jezero, Marte |
+| Local da missão | Cratera Jezero, Marte; ou polo sul da Lua, perto da cratera Shackleton ([Base lunar](#base-lunar), só no modo solo) |
 | Duração de uma partida | 15 sóis, cerca de 10 a 15 minutos |
 | Jogadores | 1 no modo solo; de 2 a 5 no modo cooperativo, no mesmo aparelho (planejado) ou **online, cada um no seu aparelho** (servidor Go e cliente prontos: [servidor-coop.md](servidor-coop.md)) |
 | Idiomas | Português e inglês |
@@ -199,6 +199,68 @@ mais difícil, porque o DONKI só registra erupções a partir de M5.0 (não há
 Qualquer mudança nos números deve manter essa forma: as duas estratégias extremas falham e a estratégia atenta vence.
 
 **Com as cartas do rover** (MOXIE e "Caminho do rover", 2026-11-14, 1.000 partidas por estratégia, erupções reais, simuladas e as 6 missões): a forma se mantém em todos os cenários. As estratégias extremas continuam falhando sempre, "ignora a blindagem" não mudou, e a estratégia atenta (que pega o atalho e resgata o rover) termina com 1 estrela um pouco menos vezes (ex.: erupções reais, de 9% para 5%).
+
+## Base lunar
+
+Antes da missão solo, a criança escolhe **Marte** ou **Lua** (tela "Para onde vamos?"; aparece de novo em "Jogar de novo").
+A Lua é a "Missão Shackleton": a base fica no polo sul da Lua, a região que o programa Artemis estuda.
+O loop, os recursos e as cartas são os mesmos; mudam só as regras abaixo, cada uma ligada a uma diferença real.
+A ideia é a criança **comparar os dois lugares**: o mesmo plano que funciona em Marte pode falhar na Lua, e vice-versa.
+
+| Regra | Marte | Lua | Fato real por trás |
+| --- | --- | --- | --- |
+| Turno | sol (24 h 39 min) | dia da Terra (24 h) | Um dia inteiro da Lua dura ~29,5 dias da Terra (mês sinódico) [L1] |
+| Fim do dia | noite: aquecedores gastam 20 de bateria; a cena escurece | **descanso da tripulação**: a base gasta 15 (ar, água, computadores) e a cena não escurece. Só nos dias de sombra há noite de verdade: fria e escura, os aquecedores gastam **30** | No alto de uma borda de cratera do polo sul o Sol não se põe a cada 24 h [L3]; na sombra a superfície chega a cerca de −170 °C [L1] |
+| Dose de todo dia | +1 | **+2** | Sem atmosfera: a Chang'e 4 mediu ~1,37 mSv/dia no chão da Lua [L2], cerca de 2× o que o Curiosity mediu em Marte (~0,67 mSv/dia) |
+| Tempestade solar | intensidade normal | **× 1,2** | Sem ar para frear as partículas. O multiplicador é do jogo (INTERPRETADO) |
+| Atraso das mensagens | 3 a 22 min (real, JPL Horizons nas missões históricas) | **~1,3 s** (chega na hora) | A luz cruza os 384.400 km Terra-Lua em ~1,3 s [L1] |
+| Carta "Sensor quebrado": pedir ajuda à Terra | ciência −10 | **ciência −3** | Mesma razão: a resposta chega em segundos |
+| Poeira | o vento limpa 6%/sol; tempestade de poeira | **sem vento**: a poeira só sai quando um astronauta resolve "Poeira nos painéis" (−20%) | A Lua não tem atmosfera nem vento |
+| Energia do dia | 10 blocos (menos com poeira) | **depende da luz do Sol do dia**: 14 blocos com Sol pleno (100%), vezes a luz de hoje (40% a 100%, de 5 em 5). A luz sobe e desce em ciclos de 5 a 8 dias, com variação de um dia para o outro. Previsão de hoje e dos próximos 2 dias nas mensagens da Terra (não chega sem sinal) | Sem atmosfera, o Sol pleno na Lua é forte: ~1.361 W/m², mais que o dobro do que chega a Marte (~586 W/m²) [L8]. Mas no polo sul o Sol anda rente ao horizonte e passa atrás de morros [L3]: a luz muda dia a dia e **dá para prever** (caminho do Sol + relevo). A curva e o relevo são do jogo (INTERPRETADO) |
+| Evento de energia | tempestade de poeira (painéis cobertos) | **sombra das montanhas**: 3 dias seguidos com só 25% a 35% de luz (~4 blocos), avisados 1 dia antes | No polo sul o Sol fica sempre baixo no horizonte; montanhas e crateras fazem sombra por dias [L3] |
+| Problema da antena | "Antena desalinhada" | **"Terra escondida"**: a Terra sumiu atrás das montanhas e é preciso apontar a antena para o satélite de retransmissão (mesmo efeito: sem mensagens amanhã) | No polo sul a Terra fica baixa no horizonte e o relevo bloqueia o sinal; a NASA planeja satélites de retransmissão (LunaNet) [L7] |
+| Cartas | todas | sem "Fazer oxigênio" (MOXIE) | O MOXIE tira oxigênio do CO₂ do ar de Marte; a Lua não tem ar |
+| 3ª estrela | dose abaixo de 50 | dose abaixo de **70** | A dose de todo dia já é o dobro |
+| Tempestades | missões históricas (CMEs + atraso real) | erupções reais do DONKI sorteadas | O atraso das missões históricas é Terra-Marte; não vale para a Lua |
+| Gravidade (pulo) | 38% da Terra | **1,62 m/s²** (~1/6) [L4] | O mesmo pulo sobe ~6× mais que na Terra |
+
+Textos trocados na Lua (cartas "Gelo na cratera escura", "Rocha misteriosa", "Nave de carga", "Caminho do rover",
+tutorial, ajuda, lições do fim) ficam em `src/i18n/moon.ts`. Fatos reais mostrados uma vez por missão, como em Marte:
+
+- **Dia 2:** sem ar, o Sol na Lua é forte (mais que o dobro da luz de Marte), mas no polo ele anda rente ao chão, atrás dos morros [L3, L8].
+- **Dia 1:** a Chang'e 4 mediu que a radiação de todo dia na Lua é ~2× a de Marte [L2].
+- **Primeiro dia de sombra:** no polo sul, o Sol fica baixo e montanhas fazem sombra por dias [L3].
+- **Rover atolado:** em 1973, o Lunokhod 2 se cobriu de poeira na borda de uma cratera, esquentou e parou [L5].
+- **Problema "Terra escondida":** no polo sul a Terra some atrás das montanhas; por isso a NASA planeja satélites para as mensagens [L7].
+- **Carta do gelo:** em 2009, a LCROSS achou gelo de água numa cratera escura do polo sul (Cabeus) [L6].
+
+Fontes:
+
+- [L1] NASA, Moon Facts: <https://science.nasa.gov/moon/facts/>
+- [L2] Zhang et al. (2020), "First measurements of the radiation dose on the lunar surface", *Science Advances* 6, eaaz1334: <https://doi.org/10.1126/sciadv.aaz1334>
+- [L3] NASA, Artemis e o polo sul lunar (iluminação): <https://www.nasa.gov/humans-in-space/artemis/>; Gläser et al. (2014), *Icarus* 243, iluminação do polo sul com dados do LOLA
+- [L4] NASA NSSDCA, Moon Fact Sheet: <https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html>
+- [L5] NASA NSSDCA, Luna 21/Lunokhod 2: <https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1973-001A>
+- [L6] NASA, LCROSS: <https://science.nasa.gov/mission/lcross/>
+- [L8] NASA NSSDCA, Mars Fact Sheet (irradiância solar: Marte 586,2 W/m², Terra 1.361 W/m²; a Lua recebe o mesmo que a Terra): <https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html>
+- [L7] NASA, LunaNet (comunicação e navegação na Lua): <https://www.nasa.gov/communicating-with-missions/lunanet/>
+
+Números de jogo (dose diária 2, tempestade × 1,2, 4 blocos na sombra, descanso 15, noite fria 30, 14 blocos com Sol pleno, luz de 40% a 100%, 3ª estrela em 70) estão em `CONFIG.moon`
+(`src/sim/config.ts`) e são INTERPRETADOS: o que é real é a diferença entre os lugares, não a escala.
+
+**Equilíbrio na Lua** (`npm run balance`, 2.000 partidas por estratégia, 2026-11-14):
+
+| Estratégia | Erupções reais do DONKI | Erupções simuladas |
+| --- | --- | --- |
+| Só ciência, sem guardar bateria | Perde sempre (suporte de vida) | Perde sempre |
+| Só segurança, sem ciência | Sobrevive sempre, 1 estrela | Sobrevive sempre, 1 estrela |
+| Ignora a blindagem | Perde 100% por radiação | Perde 87% por radiação |
+| Reage aos alertas e guarda reserva | Perde 3% por radiação; 84% 2★, 13% 3★ | Perde 1%; 56% 2★, 41% 3★ |
+
+A forma se mantém (extremos falham, a estratégia atenta vence), e a Lua é um pouco mais difícil que Marte por causa da
+radiação, como na vida real. Os números de Marte não mudaram com a base lunar (mesma saída do `npm run balance`).
+
+**Modo em grupo:** por enquanto só Marte. O servidor cria a missão sem `location`, e a ponte (`src/sim/bridge.ts`) usa Marte.
 
 ## Modo cooperativo
 

@@ -2,7 +2,7 @@ import { CONFIG } from '@/sim/config';
 import type { EnergyPlan, Flare, GameState, ProblemKind, Resources } from '@/sim/types';
 import { PROBLEMS } from '@/sim/problems';
 import type { Mission } from '@/sim/mission';
-import { CONFIG as SIM } from '@/sim/config';
+import { CONFIG as SIM, doseFor3 } from '@/sim/config';
 
 /** Prévia calculada pela simulação (Mission.previewSol). */
 export type PlanPreview = ReturnType<Mission['previewSol']>;
@@ -46,6 +46,8 @@ export interface HudCallbacks {
   onNasaData(): void;
   onToggleLang(): void;
   onHowTo(): void;
+  /** Bateria que a base gasta até amanhã (Marte: a noite; Lua: descanso ou noite fria da sombra). */
+  nightCost?(): number;
 }
 
 type PlanKey = keyof EnergyPlan;
@@ -201,6 +203,9 @@ export class Hud {
   private renderResources(): void {
     const r = this.nightView?.res ?? this.state?.res;
     if (!r) return;
+    // Faixas da dose: amarelo a partir da 3ª estrela perdida, vermelho mais adiante (na Lua a dose diária é maior).
+    const doseWarn = doseFor3(this.state?.location ?? 'mars');
+    const doseBad = Math.max(70, doseWarn + 15);
     const level = (v: number, invert = false) => {
       const k = invert ? 100 - v : v;
       return k >= 50 ? 'good' : k >= 25 ? 'warn' : 'bad';
@@ -210,7 +215,7 @@ export class Hud {
       resource('res.battery', 'help.battery', r.battery, CONFIG.battery.max, level(r.battery)),
       resource('res.life', 'help.life', r.life, CONFIG.life.max, level(r.life)),
       resource('res.shield', 'help.shield', r.shield, CONFIG.shield.max, level(r.shield)),
-      resource('res.dose', 'help.dose', r.dose, CONFIG.dose.max, r.dose >= 70 ? 'bad' : r.dose >= 50 ? 'warn' : 'good', [50, 70]),
+      resource('res.dose', 'help.dose', r.dose, CONFIG.dose.max, r.dose >= doseBad ? 'bad' : r.dose >= doseWarn ? 'warn' : 'good', [doseWarn, doseBad]),
       resource('res.science', 'help.science', r.science, CONFIG.science.goal, 'sci', [], t('res.goal', { n: CONFIG.science.goal })),
     ]);
   }
@@ -321,7 +326,9 @@ export class Hud {
       if (pv.after.life <= 0) warnings.push({ text: t('preview.lifeZero'), tone: 'bad' });
       else if (pv.after.life <= 25) warnings.push({ text: t('preview.lifeLow', { v: fmt(pv.after.life) }), tone: 'bad' });
       if (pv.after.dose >= SIM.dose.max) warnings.push({ text: t('preview.doseMax'), tone: 'bad' });
-      else if (s.res.dose < SIM.stars.doseFor3 && pv.after.dose >= SIM.stars.doseFor3) warnings.push({ text: t('preview.doseStar', { v: fmt(pv.after.dose) }), tone: 'warn' });
+      else if (s.res.dose < doseFor3(s.location) && pv.after.dose >= doseFor3(s.location)) {
+        warnings.push({ text: t('preview.doseStar', { v: fmt(pv.after.dose), limit: doseFor3(s.location) }), tone: 'warn' });
+      }
     }
 
     const row = (k: PlanKey) => {
@@ -340,6 +347,7 @@ export class Hud {
     patchChildren(this.planEl, [
       h('div', { class: 'plan-top' },
         h('strong', { id: 'plan-title' }, t('plan.today', { n: s.blocks })),
+        s.location === 'moon' ? h('span', { class: 'dust' }, t('plan.sunNote', { n: s.sunlight[s.sol - 1] ?? 100 })) : null,
         s.res.dust > 0 ? h('span', { class: 'dust' }, t('plan.dustNote', { n: Math.round(s.res.dust) })) : null,
         blocks,
         coop?.note ? h('p', { class: 'coop-note', role: 'status' }, coop.note) : null,
@@ -349,7 +357,7 @@ export class Hud {
       ),
       ...PLAN_KEYS.map(row),
       h('div', { class: 'plan-row battery' },
-        h('div', { class: 'name' }, t('plan.battery'), pv ? arrow(s.res.battery, pv.after.battery, t('preview.afterNight')) : null, h('small', {}, t('plan.hint.battery'))),
+        h('div', { class: 'name' }, t('plan.battery'), pv ? arrow(s.res.battery, pv.after.battery, t('preview.afterNight')) : null, h('small', {}, t('plan.hint.battery', { cost: pv?.nightCost ?? this.cb.nightCost?.() ?? SIM.battery.nightCost }))),
         h('span'), h('div', { class: 'count' }, String(leftover)), h('span'),
       ),
       ...(pv ? [h('div', { class: 'preview', 'aria-live': 'polite' },
@@ -451,5 +459,13 @@ function messageEl(m: MarsMessage): HTMLElement {
       return h('div', { class: 'msg' }, t('msg.allClear'), delay);
     case 'noSignal':
       return h('div', { class: 'msg storm' }, t('msg.noSignal'));
+    case 'shadowAlert':
+      return h('div', { class: 'msg dust' }, t('msg.shadowAlert', { n: SIM.moon.shadow.sols }), delay);
+    case 'sunForecast':
+      return h('div', { class: 'msg' },
+        m.next.length ? t('msg.sunForecast', { today: m.today, next: m.next.map((n) => `${n}%`).join(', ') }) : t('msg.sunForecast.last', { today: m.today }),
+        h('span', { class: 'meta' }, t('msg.sunForecast.note')));
+    case 'shadowNow':
+      return h('div', { class: 'msg dust' }, m.left > 1 ? t('msg.shadowNow', { n: m.left }) : t('msg.shadowNow.last'));
   }
 }

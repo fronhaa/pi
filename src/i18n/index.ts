@@ -1,4 +1,5 @@
 import { STRINGS, type Lang, type StringKey } from './strings';
+import { MOON_STRINGS } from './moon';
 
 export type { Lang, StringKey };
 
@@ -16,6 +17,18 @@ function initialLang(): Lang {
 
 let lang: Lang = initialLang();
 const listeners = new Set<() => void>();
+
+/** Onde fica a base: na Lua, os textos de src/i18n/moon.ts substituem os de Marte. */
+export type Place = 'mars' | 'moon';
+let place: Place = 'mars';
+
+export function setPlace(next: Place): void {
+  place = next;
+}
+
+export function getPlace(): Place {
+  return place;
+}
 
 export function getLang(): Lang {
   return lang;
@@ -39,7 +52,8 @@ export function onLangChange(fn: () => void): void {
 /** Texto traduzido. Chaves dinâmicas (ex.: relatórios da simulação) também são aceitas como string. */
 export function t(key: StringKey | string, params: Record<string, string | number> = {}): string {
   const table = STRINGS[lang] as Record<string, string>;
-  const raw = table[key] ?? (STRINGS.pt as Record<string, string>)[key] ?? key;
+  const moon = place === 'moon' ? (MOON_STRINGS[lang] as Record<string, string>)[key] : undefined;
+  const raw = moon ?? table[key] ?? (STRINGS.pt as Record<string, string>)[key] ?? key;
   return raw.replace(/\{(\w+)\}/g, (_, k) => (k in params ? formatParam(params[k]) : `{${k}}`));
 }
 

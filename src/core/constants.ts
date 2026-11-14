@@ -19,6 +19,12 @@ export const MARS_G = MARS_GRAVITY_RATIO * EARTH_G;
 export const GRAVITY = { x: 0, y: -MARS_G, z: 0 };
 
 /**
+ * Gravidade da Lua: 1,62 m/s², cerca de 1/6 da Terra.
+ * Fonte: NASA NSSDCA, Moon Fact Sheet (https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html).
+ */
+export const MOON_G = 1.62;
+
+/**
  * Volta para casa à noite (m/s): andando para dormir no habitat, correndo para o abrigo na tempestade.
  * Valores de jogo, escolhidos para todos entrarem em poucos segundos (o andar normal é 2,4 m/s).
  */

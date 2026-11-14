@@ -1,5 +1,5 @@
-import { CONFIG, type FlareClass } from './config.ts';
-import { CARDS, CARD_IDS, applyCardOption, clamp, onCardDrawn } from './cards.ts';
+import { CONFIG, doseFor3, type FlareClass, type Location } from './config.ts';
+import { CARDS, CARD_IDS, MARS_ONLY_CARDS, applyCardOption, clamp, onCardDrawn } from './cards.ts';
 import { createRng, type Rng } from './rng.ts';
 import { PROBLEMS, scheduleProblems } from './problems.ts';
 import { simulateDay, stormDose, type DayResult } from './day.ts';
@@ -7,6 +7,8 @@ import type { EnergyPlan, Flare, GameState, HistoricalMission, Message, Problem,
 
 /** Cartas substituídas pelos problemas da tripulação (GDD: "Eles substituem as cartas..."). */
 const CARD_POOL = CARD_IDS.filter((id) => id !== 'dustyPanels' && id !== 'greenhouseLeak');
+/** Na Lua, sem as cartas que só existem em Marte. */
+const MOON_CARD_POOL = CARD_POOL.filter((id) => !MARS_ONLY_CARDS.includes(id));
 
 /**
  * Simulação pura da missão (docs/game-design.md). Sem DOM, sem Three.js:
@@ -27,26 +29,38 @@ export class Mission {
 
   /**
    * @param realFlares erupções reais para sortear (usadas quando não há missão histórica)
-   * @param historical missão histórica: tempestades e atraso das mensagens vêm dela, com datas reais
+   * @param historical missão histórica: tempestades e atraso das mensagens vêm dela, com datas reais (só Marte:
+   *   o atraso é Terra-Marte)
+   * @param location Marte (padrão) ou Lua (docs/game-design.md, "Base lunar")
    */
-  constructor(seed: number, realFlares: Flare[] = [], historical: HistoricalMission | null = null) {
+  constructor(seed: number, realFlares: Flare[] = [], historical: HistoricalMission | null = null, location: Location = 'mars') {
     this.rng = createRng(seed);
-    const storms = historical ? this.historicalStorms(historical) : this.scheduleStorms(realFlares);
+    const moon = location === 'moon';
+    if (moon) historical = null;
+    const storms = historical ? this.historicalStorms(historical) : this.scheduleStorms(realFlares, moon);
     const stormSols = new Set(storms.map((s) => s.sol));
 
-    let dustStormSol: number;
-    do dustStormSol = this.rng.int(CONFIG.dustStorm.firstSol, CONFIG.dustStorm.lastSol);
-    while (stormSols.has(dustStormSol));
+    // Marte: um sol de tempestade de poeira. Lua: o primeiro dos dias de sombra das montanhas.
+    // (Mesmo número de sorteios nos dois casos; em Marte a sequência é a de sempre.)
+    const event = moon ? CONFIG.moon.shadow : CONFIG.dustStorm;
+    let eventSol: number;
+    do eventSol = this.rng.int(event.firstSol, event.lastSol);
+    while (stormSols.has(eventSol));
+    const dustStormSol = moon ? 0 : eventSol;
+    const shadowSol = moon ? eventSol : 0;
 
     const cardSols = new Map<number, (typeof CARD_IDS)[number]>();
     const sols = this.rng
-      .shuffle(range(CONFIG.cards.firstSol, CONFIG.cards.lastSol).filter((s) => s !== dustStormSol))
+      .shuffle(range(CONFIG.cards.firstSol, CONFIG.cards.lastSol).filter((s) => s !== eventSol))
       .slice(0, CONFIG.cards.perGame);
-    const ids = this.rng.shuffle(CARD_POOL).slice(0, CONFIG.cards.perGame);
+    const ids = this.rng.shuffle(moon ? MOON_CARD_POOL : CARD_POOL).slice(0, CONFIG.cards.perGame);
     sols.forEach((s, i) => cardSols.set(s, ids[i]));
+    // Luz do Sol de cada dia na Lua (sorteada por último: em Marte nada muda na sequência).
+    const sunlight = moon ? this.sunProfile(shadowSol) : [];
 
     this.state = {
       seed,
+      location,
       historical,
       sol: 0,
       res: {
@@ -60,6 +74,8 @@ export class Mission {
       blocks: CONFIG.energy.panelBlocks,
       storms,
       dustStormSol,
+      shadowSol,
+      sunlight,
       dustHold: 0,
       cardSols,
       pendingCard: null,
@@ -74,7 +90,7 @@ export class Mission {
 
   // ---------- agenda ----------
 
-  private scheduleStorms(realFlares: Flare[]): ScheduledStorm[] {
+  private scheduleStorms(realFlares: Flare[], moon = false): ScheduledStorm[] {
     const { count, firstSol, lastSol, minGap, commDelayMin } = CONFIG.solarStorms;
     let sols: number[] = [];
     // Sorteia até achar sóis com a distância mínima (converge rápido: 3 de 11 sóis).
@@ -86,7 +102,8 @@ export class Mission {
     return sols.map((sol, i) => ({
       sol,
       flare: flares[i],
-      delayMin: this.rng.int(commDelayMin.min, commDelayMin.max),
+      // Na Lua a mensagem chega em ~1 s: atraso de 0 min (a interface mostra os segundos).
+      delayMin: moon ? 0 : this.rng.int(commDelayMin.min, commDelayMin.max),
     }));
   }
 
@@ -105,6 +122,47 @@ export class Mission {
 
   get stormToday(): ScheduledStorm | undefined {
     return this.state.storms.find((s) => s.sol === this.state.sol);
+  }
+
+  /**
+   * Luz do Sol (%) de cada dia na Lua: o Sol anda rente ao horizonte e passa atrás de morros, então a luz sobe e
+   * desce em ciclos de alguns dias (com variação de um dia para o outro). Nos dias de sombra, só uma beirada aparece.
+   * Arredondado de 5 em 5 para a criança ler fácil.
+   */
+  private sunProfile(shadowSol: number): number[] {
+    const { minLight, shadowLight, cycleDays } = CONFIG.moon.sun;
+    const period = this.rng.int(cycleDays.min, cycleDays.max);
+    const phase = this.rng.next() * Math.PI * 2;
+    const out: number[] = [];
+    for (let d = 1; d <= CONFIG.sols; d++) {
+      const inShadow = d >= shadowSol && d < shadowSol + CONFIG.moon.shadow.sols;
+      if (inShadow) {
+        out.push(round5(this.rng.int(shadowLight.min, shadowLight.max)));
+        continue;
+      }
+      const wave = 0.5 + 0.5 * Math.sin((2 * Math.PI * d) / period + phase);
+      const k = clamp(wave + (this.rng.next() - 0.5) * 0.3, 0, 1);
+      out.push(round5(minLight + (100 - minLight) * k));
+    }
+    return out;
+  }
+
+  /** Luz do Sol de hoje (%); 100 em Marte (lá a energia muda pela poeira). */
+  sunlightToday(sol = this.state.sol): number {
+    return this.state.location === 'moon' ? (this.state.sunlight[sol - 1] ?? 100) : 100;
+  }
+
+  /** Bateria gasta até amanhã: noite de Marte; na Lua, descanso da tripulação ou noite fria da sombra. */
+  nightCost(): number {
+    if (this.state.location !== 'moon') return CONFIG.battery.nightCost;
+    return this.shadowLeft() > 0 ? CONFIG.moon.shadowNightCost : CONFIG.moon.restCost;
+  }
+
+  /** Dias de sombra que faltam, contando hoje (0 = sem sombra hoje). Só na Lua. */
+  shadowLeft(sol = this.state.sol): number {
+    const start = this.state.shadowSol;
+    if (!start || sol < start) return 0;
+    return Math.max(0, start + CONFIG.moon.shadow.sols - sol);
   }
 
   private startSol(sol: number): void {
@@ -139,29 +197,42 @@ export class Mission {
     const s = this.state;
     const h = s.historical;
     // Missão histórica: atraso real Terra-Marte do sol (JPL Horizons). Sem ela, sorteado.
-    const delay = () => (h ? h.delays[sol - 1] : this.rng.int(CONFIG.solarStorms.commDelayMin.min, CONFIG.solarStorms.commDelayMin.max));
+    const moon = s.location === 'moon';
+    const delay = () =>
+      moon ? 0 : h ? h.delays[sol - 1] : this.rng.int(CONFIG.solarStorms.commDelayMin.min, CONFIG.solarStorms.commDelayMin.max);
     const msgs: Message[] = [];
     for (const storm of s.storms) {
       if (storm.sol === sol + 1) msgs.push({ kind: 'stormAlert', flare: storm.flare, delayMin: storm.delayMin, impactSol: storm.sol });
       if (storm.sol === sol) msgs.push({ kind: 'stormToday', flare: storm.flare, delayMin: h ? h.delays[sol - 1] : storm.delayMin });
     }
-    if (s.dustStormSol === sol + 1) msgs.push({ kind: 'dustAlert', delayMin: delay(), sol: s.dustStormSol });
-    if (s.dustStormSol === sol) msgs.push({ kind: 'dustNow' });
+    if (s.dustStormSol && s.dustStormSol === sol + 1) msgs.push({ kind: 'dustAlert', delayMin: delay(), sol: s.dustStormSol });
+    if (s.dustStormSol && s.dustStormSol === sol) msgs.push({ kind: 'dustNow' });
+    if (s.shadowSol && s.shadowSol === sol + 1) msgs.push({ kind: 'shadowAlert', delayMin: delay(), sol: s.shadowSol });
+    if (this.shadowLeft(sol) > 0) msgs.push({ kind: 'shadowNow', left: this.shadowLeft(sol) });
     if (msgs.length === 0) msgs.push({ kind: 'allClear', delayMin: delay() });
+    if (moon) {
+      // Previsão da luz: na vida real dá para calcular (caminho do Sol + mapa do relevo). Sem sinal, não chega.
+      const next = s.sunlight.slice(sol, sol + CONFIG.moon.sun.forecastDays);
+      msgs.push({ kind: 'sunForecast', today: this.sunlightToday(sol), next });
+    }
     return msgs;
   }
 
-  /** Blocos do dia: 10, reduzidos na proporção da poeira, mínimo 2. */
+  /**
+   * Blocos do dia, reduzidos na proporção da poeira, mínimo 2.
+   * Marte: 10. Lua: 12 com Sol pleno, vezes a luz do Sol de hoje.
+   */
   private updateBlocks(): void {
     const { panelBlocks, minBlocks } = CONFIG.energy;
-    this.state.blocks = Math.max(minBlocks, Math.round(panelBlocks * (1 - this.state.res.dust / 100)));
+    const light = this.state.location === 'moon' ? (CONFIG.moon.sun.fullBlocks * this.sunlightToday()) / 100 : panelBlocks;
+    this.state.blocks = Math.max(minBlocks, Math.round(light * (1 - this.state.res.dust / 100)));
   }
 
   answerCard(optionId: string): ReportLine[] {
     const card = this.state.pendingCard;
     if (!card) throw new Error('Nenhuma carta pendente');
     if (!card.options.some((o) => o.id === optionId)) throw new Error(`Opção inválida: ${optionId}`);
-    const lines = applyCardOption(card.id, optionId, this.state.res, this.rng);
+    const lines = applyCardOption(card.id, optionId, this.state.res, this.rng, this.state.location);
     if (card.id === 'roverRoute' && optionId === 'shortcut') lines.push(this.shortcutOutcome());
     this.cardLines.push(...lines);
     this.state.pendingCard = null;
@@ -228,6 +299,11 @@ export class Mission {
     p.progress = 1;
     const outside = PROBLEMS[p.kind].outside;
     if (outside) this.state.res.dose = round1(this.state.res.dose + CONFIG.problems.outsideDose);
+    // Na Lua não há vento: limpar os painéis à mão é o único jeito de tirar a poeira que já estava lá.
+    if (p.kind === 'dustyPanels' && this.state.location === 'moon' && this.state.res.dust > 0) {
+      this.state.res.dust = Math.max(0, this.state.res.dust - CONFIG.moon.crewCleanDust);
+      this.updateBlocks();
+    }
     this.cardLines.push({
       key: outside ? 'report.problem.fixedOutside' : 'report.problem.fixed',
       params: { problem: `problem.${p.kind}`, dose: CONFIG.problems.outsideDose },
@@ -262,12 +338,14 @@ export class Mission {
 
     // O cálculo é o mesmo da prévia (src/sim/day.ts); aqui só montamos o relatório.
     const day = simulateDay({
+      location: s.location,
       res: s.res,
       plan,
       blocks: s.blocks,
       stormClass: storm ? storm.flare.cls : null,
       dustHold: s.dustHold > 0,
       failed: failed.map((p) => p.kind),
+      nightCost: this.nightCost(),
     });
     const r = day.after;
     s.res = r;
@@ -289,7 +367,8 @@ export class Mission {
     }
     if (day.leftover > 0) lines.push({ key: 'report.battery.saved', params: { blocks: day.leftover, gain: day.leftover * CONFIG.battery.perLeftoverBlock } });
     if (day.missing > 0) lines.push({ key: 'report.night.short', params: { missing: day.missing, lifeLost: day.lifeLost }, tone: 'bad' });
-    else lines.push({ key: 'report.night.ok', params: { cost: CONFIG.battery.nightCost } });
+    else if (s.location === 'moon' && this.shadowLeft() > 0) lines.push({ key: 'report.night.shadow', params: { cost: day.nightCost } });
+    else lines.push({ key: 'report.night.ok', params: { cost: day.nightCost } });
 
     let stormResult: SolReport['storm'] = null;
     if (storm) {
@@ -302,8 +381,15 @@ export class Mission {
     if (s.dustHold > 0) {
       s.dustHold--;
       if (before.dust > 0) lines.push({ key: 'report.dust.hold', params: { dust: Math.round(before.dust) }, tone: 'bad' });
+    } else if (before.dust > 0 && s.location === 'moon') {
+      lines.push({ key: 'report.dust.noWind', params: { dust: Math.round(r.dust) }, tone: 'bad' });
     } else if (before.dust > 0) {
       lines.push({ key: 'report.dust.wind', params: { dust: Math.round(Math.max(0, before.dust - CONFIG.dust.windCleanPerSol)) } });
+    }
+    if (this.shadowLeft() > 0) lines.push({ key: 'report.shadow', params: { blocks: s.blocks }, tone: 'bad' });
+    else if (s.location === 'moon') {
+      const light = this.sunlightToday();
+      lines.push({ key: 'report.sunlight', params: { light, blocks: s.blocks }, tone: light >= 80 ? 'good' : light <= 55 ? 'bad' : 'neutral' });
     }
 
     const fx = CONFIG.problems.effects;
@@ -317,10 +403,19 @@ export class Mission {
     }
     this.carryOver = carried.map((p) => ({ ...p, status: 'open' as const, spawnAt: 0 }));
 
-    // Fatos reais dos rovers, ligados ao que a criança acabou de viver (uma vez por missão).
-    if (s.sol === 1) lines.push(...this.factOnce('fact.battery'));
-    if (s.sol === s.dustStormSol) lines.push(...this.factOnce('fact.opportunity'));
-    if (s.problems.some((p) => p.kind === 'roverStuck' && p.status !== 'pending')) lines.push(...this.factOnce('fact.spirit'));
+    // Fatos reais, ligados ao que a criança acabou de viver (uma vez por missão).
+    const roverStuckToday = s.problems.some((p) => p.kind === 'roverStuck' && p.status !== 'pending');
+    if (s.location === 'moon') {
+      if (s.sol === 1) lines.push(...this.factOnce('fact.moon.radiation'));
+      if (s.sol === 2) lines.push(...this.factOnce('fact.moon.sun'));
+      if (s.sol === s.shadowSol) lines.push(...this.factOnce('fact.moon.shadow'));
+      if (roverStuckToday) lines.push(...this.factOnce('fact.moon.lunokhod'));
+      if (s.problems.some((p) => p.kind === 'antenna' && p.status !== 'pending')) lines.push(...this.factOnce('fact.moon.relay'));
+    } else {
+      if (s.sol === 1) lines.push(...this.factOnce('fact.battery'));
+      if (s.sol === s.dustStormSol) lines.push(...this.factOnce('fact.opportunity'));
+      if (roverStuckToday) lines.push(...this.factOnce('fact.spirit'));
+    }
 
     const report: SolReport = { sol: s.sol, plan: { ...plan }, before, after: { ...r }, storm: stormResult, lines };
     s.reports.push(report);
@@ -341,12 +436,14 @@ export class Mission {
     const s = this.state;
     const storm = this.stormToday;
     const day = simulateDay({
+      location: s.location,
       res: s.res,
       plan,
       blocks: s.blocks,
       stormClass: storm ? storm.flare.cls : null,
       dustHold: s.dustHold > 0,
       failed: [],
+      nightCost: this.nightCost(),
     });
     // Aviso que a criança já recebeu: tempestade amanhã. Quanto ela daria com a blindagem desta noite?
     const tomorrow = s.messages.some((m) => m.kind === 'stormAlert') ? s.storms.find((x) => x.sol === s.sol + 1) : undefined;
@@ -354,7 +451,7 @@ export class Mission {
       ...day,
       stormTonight: storm ? storm.flare : null,
       stormTomorrow: tomorrow ? tomorrow.flare : null,
-      doseTomorrowIfNow: tomorrow ? stormDose(tomorrow.flare.cls, day.after.shield) : 0,
+      doseTomorrowIfNow: tomorrow ? stormDose(tomorrow.flare.cls, day.after.shield, s.location) : 0,
     };
   }
 
@@ -368,7 +465,7 @@ export class Mission {
   private stars(): 1 | 2 | 3 {
     const r = this.state.res;
     if (r.science < CONFIG.science.goal) return 1;
-    if (r.dose >= CONFIG.stars.doseFor3) return 2;
+    if (r.dose >= doseFor3(this.state.location)) return 2;
     return 3;
   }
 }
@@ -377,6 +474,10 @@ export { stormDose } from './day.ts';
 
 function range(a: number, b: number): number[] {
   return Array.from({ length: b - a + 1 }, (_, i) => a + i);
+}
+
+function round5(n: number): number {
+  return Math.round(n / 5) * 5;
 }
 
 function round1(n: number): number {
