@@ -453,7 +453,8 @@ export class Game {
       return;
     }
     const name = t(`crew.${this.selected}` as StringKey);
-    const items = this.mission.state.problems
+    // Em grupo, os problemas vêm do servidor.
+    const items = (this.coop?.view ?? this.mission.state).problems
       .filter((p) => p.status === 'open')
       .map((p) => {
         const problem = t(`problem.${p.kind}` as StringKey);
@@ -780,6 +781,7 @@ export class Game {
     this.paused = false;
     this.tasks.clear();
     this.markers.clear();
+    this.offscreen.clear();
     this.coop?.marked.clear();
     this.base.setRoverStuck(null);
     this.hud.setDay(null);
