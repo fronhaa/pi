@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "docs:adr": "node scripts/new-adr.mjs",
     "fetch-data": "node --env-file-if-exists=.env scripts/fetch-donki.mjs",
-    "balance": "node scripts/balance.ts"
+    "balance": "node scripts/balance.ts",
+    "data:missions": "node scripts/fetch-missions.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

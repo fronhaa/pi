@@ -86,6 +86,46 @@ Cada partida sorteia 3 tempestades solares, 1 tempestade de poeira e 4 das 6 car
 
 **Tempestade solar e atraso de comunicação.** O alerta chega pela antena um sol antes do impacto. Ele diz a classe da erupção e quantos minutos a mensagem levou para chegar (sorteado entre 3 e 22). No sol do impacto, um segundo aviso lembra que é a última chance de reforçar a blindagem. As tempestades acontecem entre o sol 4 e o sol 14, com pelo menos 2 sóis de distância entre elas.
 
+### Calendário da missão: janelas históricas reais
+
+> **Estado: planejado** (aprovado em 2026-11-14). O jogo ainda usa as erupções reais sorteadas de `donki-flares.json` descritas acima. Os dados das missões já estão prontos em [`public/data/missions.json`](../public/data/missions.json); falta a simulação ler o arquivo (backlog #15). Até lá, as regras abaixo são a especificação, não o comportamento atual.
+
+Cada partida acontece numa janela real de 15 sóis do passado. O sol 1 é uma data de verdade, e tudo o que o jogo chama de real vem desses mesmos dias: as tempestades (DONKI), o atraso das mensagens e a posição do Sol (JPL Horizons). Na tela final, o jogo conta: "Sua missão foi de 6 a 21 de maio de 2024. As tempestades aconteceram de verdade."
+
+**Força das tempestades.** As missões usam ejeções de massa coronal (CME) do DONKI, pelo tipo de velocidade: S e C = fraca (10), O = média (25), R e ER = forte (45). Foram escolhidas porque o endpoint de CMEs responde direto, com tipo e velocidade; as erupções do jogo atual vêm de notificações do DONKI ([dados.md](dados.md)). Ao implementar, decidir se a missão usa a CME ou a erupção ligada a ela, e manter uma só regra.
+
+**Como o tempo corre.** Um sol dura 24 h 39 min 35 s ([NASA](https://science.nasa.gov/mars/facts/)). O sol *k* da partida começa em `data inicial + (k − 1) × 1,0275 dia`. Uma tempestade cai no sol que contém o horário de início da CME.
+
+**Como as janelas foram escolhidas** (DONKI, CMEs de 2023-01-01 a 2026-11-14, baixadas em 2026-11-14):
+
+- pelo menos 3 CMEs do tipo O, R ou ER entre os sóis 4 e 14, com pelo menos 2 sóis de distância entre elas (a mesma regra das tempestades);
+- quando um sol tem mais de uma CME, vale a mais forte (tipo e, no empate, velocidade);
+- das combinações possíveis, fica a de maior soma de força;
+- janelas com pelo menos 45 dias de distância, para não repetir os mesmos eventos.
+
+| Missão | Sol 1 | Tempestades (sol: tipo, velocidade, data UTC) | Força | Atraso Terra-Marte |
+| --- | --- | --- | --- | --- |
+| 1 | 2023-02-27 | 6: O, 1.576 km/s, 04/03 · 9: O, 1.182 km/s, 07/03 · 14: R, 2.127 km/s, 13/03 | Média | 9 a 11 min |
+| 2 | 2023-07-25 | 4: R, 2.000 km/s, 28/07 · 8: O, 1.369 km/s, 01/08 · 11: O, 1.044 km/s, 05/08 | Média | 20 min |
+| 3 | 2024-01-31 | 10: R, 2.534 km/s, 09/02 · 12: ER, 3.529 km/s, 12/02 · 14: R, 2.012 km/s, 14/02 | Difícil | 19 min |
+| 4 | 2024-05-06 | 4: O, 1.330 km/s, 09/05 · 9: R, 2.119 km/s, 14/05 · 14: R, 2.678 km/s, 20/05 | Difícil | 16 min |
+| 5 | 2025-03-15 | 4: O, 1.188 km/s, 19/03 · 7: ER, 3.032 km/s, 21/03 · 14: R, 2.212 km/s, 28/03 | Difícil | 8 a 9 min |
+| 6 | 2025-10-18 | 4: R, 2.077 km/s, 21/10 · 6: O, 1.133 km/s, 23/10 · 9: O, 1.312 km/s, 26/10 | Média | 20 min |
+
+"Força" é a soma das intensidades do jogo (média = 95; difícil = 115 ou 135). Os identificadores e links de cada CME (por exemplo, `2024-05-20T05:36:00-CME-001`, [DONKI](https://ccmc.gsfc.nasa.gov/DONKI/view/CME/31034/-1)) ficam em [`public/data/missions.json`](../public/data/missions.json), gerado por `npm run data:missions` ([scripts/fetch-missions.mjs](../scripts/fetch-missions.mjs)). O atraso é a distância Terra-Marte do JPL Horizons no início e no fim da janela, dividida pela velocidade da luz.
+
+A missão 4 é a melhor para contar a história: a CME do sol 14 (20 de maio de 2024) veio com uma erupção estimada em X12, e a tempestade atingiu Marte com tanta energia que apareceu nas câmeras do Curiosity ([NASA](https://www.nasa.gov/solar-system/planets/mars/nasa-watches-mars-light-up-during-epic-solar-storm/)).
+
+**Regras:**
+
+- Na primeira partida, o jogo sorteia entre as missões de força média; as difíceis entram a partir da segunda.
+- O alerta continua chegando um sol antes do impacto, agora com a data real do evento.
+- A dose continua sendo a escala do jogo (INTERPRETADO). O que é real é a data, o tipo e a velocidade da CME, nunca a dose.
+- As janelas são dados baixados. O selo é "dados reais baixados em 2026-11-14", nunca "ao vivo".
+- Sem os dados das missões, o jogo usa tempestades simuladas, marcadas como tal.
+
+**Equilíbrio a conferir.** As janelas reais têm mais tempestades fortes do que o sorteio atual. Ao implementar, rode `npm run balance` com as 6 missões e confira se a forma da tabela de [equilíbrio esperado](#vitória-derrota-e-estrelas) se mantém, principalmente nas missões 3, 4 e 5. Se uma missão difícil quebrar a estratégia atenta, troque-a por outra janela com a mesma regra de escolha.
+
 **Tempestade de poeira.** Soma 40 pontos percentuais de poeira nos painéis. A poeira fica assim por 3 sóis antes de o vento começar a limpar.
 
 **Cartas de decisão.** Toda opção tem um custo, direto ou de oportunidade. Nenhuma escolha sai de graça. Uma carta aparece no começo do sol e precisa ser respondida antes de o jogador planejar a energia.
@@ -289,6 +329,7 @@ As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros c
 | Fonte | Uso no jogo | Estado no protótipo |
 | --- | --- | --- |
 | [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) (erupções solares), via [api.nasa.gov](https://api.nasa.gov/) | Classe e data de cada tempestade; resumo do clima espacial real na tela inicial | Snapshot real pronto (305 erupções M5+ e X, de 2016 até a coleta); busca ao vivo pendente. Resumo na tela inicial pendente |
+| [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) (CMEs) e [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) | [Missões históricas](#calendário-da-missão-janelas-históricas-reais): tempestades com data real e atraso real Terra-Marte por sol | Planejado; dados prontos em `public/data/missions.json` (`npm run data:missions`), falta o jogo ler |
 | [OSDR](https://osdr.nasa.gov/bio/repo/) (pesquisa de saúde no espaço) | Três estudos reais na tela final, rotulados como pesquisas em biologia espacial | Pronto, mas a leitura da resposta não foi testada |
 | [RadLab](https://visualization.osdr.nasa.gov/radlab/gui/data-api/) (dose medida na ISS) | Contexto sobre radiação no espaço, sempre rotulado "medido na ISS, em órbita da Terra"; nunca como dose em Marte | Planejado |
 | [Mars Trek](https://trek.nasa.gov/mars/) (relevo de Marte) | Terreno real da cratera Jezero | Planejado; hoje o terreno é gerado por código |
@@ -554,6 +595,7 @@ A prioridade máxima é trocar as erupções simuladas por dados reais. O resto 
 | 12 | Arte 2D original para a tela de título e o vídeo | Impacto visual | 2 h |
 | 13 | Missão na Lua, com a noite lunar de cerca de 14 dias terrestres | Segunda missão, mais rejogabilidade | 4 h ou mais |
 | 14 | Migrar o protótipo para a Art Bible: paleta oficial, 4 faixas de sombra, contorno mais fino, modelos mais detalhados, astronauta de 1,85 m com traje completo e pôr do sol com halo azul | Arte e jogo coerentes, como pede o alinhamento | 4 a 6 h |
+| 15 | Missões históricas: a simulação lê `public/data/missions.json` (tempestades e atraso real por sol) e `npm run balance` roda com as 6 missões | Datas reais coerentes entre tempestade, atraso e Sol; história forte na tela final | 2 a 3 h |
 
 ### Entregas do envio
 

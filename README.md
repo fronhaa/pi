@@ -27,6 +27,7 @@ e clique em **Terminar o sol**. Leia as mensagens da Terra: elas avisam das temp
 | `npm run docs:adr -- "título"` | Cria um novo registro de decisão (ADR) |
 | `npm run balance` | Teste de equilíbrio: 2.000 partidas por estratégia com a simulação real |
 | `npm run fetch-data` | Atualiza as tempestades solares reais (precisa de `NASA_API_KEY` no `.env`, ver [docs/dados.md](docs/dados.md)) |
+| `npm run data:missions` | Baixa da NASA os dados das missões históricas para `public/data/missions.json` (precisa do `.env`, ver `.env.example`) |
 
 ## Documentação
 
