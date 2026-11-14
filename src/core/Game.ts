@@ -12,11 +12,14 @@ import { Hud } from '@/ui/Hud';
 import { showCard, showEnd, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
 import { formatDate, getLang, setLang, t } from '@/i18n';
 import { Input } from './Input';
+import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
-import type { Role } from '@/scene/MarsBase';
+import { ENTRANCES, type Role } from '@/scene/MarsBase';
 
-/** Duração da animação da noite antes do relatório (ms). */
+/** Duração mínima da noite antes do relatório (ms). */
 const NIGHT_MS = 2200;
+/** A noite espera a tripulação entrar, mas no máximo isto (ms); quem não chegou entra direto. */
+const NIGHT_MAX_MS = 6000;
 
 
 /**
@@ -130,6 +133,8 @@ export class Game {
       });
       this.input.reset();
       this.motion.enabled = !this.night;
+      // Física chegou no meio da noite: a tripulação já está "dentro" (escondida); de manhã sai pela porta.
+      if (this.night) this.motion.forceInside();
       this.hud.setCrew('ready', this.motion.selected);
     } catch (err) {
       console.warn('Física indisponível; o jogo segue só com a interface.', err);
@@ -207,23 +212,45 @@ export class Game {
     this.night = true;
     this.stormNight = stormTonight;
     this.nightRes = report.after;
-    this.crew.setSheltered(stormTonight);
-    if (this.motion) this.motion.enabled = false;
     this.hud.showNight(report.after, report.sol);
     this.updateScene();
 
-    window.setTimeout(() => {
+    // A tripulação volta para dentro: anda até o habitat para dormir ou corre para o abrigo na tempestade.
+    // O relatório espera todos entrarem (mínimo NIGHT_MS, máximo NIGHT_MAX_MS).
+    const entrance: keyof typeof ENTRANCES = stormTonight ? 'shelter' : 'habitat';
+    const started = performance.now();
+    let reported = false;
+    const report_ = () => {
+      if (reported) return;
+      reported = true;
+      window.clearTimeout(cap);
+      this.motion?.forceInside();
       showReport(report, m.state, () => {
         this.night = false;
         this.stormNight = false;
         this.nightRes = null;
-        this.crew.setSheltered(false);
-        if (this.motion) this.motion.enabled = true;
+        if (this.motion) {
+          this.motion.comeOut(ENTRANCES[entrance]);
+          this.motion.enabled = true;
+        } else {
+          this.crew.setSheltered(false);
+        }
         this.hud.setBusy(false);
         if (m.state.outcome.status === 'playing') this.beginSol();
         else this.finish();
       });
-    }, NIGHT_MS);
+    };
+    const cap = window.setTimeout(report_, NIGHT_MAX_MS);
+    if (this.motion) {
+      this.motion.enabled = false;
+      this.motion.goInside(ENTRANCES[entrance], stormTonight ? STORM_RUN_SPEED : NIGHT_WALK_SPEED, () => {
+        window.setTimeout(report_, Math.max(0, NIGHT_MS - (performance.now() - started)));
+      });
+    } else {
+      // Sem física: a tripulação some (está dentro) e a noite dura o tempo mínimo.
+      this.crew.setSheltered(true);
+      window.setTimeout(report_, NIGHT_MS);
+    }
   }
 
   private finish(): void {

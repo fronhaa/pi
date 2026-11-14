@@ -420,7 +420,8 @@ Isso é parte do ensino, não enfeite.
 | Blindagem | Um saco de terra em volta do abrigo para cada 8 pontos, até 12 sacos |
 | Bateria | Medidor no contêiner diminui e muda de verde para amarelo e vermelho |
 | Alerta ou tempestade | Luz vermelha piscando na torre e céu com tom avermelhado |
-| Noite de tempestade | Tripulação corre para o abrigo e some |
+| Noite | A tripulação anda até a escotilha do habitat e entra para dormir; o relatório do sol espera todos entrarem (no mínimo 2,2 s e no máximo 6 s; quem não chegar entra direto). De manhã, todos saem pela mesma porta e voltam andando aos postos, e o jogador pode assumir qualquer um no caminho |
+| Noite de tempestade | A tripulação corre para o abrigo de regolito, entra e sai por ali de manhã |
 | Mensagem da Terra | A antena pisca |
 | Energia na ciência | O rover anda em volta da base |
 | Noite | Céu escurece, estrelas aparecem, janelas acendem |

@@ -32,7 +32,7 @@ interface ──decisões──► simulação ──estado──► interface e
 | Pasta | Responsabilidade |
 | --- | --- |
 | [`src/sim/`](../src/sim) | Regras do jogo. `config.ts` tem **todos os números**; `mission.ts`, o ciclo do sol; `cards.ts`, as cartas; `historical.ts`, as missões históricas. Imports com extensão `.ts` (o Node roda direto). |
-| [`src/scene/`](../src/scene) | Cena 3D: base na cratera Jezero (`MarsBase.ts`) e tripulação (`Crew.ts`). |
+| [`src/scene/`](../src/scene) | Cena 3D: base na cratera Jezero (`MarsBase.ts`), tripulação (`Crew.ts`), movimento com física (`crewMotion.ts`, sob demanda) e caminho desviando das construções (`crewPath.ts`). |
 | [`src/ui/`](../src/ui) | Interface HTML sobre a cena: `Hud.ts` (barra, recursos, mensagens, plano), `dialogs.ts` (tutorial, cartas, relatório, fim, dados da NASA), `LoadingScreen.ts`. Sem framework. |
 | [`src/i18n/`](../src/i18n) | Textos em PT e EN (`strings.ts`). O TypeScript obriga toda chave a existir nos dois idiomas. |
 | [`src/data/`](../src/data) | Carregamento dos dados da NASA para o jogo: `missions.ts` (missões históricas, padrão) e `flares.ts` (erupções, reserva). Coleta: [dados.md](dados.md). |
