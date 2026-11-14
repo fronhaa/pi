@@ -78,6 +78,8 @@ export class Hud {
   private readonly resources = h('section', { class: 'resources panel', 'aria-labelledby': 'res-title' });
   private readonly messages = h('section', { class: 'messages panel', 'aria-live': 'polite', 'aria-labelledby': 'msg-title' });
   private readonly planEl = h('section', { class: 'plan panel', 'aria-labelledby': 'plan-title' });
+  /** Painel do plano/dia recolhido: só o título e os botões principais, para ver a cena inteira. */
+  private planCollapsed = false;
   private readonly crewChip = h('div', { class: 'crew-chip', 'aria-live': 'polite' });
   private crewView: { status: 'loading' | 'ready' | 'off'; role?: string } = { status: 'loading' };
   private placesView = { inside: 4, outside: 0 };
@@ -271,6 +273,7 @@ export class Hud {
       h('div', { class: 'plan-top' },
         h('strong', { id: 'plan-title' }, v.paused ? t('day.paused') : t('day.title')),
         h('span', { class: 'clock', 'aria-label': t('day.remaining', { s: v.remaining }) }, `☀️ ${t('day.remaining', { s: v.remaining })}`),
+        this.collapseButton(),
       ),
       v.evaBanned ? h('p', { class: 'day-warn', role: 'status' }, t('eva.banned')) : h('p', { class: 'day-hint' }, t('day.hint')),
       crewRow,
@@ -285,6 +288,23 @@ export class Hud {
         :'',
     ]);
     if (focusedLabel) this.planEl.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focusedLabel)}"]`)?.focus();
+  }
+
+  /** Botão ▾/▴ no topo do painel: recolhe ou mostra o conteúdo (o botão principal continua visível). */
+  private collapseButton(): HTMLElement {
+    const label = () => t(this.planCollapsed ? 'hud.expand' : 'hud.collapse');
+    const btn = h('button', {
+      class: 'collapse', type: 'button', 'aria-expanded': String(!this.planCollapsed), 'aria-label': label(), title: label(),
+      onclick: () => {
+        this.planCollapsed = !this.planCollapsed;
+        this.planEl.classList.toggle('collapsed', this.planCollapsed);
+        btn.setAttribute('aria-expanded', String(!this.planCollapsed));
+        btn.setAttribute('aria-label', label());
+        btn.title = label();
+        btn.textContent = this.planCollapsed ? '▴' : '▾';
+      },
+    }, this.planCollapsed ? '▴' : '▾');
+    return btn;
   }
 
   private renderPlan(): void {
@@ -354,6 +374,7 @@ export class Hud {
         coop && coop.editable.length > 0
           ? h('p', { class: 'coop-note' }, t('coop.yourParts', { parts: coop.editable.map((k) => t(`plan.${k}` as StringKey)).join(', ') }))
           : null,
+        this.collapseButton(),
       ),
       ...PLAN_KEYS.map(row),
       h('div', { class: 'plan-row battery' },

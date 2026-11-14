@@ -107,6 +107,10 @@ const pt = {
   'eva.return': 'Voltar para dentro',
   'eva.fact': 'A NASA planeja até 24 horas de EVA por semana para cada astronauta. A semana tem 168 horas: quase todo o tempo é dentro.',
   'eva.fact.source': 'Fonte: NASA, relatório sobre EVA (2021)',
+  'hud.collapse': 'Esconder o painel',
+  'hud.expand': 'Mostrar o painel',
+  'fact.exercise': 'Astronautas fazem exercício todo dia, umas 2 horas. Assim os ossos e os músculos continuam fortes.',
+  'fact.exercise.source': 'Fonte: NASA, perda de osso e músculo no espaço (2023)',
   'msg.noSignal': 'Sem sinal da Terra! A antena ficou desalinhada e os avisos de hoje se perderam.',
 
   'msg.title': 'Mensagens da Terra',
@@ -495,6 +499,10 @@ const en: Record<StringKey, string> = {
   'eva.return': 'Go back inside',
   'eva.fact': 'NASA plans up to 24 hours of EVA per week for each astronaut. A week has 168 hours: almost all the time is inside.',
   'eva.fact.source': 'Source: NASA, EVA report (2021)',
+  'hud.collapse': 'Hide the panel',
+  'hud.expand': 'Show the panel',
+  'fact.exercise': 'Astronauts exercise every day, about 2 hours. That keeps their bones and muscles strong.',
+  'fact.exercise.source': 'Source: NASA, bone and muscle loss in space (2023)',
   'msg.noSignal': 'No signal from Earth! The antenna is out of alignment and today’s warnings were lost.',
 
   'msg.title': 'Messages from Earth',

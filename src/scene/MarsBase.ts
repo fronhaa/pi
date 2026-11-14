@@ -30,19 +30,91 @@ export const POSTS = {
 
 export type Role = keyof typeof POSTS;
 
-/** Altura do piso dentro dos módulos do habitat (o cilindro tem centro em y = 2,1 e raio 1,5). */
-const HABITAT_FLOOR_Y = 1;
+/**
+ * Onde fica a base de pesquisa (research-base.glb, docs/rover-e-base-de-pesquisa.md): o casco corre em X,
+ * a torre do airlock (a porta) fica virada para +Z, para o lado da câmera. Origem do modelo no chão.
+ */
+const HABITAT_POSITION = new THREE.Vector3(-1.5, 0, 1.8);
+/** Porta do airlock no referencial do modelo: o astronauta anda até ela e some (doc do modelo). */
+const HABITAT_DOOR_LOCAL_Z = 4.1;
+/** Abrigo de regolito (tempestade solar): à frente e à esquerda do habitat, longe da trilha do rover. */
+const SHELTER_CENTER = new THREE.Vector3(-13.5, 0, 8.5);
+/** Deslocamento do alojamento em relação ao laboratório: a port_b dele encaixa na port_a do laboratório. */
+/**
+ * Escala dos módulos do habitat (cascos, pernas, teto). Em 100% o casco tem 3,3 m de diâmetro e o astronauta
+ * fica pequeno lá dentro; em 80% a cabine fica mais justa, como uma nave. A torre do airlock continua em 100%,
+ * para a porta seguir mais alta que o astronauta.
+ */
+const HABITAT_SCALE = 0.8;
+/** Comprimento útil do piso em cada módulo (entre as portas de acoplamento, ±3,25 m no modelo). */
+const MODULE_FLOOR_LENGTH = 6.5 * HABITAT_SCALE;
+const QUARTERS_OFFSET_X = -7 * HABITAT_SCALE;
+/** A academia encaixa do mesmo jeito na port_a do alojamento. */
+const GYM_OFFSET_X = 2 * QUARTERS_OFFSET_X;
+/** Altura das duas camas de cada beliche, acima do piso. */
+const BUNK_LEVELS = [0.3, 1.12] as const;
+/** Fundo dos módulos, onde ficam os beliches e os aparelhos (z relativo ao centro do casco). */
+const BACK_Z = -0.55;
+
+/** Piso dentro do casco (em 80% o casco vai de y = 0,8 a 3,4; neste piso sobra ~2,1 m de altura). */
+const HABITAT_FLOOR_Y = 1.25;
 
 /**
- * Onde cada papel fica DENTRO do habitat (um módulo para cada), para dar para ver a tripulação lá dentro.
- * Os módulos são translúcidos, como a cúpula da estufa.
+ * Onde cada papel fica DENTRO do habitat, visível pelo casco translúcido: comandante e cientista no
+ * laboratório (perto do console), engenheiro e médico no alojamento (em frente aos beliches).
  */
 export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
-  engineer: new THREE.Vector3(-6, HABITAT_FLOOR_Y, 0.2),
-  medic: new THREE.Vector3(-2.2, HABITAT_FLOOR_Y, 0.2),
-  commander: new THREE.Vector3(1.6, HABITAT_FLOOR_Y, 0.2),
-  scientist: new THREE.Vector3(5.4, HABITAT_FLOOR_Y, 0.2),
+  commander: new THREE.Vector3(HABITAT_POSITION.x - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
+  scientist: new THREE.Vector3(HABITAT_POSITION.x + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
+  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
+  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
 };
+
+/**
+ * Cabines transparentes: todas as peças do casco (casco, faixas, janelas, portas de acoplamento) ficam
+ * translúcidas, para ver a tripulação lá dentro sem nada opaco na frente. Sem contorno e sem sombra.
+ */
+function glassMaterial<M extends THREE.Material>(mat: M, opacity: number): M {
+  const m = mat.clone();
+  m.transparent = true;
+  m.opacity = opacity;
+  m.depthWrite = false;
+  m.side = THREE.FrontSide;
+  return m;
+}
+
+/** Centro de cada beliche em relação ao centro do alojamento. */
+const BUNK_DX = 1.25;
+/** Comprimento do boneco deitado (deitado ele fica em 80%, para caber entre as duas camas do beliche). */
+const LYING_LENGTH = 1.85 * 0.8;
+
+/** Cama de cada papel no alojamento (beliche, cabeça no travesseiro em −X): onde dorme à noite e descansa. */
+export const BUNK_SPOTS: Record<Role, THREE.Vector3> = {
+  engineer: bunkSpot(-BUNK_DX, 0),
+  medic: bunkSpot(-BUNK_DX, 1),
+  commander: bunkSpot(BUNK_DX, 0),
+  scientist: bunkSpot(BUNK_DX, 1),
+};
+
+function bunkSpot(dx: number, level: 0 | 1): THREE.Vector3 {
+  // O boneco deitado tem os pés na origem: a origem fica na ponta da cama, longe do travesseiro.
+  return new THREE.Vector3(
+    HABITAT_POSITION.x + QUARTERS_OFFSET_X + dx + LYING_LENGTH / 2,
+    HABITAT_FLOOR_Y + BUNK_LEVELS[level] + 0.36,
+    HABITAT_POSITION.z + BACK_Z,
+  );
+}
+
+/**
+ * Aparelhos da academia que um astronauta usa (F9: esteira e bicicleta, como na Estação Espacial).
+ * `heading` segue a convenção do andar: 0 olha para −Z; aqui todos olham para a frente (+Z), para a câmera.
+ */
+const GYM_DX = 1.8;
+export const GYM_STATIONS = [
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X - GYM_DX, HABITAT_FLOOR_Y + 0.14, HABITAT_POSITION.z), heading: Math.PI, speed: 1.8 },
+  // Na bicicleta, pedalando em pé atrás do guidão (o boneco não tem pose sentada).
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X, HABITAT_FLOOR_Y + 0.05, HABITAT_POSITION.z - 0.35), heading: Math.PI, speed: 0.9 },
+] as const;
 
 /** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
 export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(1.0, 0.4, -4.6);
@@ -52,8 +124,8 @@ export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(1.0, 0.4, -4.6);
  * no abrigo de regolito na noite de tempestade solar. Precisam ficar FORA das caixas de `obstacles`.
  */
 export const ENTRANCES = {
-  habitat: new THREE.Vector3(1.6, 0, 2.4),
-  shelter: new THREE.Vector3(-11.9, 0, 7.9),
+  habitat: new THREE.Vector3(HABITAT_POSITION.x, 0, HABITAT_POSITION.z + HABITAT_DOOR_LOCAL_Z + 0.3),
+  shelter: new THREE.Vector3(SHELTER_CENTER.x + 0.6, 0, SHELTER_CENTER.z + 3.4),
 } as const;
 
 /**
@@ -65,7 +137,7 @@ export const PROBLEM_SPOTS = {
   greenhouseLeak: new THREE.Vector3(2.3, 0, -4.6),
   antenna: new THREE.Vector3(9.7, 0, -0.6),
   roverStuck: new THREE.Vector3(22, 0, 13),
-  tornBag: new THREE.Vector3(-12.5, 0, 8.4),
+  tornBag: new THREE.Vector3(SHELTER_CENTER.x, 0, SHELTER_CENTER.z + 3.9),
 } as const;
 
 /** Céu por lugar: em Marte, rosado com poeira; na Lua, sem ar, o céu é preto até de dia. */
@@ -101,6 +173,15 @@ export class MarsBase {
   private readonly antennaTip: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   private readonly batteryMeter: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   private readonly rover = new THREE.Group();
+  /** Habitat simples, só até a base de pesquisa (.glb) carregar ou se ela falhar. */
+  private readonly habitatFallback = new THREE.Group();
+  /** Animações dos modelos .glb (observatório, cata-vento, broca do rover). */
+  private readonly mixers: THREE.AnimationMixer[] = [];
+  private roverModel: { play(name: string, once?: boolean): void; mixer: THREE.AnimationMixer } | null = null;
+  private roverModelStudying = false;
+  private roverWheelRadius = 0.3;
+  /** Vidros das janelas dos módulos .glb: acendem à noite (luz de dentro). */
+  private readonly windowGlass: THREE.MeshToonMaterial[] = [];
   private readonly dustParticles: THREE.Points;
 
   private state: SceneState | null = null;
@@ -313,6 +394,8 @@ export class MarsBase {
       const r = Math.max(sx, sz);
       // Trilha do rover: nenhuma pedra na faixa principal (senão ele poderia ficar preso para sempre).
       if (distanceToRoverTrack(x, z) < r + 2) continue;
+      // Nada de pedra em cima do abrigo de regolito e dos sacos em volta dele.
+      if (Math.hypot(x - SHELTER_CENTER.x, z - SHELTER_CENTER.z) < r + 4.5) continue;
       this.roverRocks.push({ x, z, r });
       const rock = toonMesh(geo, color, 0.04);
       rock.scale.set(sx, sy, sz);
@@ -323,51 +406,264 @@ export class MarsBase {
   }
 
   private buildHabitat(): void {
-    // ARC-001: fila de módulos cilíndricos ligados.
-    const geo = new THREE.CylinderGeometry(1.5, 1.5, 3.6, 20);
-    geo.rotateZ(Math.PI / 2);
-    const ring = new THREE.TorusGeometry(1.55, 0.12, 8, 24);
-    ring.rotateY(Math.PI / 2);
-    // Casco translúcido (como a cúpula): dá para ver a tripulação lá dentro. Sem contorno e sem sombra,
-    // senão o interior fica escuro.
-    const shell = toonMaterial(PALETTE.light, { transparent: true, opacity: 0.35, depthWrite: false });
-    const floorGeo = new THREE.BoxGeometry(3.4, 0.08, 2);
-    for (let i = 0; i < 4; i++) {
-      const x = -6 + i * 3.8;
-      const mod = new THREE.Mesh(geo, shell);
-      mod.position.set(x, 2.1, 0);
-      mod.receiveShadow = true;
-      this.root.add(mod);
-      const floor = toonMesh(floorGeo, PALETTE.tech, 0);
-      floor.position.set(x, HABITAT_FLOOR_Y - 0.04, 0);
-      this.root.add(floor);
-      for (const dx of [-1.8, 1.8]) {
-        const r = toonMesh(ring, PALETTE.accent, 0);
-        r.position.set(x + dx, 2.1, 0);
-        this.root.add(r);
-      }
-      for (const wx of [-0.8, 0, 0.8]) {
-        const w = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.05), this.windows);
-        w.position.set(x + wx, 2.5, 1.49);
-        this.root.add(w);
-      }
-      for (const lx of [-1.2, 1.2]) {
-        const leg = toonMesh(new THREE.CylinderGeometry(0.08, 0.08, 0.9, 6), PALETTE.tech, 0);
-        leg.position.set(x + lx, 0.45, 0.9);
-        this.root.add(leg);
-        const leg2 = leg.clone();
-        leg2.position.z = -0.9;
-        this.root.add(leg2);
+    // ARC-001: base de pesquisa do Grégor (research-base.glb), carregada em loadModels().
+    // Até lá (ou se falhar), um módulo simples no mesmo lugar: casco translúcido e torre com a porta.
+    const fb = this.habitatFallback;
+    const hullGeo = new THREE.CylinderGeometry(1.6, 1.6, 7.2, 20);
+    hullGeo.rotateZ(Math.PI / 2);
+    const hull = new THREE.Mesh(hullGeo, glassMaterial(toonMaterial(PALETTE.light), 0.3));
+    hull.position.y = 2.65;
+    fb.add(hull);
+    const tower = toonMesh(new THREE.BoxGeometry(1.9, 3.9, 2.4), PALETTE.light);
+    tower.position.set(0, 1.95, 2.4);
+    fb.add(tower);
+    const opening = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.8), new THREE.MeshBasicMaterial({ color: PALETTE.shadow }));
+    opening.position.set(0, 0.9, 3.61);
+    fb.add(opening);
+    for (const wx of [-2.4, -0.8, 0.8, 2.4]) {
+      const w = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.05), this.windows);
+      w.position.set(wx, 3.2, 1.55);
+      fb.add(w);
+    }
+    for (const ox of [QUARTERS_OFFSET_X, GYM_OFFSET_X]) {
+      const extra = hull.clone();
+      extra.position.x = ox / HABITAT_SCALE; // o grupo inteiro está em HABITAT_SCALE
+      fb.add(extra);
+    }
+    fb.position.copy(HABITAT_POSITION);
+    fb.scale.setScalar(HABITAT_SCALE);
+    tower.scale.setScalar(1 / HABITAT_SCALE);
+    tower.position.divideScalar(HABITAT_SCALE);
+    opening.scale.setScalar(1 / HABITAT_SCALE);
+    opening.position.set(0, 0.9 / HABITAT_SCALE, 3.61 / HABITAT_SCALE);
+    this.root.add(fb);
+
+    this.buildHabitatInterior();
+
+    // Colisão: os três cascos com as pernas, torre do airlock e o armário de amostras ao lado da porta.
+    const { x, z } = HABITAT_POSITION;
+    this.addObstacle(x + GYM_OFFSET_X / 2, z, 3.6 * HABITAT_SCALE - GYM_OFFSET_X / 2, 2.5 * HABITAT_SCALE);
+    this.addObstacle(x, z + 2.4, 1.0, 1.5);
+    this.addObstacle(x - 1.5, z + 3.06, 0.6, 0.35);
+  }
+
+  /**
+   * Por dentro do habitat (visto pelo casco translúcido): um piso em cada módulo, console no
+   * laboratório, dois beliches (4 camas, uma por astronauta) no alojamento e a academia (esteira,
+   * bicicleta e aparelho de força, como na Estação Espacial, F9). Serve para os dois modelos.
+   */
+  private buildHabitatInterior(): void {
+    const { x, z } = HABITAT_POSITION;
+    const y = HABITAT_FLOOR_Y;
+    const inside = new THREE.Group();
+    // Um piso por módulo: entre eles ficam as portas de acoplamento (um piso contínuo aparecia por fora).
+    for (const ox of [0, QUARTERS_OFFSET_X, GYM_OFFSET_X]) {
+      const floor = toonMesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH, 0.08, 1.9), PALETTE.tech, 0);
+      floor.position.set(ox, y - 0.04, 0);
+      inside.add(floor);
+    }
+
+    // Laboratório: bancada comprida no fundo, com duas telas (ciência e Terra) e prateleira de amostras.
+    const screenMat = new THREE.MeshBasicMaterial({ color: 0x7fe6ea });
+    const counter = toonMesh(new THREE.BoxGeometry(3.6, 0.8, 0.5), PALETTE.light, 0.03);
+    counter.position.set(0, y + 0.4, BACK_Z - 0.05);
+    inside.add(counter);
+    const counterTop = toonMesh(new THREE.BoxGeometry(3.7, 0.06, 0.56), PALETTE.tech, 0);
+    counterTop.position.set(0, y + 0.83, BACK_Z - 0.05);
+    inside.add(counterTop);
+    for (const sx of [-0.9, 0.9]) {
+      const frame = toonMesh(new THREE.BoxGeometry(0.95, 0.6, 0.06), PALETTE.shadow, 0.03);
+      frame.position.set(sx, y + 1.3, BACK_Z - 0.2);
+      inside.add(frame);
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.48), screenMat);
+      screen.position.set(sx, y + 1.3, BACK_Z - 0.165);
+      inside.add(screen);
+    }
+    const shelf = toonMesh(new THREE.BoxGeometry(0.5, 1.5, 0.4), PALETTE.light, 0.03);
+    shelf.position.set(-2.15, y + 0.75, BACK_Z);
+    inside.add(shelf);
+    const jarColors = [0xc65b36, 0x9a9792, 0x718b9a];
+    for (let i = 0; i < 3; i++) {
+      for (const level of [0.95, 1.35]) {
+        const jar = toonMesh(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 10), jarColors[(i + (level > 1 ? 1 : 0)) % 3], 0);
+        jar.position.set(-2.3 + i * 0.15, y + level, BACK_Z + 0.08);
+        inside.add(jar);
       }
     }
-    // Escotilha de entrada (ARC-001): por aqui a tripulação entra para dormir (ver ENTRANCES).
-    const hatch = toonMesh(new THREE.BoxGeometry(1.1, 1.7, 0.5), PALETTE.light);
-    hatch.position.set(ENTRANCES.habitat.x, 0.85, 1.55);
-    this.root.add(hatch);
-    const opening = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.2), new THREE.MeshBasicMaterial({ color: PALETTE.shadow }));
-    opening.position.set(ENTRANCES.habitat.x, 0.75, 1.81);
-    this.root.add(opening);
-    this.addObstacle(-0.3, 0, 7.9, 1.6);
+
+    // Alojamento: armários nas pontas e uma mesinha na frente, entre os dois que ficam ali.
+    for (const lx of [QUARTERS_OFFSET_X - 2.38, QUARTERS_OFFSET_X + 2.38]) {
+      const locker = toonMesh(new THREE.BoxGeometry(0.36, 1.6, 0.6), PALETTE.tech, 0.03);
+      locker.position.set(lx, y + 0.8, BACK_Z + 0.05);
+      inside.add(locker);
+    }
+    const table = toonMesh(new THREE.CylinderGeometry(0.32, 0.32, 0.06, 16), PALETTE.light, 0.03);
+    table.position.set(QUARTERS_OFFSET_X, y + 0.7, 0.3);
+    inside.add(table);
+    const leg = toonMesh(new THREE.CylinderGeometry(0.05, 0.05, 0.68, 8), PALETTE.tech, 0);
+    leg.position.set(QUARTERS_OFFSET_X, y + 0.34, 0.3);
+    inside.add(leg);
+    const mug = toonMesh(new THREE.CylinderGeometry(0.06, 0.05, 0.12, 10), PALETTE.accent, 0);
+    mug.position.set(QUARTERS_OFFSET_X + 0.1, y + 0.79, 0.3);
+    inside.add(mug);
+
+    // Alojamento: dois beliches encostados no fundo, cada um com duas camas.
+    for (const bx of [QUARTERS_OFFSET_X - BUNK_DX, QUARTERS_OFFSET_X + BUNK_DX]) {
+      for (const level of BUNK_LEVELS) {
+        const bed = toonMesh(new THREE.BoxGeometry(1.9, 0.18, 0.8), PALETTE.light, 0.04);
+        bed.position.set(bx, y + level, BACK_Z);
+        inside.add(bed);
+        const blanket = toonMesh(new THREE.BoxGeometry(1.3, 0.08, 0.82), PALETTE.panel, 0);
+        blanket.position.set(bx + 0.25, y + level + 0.12, BACK_Z);
+        inside.add(blanket);
+        const pillow = toonMesh(new THREE.BoxGeometry(0.4, 0.12, 0.6), 0xffffff, 0);
+        pillow.position.set(bx - 0.7, y + level + 0.14, BACK_Z);
+        inside.add(pillow);
+      }
+      for (const px of [-0.93, 0.93]) {
+        const post = toonMesh(new THREE.BoxGeometry(0.06, 1.4, 0.06), PALETTE.tech, 0);
+        post.position.set(bx + px, y + 0.7, BACK_Z + 0.38);
+        inside.add(post);
+      }
+    }
+
+    // Academia: esteira e bicicleta viradas para a frente (GYM_STATIONS) e um aparelho de força no fundo.
+    const g = GYM_OFFSET_X;
+    const treadBase = toonMesh(new THREE.BoxGeometry(0.8, 0.12, 1.7), PALETTE.light, 0.04);
+    treadBase.position.set(g - GYM_DX, y + 0.06, 0);
+    inside.add(treadBase);
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.02, 1.5), new THREE.MeshBasicMaterial({ color: PALETTE.shadow }));
+    belt.position.set(g - GYM_DX, y + 0.13, 0);
+    inside.add(belt);
+    for (const side of [-0.38, 0.38]) {
+      const rail = toonMesh(new THREE.BoxGeometry(0.05, 1.0, 0.05), PALETTE.tech, 0);
+      rail.position.set(g - GYM_DX + side, y + 0.6, 0.75);
+      inside.add(rail);
+    }
+    const panel = toonMesh(new THREE.BoxGeometry(0.85, 0.2, 0.12), PALETTE.accent, 0);
+    panel.position.set(g - GYM_DX, y + 1.1, 0.75);
+    inside.add(panel);
+
+    const bikeFrame = toonMesh(new THREE.BoxGeometry(0.3, 0.25, 1.1), PALETTE.light, 0.04);
+    bikeFrame.position.set(g, y + 0.13, 0);
+    inside.add(bikeFrame);
+    const wheel = toonMesh(new THREE.CylinderGeometry(0.28, 0.28, 0.12, 16).rotateZ(Math.PI / 2), PALETTE.accent, 0.04);
+    wheel.position.set(g, y + 0.4, 0.45);
+    inside.add(wheel);
+    const bars = toonMesh(new THREE.BoxGeometry(0.6, 0.05, 0.05), PALETTE.tech, 0);
+    bars.position.set(g, y + 1.0, 0.55);
+    inside.add(bars);
+    const stem = toonMesh(new THREE.BoxGeometry(0.05, 0.75, 0.05), PALETTE.tech, 0);
+    stem.position.set(g, y + 0.62, 0.55);
+    inside.add(stem);
+
+    const rack = toonMesh(new THREE.BoxGeometry(1.3, 1.6, 0.12), PALETTE.tech, 0.03);
+    rack.position.set(g + GYM_DX, y + 0.8, BACK_Z - 0.2);
+    inside.add(rack);
+    const bar = toonMesh(new THREE.CylinderGeometry(0.04, 0.04, 1.6, 8).rotateZ(Math.PI / 2), PALETTE.light, 0);
+    bar.position.set(g + GYM_DX, y + 1.15, BACK_Z + 0.1);
+    inside.add(bar);
+    for (const side of [-0.68, 0.68]) {
+      const plate = toonMesh(new THREE.CylinderGeometry(0.25, 0.25, 0.08, 16).rotateZ(Math.PI / 2), PALETTE.accent, 0.04);
+      plate.position.set(g + GYM_DX + side, y + 1.15, BACK_Z + 0.1);
+      inside.add(plate);
+    }
+    inside.position.set(x, 0, z);
+    this.root.add(inside);
+  }
+
+  /**
+   * Troca a base e o rover simples pelos modelos .glb do Grégor (docs/rover-e-base-de-pesquisa.md).
+   * Cada um que falhar continua com o modelo simples: o jogo segue funcionando.
+   */
+  async loadModels(): Promise<void> {
+    const { loadSceneryModel, SCENERY_MODELS } = await import('@/render/sceneryModel');
+    const [base, rover] = await Promise.allSettled([
+      loadSceneryModel(SCENERY_MODELS.researchBase),
+      loadSceneryModel(SCENERY_MODELS.rover),
+    ]);
+    if (base.status === 'fulfilled') this.useResearchBase(base.value);
+    else console.warn('Base de pesquisa (.glb) não carregou; usando o módulo simples.', base.reason);
+    if (rover.status === 'fulfilled') this.useRoverModel(rover.value);
+    else console.warn('Rover (.glb) não carregou; usando o rover simples.', rover.reason);
+  }
+
+  private useResearchBase(m: { root: THREE.Group; mixer: THREE.AnimationMixer; play(name: string): void }): void {
+    // Alojamento: o mesmo bloco, acoplado pela porta de acoplamento do lado esquerdo (como o doc do modelo
+    // prevê). Uma porta só para a base inteira: sem torre do airlock, sem armário, sem observatório.
+    // A academia encaixa do mesmo jeito no alojamento.
+    // Cabines em HABITAT_SCALE; a torre do airlock e o armário ficam em 100% e no mesmo lugar de antes.
+    m.root.scale.setScalar(HABITAT_SCALE);
+    const extras = [QUARTERS_OFFSET_X, GYM_OFFSET_X].map((ox) => {
+      const module = m.root.clone(true);
+      for (const name of ['access_tower', 'sample_station', 'observatory_base', 'observatory_ring', 'observatory', 'dish', 'dish_pole']) {
+        const o = module.getObjectByName(name);
+        if (o) o.visible = false;
+      }
+      module.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (mesh.isMesh && (mesh.material as THREE.Material).name === 'label') mesh.visible = false; // placa "LAB"
+      });
+      module.position.set(HABITAT_POSITION.x + ox, 0, HABITAT_POSITION.z);
+      this.root.add(module);
+      return module;
+    });
+
+    for (const name of ['access_tower', 'sample_station']) {
+      const o = m.root.getObjectByName(name);
+      if (!o) continue;
+      o.scale.setScalar(1 / HABITAT_SCALE);
+      o.position.divideScalar(HABITAT_SCALE);
+    }
+
+    // Cabines transparentes: TODAS as peças do casco ficam translúcidas (o casco mais claro, faixas e janelas um
+    // pouco mais visíveis), para nada opaco cortar a tripulação. Sem contorno (ele é opaco) e sem sombra.
+    const cut = new Map<THREE.Material, THREE.Material>();
+    for (const module of [m.root, ...extras]) {
+      module.getObjectByName('hull')?.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh || mesh.userData.isOutline) return;
+        const src = mesh.material as THREE.Material;
+        let mat = cut.get(src);
+        if (!mat) {
+          mat = glassMaterial(src, mesh.name === 'hull_shell' ? 0.28 : 0.5);
+          cut.set(src, mat);
+        }
+        mesh.material = mat;
+        mesh.castShadow = false;
+        for (const c of [...mesh.children]) if (c.userData.isOutline) mesh.remove(c);
+      });
+    }
+    // Vidros das janelas: acendem à noite.
+    m.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && (mesh.material as THREE.Material).name === 'window') {
+        const mat = mesh.material as THREE.MeshToonMaterial;
+        if (!this.windowGlass.includes(mat)) this.windowGlass.push(mat);
+      }
+    });
+    for (const mat of this.windowGlass) mat.userData.dayEmissive = mat.emissiveIntensity;
+    m.root.position.copy(HABITAT_POSITION);
+    this.root.add(m.root);
+    this.habitatFallback.visible = false;
+    m.play('observatory_scan');
+    m.play('weather_spin');
+    this.mixers.push(m.mixer);
+  }
+
+  private useRoverModel(m: { root: THREE.Group; mixer: THREE.AnimationMixer; play(name: string, once?: boolean): void }): void {
+    // O rover simples some (menos a luz de aviso); a lógica de andar, parar e desviar continua a mesma.
+    for (const c of this.rover.children) if (c !== this.roverWarning) c.visible = false;
+    this.roverWheels.length = 0;
+    for (let i = 0; i < 6; i++) {
+      const w = m.root.getObjectByName(`wheel_${i}`);
+      if (w) this.roverWheels.push(w);
+    }
+    this.roverWheelRadius = 0.34;
+    this.roverWarning.position.set(0, 2.62, 0);
+    this.rover.add(m.root);
+    this.roverModel = m;
+    this.mixers.push(m.mixer);
   }
 
   private buildDome(): void {
@@ -478,7 +774,7 @@ export class MarsBase {
 
   private buildShelter(): void {
     // ARC-005: abrigo de radiação de regolito com sacos em volta.
-    const c = new THREE.Vector3(-12.5, 0, 4.5);
+    const c = SHELTER_CENTER;
     const mound = toonMesh(new THREE.SphereGeometry(3, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), PALETTE.rock);
     mound.scale.y = 0.6;
     mound.position.copy(c);
@@ -713,6 +1009,14 @@ export class MarsBase {
    * instrumento pisca. Andando ou parado: tudo volta ao lugar.
    */
   private animateRoverTools(studying: boolean, dt: number, time: number): void {
+    // Rover .glb: ao parar para estudar, o mastro escaneia e a broca desce; ao voltar a andar, para tudo.
+    if (this.roverModel && studying !== this.roverModelStudying) {
+      this.roverModelStudying = studying;
+      if (studying) {
+        this.roverModel.play('scan');
+        this.roverModel.play('drill', true);
+      } else this.roverModel.mixer.stopAllAction();
+    }
     this.roverArm.rotation.z = THREE.MathUtils.damp(this.roverArm.rotation.z, studying ? ARM_DEPLOYED : ARM_STOWED, 4, dt);
     let yaw = 0;
     if (studying) {
@@ -734,6 +1038,7 @@ export class MarsBase {
   }
 
   update(dt: number, time: number, crew: THREE.Vector3[] = []): void {
+    for (const m of this.mixers) m.update(dt);
     const s = this.state;
     if (!s) return;
 
@@ -763,6 +1068,10 @@ export class MarsBase {
     (this.stars.material as THREE.PointsMaterial).opacity = moon ? Math.max(0.75, n) : n;
     (this.earthDot.material as THREE.MeshBasicMaterial).opacity = n;
     this.windows.color.setHex(PALETTE.window).multiplyScalar(0.6 + n * 0.8);
+    for (const mat of this.windowGlass) {
+      mat.emissive.setHex(0xffd27a);
+      mat.emissiveIntensity = ((mat.userData.dayEmissive as number) ?? 0) + n * 1.2;
+    }
 
     const blink = (Math.sin(time * 6) + 1) / 2;
     const alarmOn = s.alert || s.stormNight;
@@ -832,7 +1141,7 @@ export class MarsBase {
       if (moved > 1e-4 && moved < 2 && this.roverReturn) {
         // Voltando para a trilha: o nariz aponta para onde ele está indo.
         this.roverHeading = Math.atan2(-(z - this.rover.position.z), x - this.rover.position.x);
-        for (const w of this.roverWheels) w.rotation.z -= moved / 0.3;
+        for (const w of this.roverWheels) w.rotation.z -= moved / this.roverWheelRadius;
       } else if (moved > 1e-4 && moved < 2) {
         // Nariz = direção exata do movimento: tangente da elipse + componente lateral do volante (sem "drift").
         const a = this.roverAngle;
@@ -843,7 +1152,7 @@ export class MarsBase {
         const vz = tz / tl + this.roverSteer * Math.sin(a);
         this.roverHeading = Math.atan2(-vz, vx);
         // Rodas giram conforme a distância (raio 0,3 m).
-        for (const w of this.roverWheels) w.rotation.z -= moved / 0.3;
+        for (const w of this.roverWheels) w.rotation.z -= moved / this.roverWheelRadius;
       }
       // Terreno: inclina o rover conforme o relevo (frente/trás = arfagem, lados = rolagem).
       const h = this.roverHeading ?? 0;

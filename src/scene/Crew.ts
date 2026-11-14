@@ -5,6 +5,10 @@ import type { ChibiAction, ChibiAstronautInstance } from '@/render/chibiAstronau
 
 /** Velocidade em que o `walk` do chibi não escorrega (docs/astronauta-chibi.md). */
 const CHIBI_WALK_SPEED = 1.15;
+/** Deitado de costas: cabeça para −X e rosto para cima (o `model` olha para −Z em pé). */
+const LIE_BASIS = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, -1, 0));
+/** Tamanho do boneco deitado no beliche (ver BUNK_SPOTS em MarsBase). */
+const LYING_SCALE = 0.8;
 /** Duração do clipe `jump`. */
 const CHIBI_JUMP_SECONDS = 1.35;
 
@@ -128,6 +132,29 @@ export class Astronaut {
     this.action = 'idle';
   }
 
+  private lying = false;
+
+  /** Deitado no beliche (dormindo ou descansando), ou de volta em pé. */
+  setLying(on: boolean): void {
+    if (on === this.lying) return;
+    this.lying = on;
+    if (on) this.model.quaternion.setFromRotationMatrix(LIE_BASIS);
+    else this.model.rotation.set(0, this.model.rotation.y, 0);
+    // Deitado fica em 80%, para caber entre as duas camas do beliche.
+    this.model.scale.setScalar(on ? LYING_SCALE : 1);
+  }
+
+  /** Exercício (esteira, bicicleta): anima o andar sem sair do lugar. */
+  exercise(speed: number, dt: number): void {
+    if (this.chibi) this.animateChibi(speed, dt);
+    else this.idle(dt);
+  }
+
+  /** Vira para uma direção (mesma convenção do andar: 0 olha para −Z). */
+  face(heading: number): void {
+    this.model.rotation.y = heading;
+  }
+
   /** Vira o boneco para a câmera (usado quando está parado dentro da base). */
   faceCamera(camera: THREE.Vector3): void {
     this.model.rotation.y = Math.atan2(-(camera.x - this.root.position.x), -(camera.z - this.root.position.z));
@@ -180,6 +207,7 @@ export class Astronaut {
 
   /** Chamado pela física: anda (anima e vira para a direção) ou fica parado. */
   setMotion(speed: number, heading: number, dt: number): void {
+    this.setLying(false);
     if (speed < 0.2) {
       this.idle(dt);
       return;

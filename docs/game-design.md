@@ -619,6 +619,8 @@ Se a atenta passar de 60%, reduza o efeito (ex.: ciência +3). Se ficar abaixo d
 
 ### B. Rotina visual: exercício e descanso
 
+> **Implementado (adaptado):** como a tripulação fica dentro por padrão, a rotina acontece no habitat translúcido: posto → academia (esteira ou bicicleta) → beliche → posto. Não há caminhada pela física; a cena troca o lugar e a animação. Em grupo, cada tela calcula a rotina sozinha (é só visual e quem está dentro não é sincronizado).
+
 **Regras (só cena, nenhuma regra muda):**
 
 1. Astronauta **sem ordem há 8 s**, de dia ou de manhã, anda sozinho até a **esteira** (dentro do habitat) e faz uma animação de exercício.

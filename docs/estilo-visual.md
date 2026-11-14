@@ -83,9 +83,26 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
   `Crew.loadChibi()` baixa o `.glb` uma vez, clona para os 4 papéis e troca o laranja do traje pela cor do papel
   (`ROLE_COLORS`). Animações: `walk` ao andar, `jump` no Espaço, `interact` ao consertar. Até carregar (ou se falhar),
   fica o boneco simples de cápsulas.
-- Dentro da base: os módulos do habitat são translúcidos (como a cúpula), com piso. Quem está dentro aparece no seu
-  módulo (`HABITAT_SPOTS`) ou na estufa consertando o vazamento (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de
-  descompressão, some.
+- Base e rover: `research-base.glb` e `rover.glb` (ver [rover-e-base-de-pesquisa.md](rover-e-base-de-pesquisa.md)),
+  carregados por `MarsBase.loadModels()` com `src/render/sceneryModel.ts`. A base fica em `HABITAT_POSITION`, com a porta
+  do airlock (`ENTRANCES.habitat`) virada para a câmera. O rover usa a mesma lógica de andar, parar e desviar; as rodas
+  `wheel_0..5` giram pela distância e, ao parar para estudar, tocam `scan` e `drill`. Até carregar (ou se falhar), ficam
+  o módulo e o rover simples.
+- Habitat de dois módulos do mesmo `research-base.glb`: o **laboratório** (com o airlock, a bancada e o observatório) e o
+  **alojamento** acoplado pela porta de acoplamento da esquerda (`QUARTERS_OFFSET_X`, sem airlock nem placa "LAB"), com
+  dois beliches, uma cama por astronauta. As janelas acendem à noite.
+- Dentro do habitat: cabines **transparentes**. Todas as peças do casco (casco, faixas, janelas e portas de acoplamento)
+  ficam translúcidas (`glassMaterial`), sem contorno e sem sombra, para nada opaco cortar a tripulação. Testamos uma vista
+  em corte, mas o time preferiu ver através do casco. Cada módulo tem seu piso. Comandante e cientista
+  ficam no laboratório e engenheiro e médico no alojamento (`HABITAT_SPOTS`); quem conserta o vazamento vai para a estufa
+  (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de descompressão, somem.
+- O abrigo de regolito fica em `SHELTER_CENTER`, à esquerda do alojamento.
+- Os módulos do habitat ficam em 80% (`HABITAT_SCALE`), para o astronauta caber justo na cabine; a torre do airlock e o
+  armário continuam em 100% (a porta segue mais alta que o astronauta). As janelas acendem à noite. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
+- Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
+  (GDD, "Atividades dentro da base", B): quem está dentro sem ordem há 8 s vai à esteira ou à bicicleta (`GYM_STATIONS`,
+  animação de andar no lugar), descansa deitado no beliche e volta ao posto. Na primeira vez aparece o fato F9.
+- À noite (sem tempestade) cada astronauta dorme deitado na sua cama (`BUNK_SPOTS`); na noite de tempestade, está no abrigo.
 - O resto é feito com primitivas (leve). Modelos `.glb` novos: exportar do Blender em glTF Binary,
   eixo Y para cima, em metros, com cores sólidas; ao carregar, trocar os materiais por `toonMaterial(cor)`.
   Coloque em `public/assets/models/` com nome em `kebab-case`.
