@@ -19,7 +19,7 @@ import { Input } from './Input';
 import { CrewTasks } from './CrewTasks';
 import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
-import { ENTRANCES, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
+import { ENTRANCES, GREENHOUSE_WORK_SPOT, HABITAT_SPOTS, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
 import { ProblemMarkers } from '@/scene/ProblemMarkers';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CONFIG } from '@/sim/config';
@@ -893,6 +893,24 @@ export class Game {
     this.camera.updateProjectionMatrix();
   }
 
+  /**
+   * Quem está dentro aparece pelo casco translúcido: no seu módulo do habitat, ou na estufa se está
+   * consertando o vazamento. À noite (dormindo ou no abrigo) e na câmara de descompressão, some.
+   * A física não cuida de quem está dentro, então a posição e a animação são daqui.
+   */
+  private showCrewInside(dt: number): void {
+    const awake = this.phase === 'morning' || this.phase === 'day';
+    for (const r of ROLES) {
+      if (!this.motion!.isInside(r)) continue;
+      const a = this.crew.members[r];
+      a.root.visible = awake && this.tasks.placeOf(r) === 'inside';
+      if (!a.root.visible) continue;
+      a.root.position.copy(this.tasks.onInsideTask(r) ? GREENHOUSE_WORK_SPOT : HABITAT_SPOTS[r]);
+      a.faceCamera(this.camera.position);
+      a.idle(dt);
+    }
+  }
+
   private frame(time: number): void {
     this.timer.update(time);
     const rawDt = this.timer.getDelta();
@@ -901,7 +919,9 @@ export class Game {
     const t = this.timer.getElapsed();
     this.controls.update();
     // O rover recebe onde estão os astronautas visíveis (quem está dentro da base não conta).
-    const crewPositions = Object.values(this.crew.members).filter((a) => a.root.visible).map((a) => a.root.position);
+    const crewPositions = ROLES.filter((r) => this.crew.members[r].root.visible && !this.motion?.isInside(r)).map(
+      (r) => this.crew.members[r].root.position,
+    );
     this.base.update(dt, t, crewPositions);
     if (this.phase === 'day' && !this.paused) {
       this.updateDay(dt);
@@ -914,8 +934,10 @@ export class Game {
     this.markers.update(t, this.camera);
     this.updateOffscreen();
     for (const r of ROLES) this.crew.members[r].setWorking(this.phase === 'day' && this.tasks.isRoleWorking(r));
-    if (this.motion) this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)
-    else this.crew.update(dt);
+    if (this.motion) {
+      this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)
+      this.showCrewInside(dt);
+    } else this.crew.update(dt);
     const marker = this.targetMarker.material as THREE.MeshBasicMaterial;
     marker.opacity = Math.max(0, marker.opacity - dt * 0.8);
     this.renderer.render(this.scene, this.camera);

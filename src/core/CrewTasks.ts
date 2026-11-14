@@ -109,6 +109,13 @@ export class CrewTasks {
     return this.assignments.get(role)?.phase === 'working' && this.places[role] !== 'airlockOut';
   }
 
+  /** Está cuidando de um problema de dentro (a estufa)? A cena usa para mostrar onde ele está. */
+  onInsideTask(role: Role): boolean {
+    const a = this.assignments.get(role);
+    const p = a && this.mission().state.problems.find((x) => x.uid === a.uid);
+    return !!p && !PROBLEMS[p.kind].outside;
+  }
+
   isWorking(uid: number): boolean {
     const r = this.workerOf(uid);
     return r !== undefined && this.assignments.get(r)!.phase === 'working';

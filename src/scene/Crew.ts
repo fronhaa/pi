@@ -128,6 +128,11 @@ export class Astronaut {
     this.action = 'idle';
   }
 
+  /** Vira o boneco para a câmera (usado quando está parado dentro da base). */
+  faceCamera(camera: THREE.Vector3): void {
+    this.model.rotation.y = Math.atan2(-(camera.x - this.root.position.x), -(camera.z - this.root.position.z));
+  }
+
   /** Pulo (Espaço): toca o clipe `jump` uma vez. */
   jump(): void {
     if (!this.chibi) return;
