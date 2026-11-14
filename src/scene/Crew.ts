@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { PALETTE, toonMesh } from '@/render/toon';
-import { POSTS, type Role } from './MarsBase';
+import { ROLES, type Role } from '@/sim/crew';
+import { POSTS } from './base/layout';
 import type { ChibiAction, ChibiAstronautInstance } from '@/render/chibiAstronaut';
 
 /** Velocidade em que o `walk` do chibi não escorrega (docs/astronauta-chibi.md). */
 const CHIBI_WALK_SPEED = 1.15;
 /** Deitado de costas: cabeça para −X e rosto para cima (o `model` olha para −Z em pé). */
 const LIE_BASIS = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, -1, 0));
-/** Tamanho do boneco deitado no beliche (ver BUNK_SPOTS em MarsBase). */
+/** Tamanho do boneco deitado no beliche (ver BUNK_SPOTS em src/scene/base/layout.ts). */
 const LYING_SCALE = 0.8;
 /** Duração do clipe `jump`. */
 const CHIBI_JUMP_SECONDS = 1.35;
@@ -20,7 +21,8 @@ export const ROLE_COLORS: Record<Role, number> = {
   scientist: 0x7fa7c9,
 };
 
-export const ROLES: Role[] = ['commander', 'engineer', 'medic', 'scientist'];
+/** Lista dos papéis (a fonte é src/sim/crew.ts). */
+export { ROLES };
 
 /** Astronauta (CHR-001 a 004). Escala: 1 unidade = 1 m; altura ~1,85 m (Art Bible). */
 export class Astronaut {

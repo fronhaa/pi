@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { Physics, RAPIER } from '@/core/Physics';
 import { FIXED_DT, MAX_FRAME_DT } from '@/core/constants';
 import type { Input } from '@/core/Input';
-import { ROLES, type Crew } from './Crew';
-import type { Role } from './MarsBase';
+import type { Crew } from './Crew';
+import { ROLES, type Role } from '@/sim/crew';
 import { findPath } from './crewPath';
 
 /**

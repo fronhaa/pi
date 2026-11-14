@@ -1,0 +1,130 @@
+import * as THREE from 'three';
+import { PALETTE } from '@/render/toon';
+import type { Scenario } from '@/scenarios';
+import { seededRandom } from './layout';
+
+/** O que o céu precisa saber a cada frame. */
+export interface SkyFrame {
+  /** 0 = dia, 1 = noite (já com a escuridão do cenário aplicada). */
+  night: number;
+  /** Poeira nos painéis, de 0 a 1 (em Marte, a mesma poeira escurece o céu). */
+  dust: number;
+  alert: boolean;
+  /** Luz do Sol de hoje, de 0 a 1 (Lua; em Marte é sempre 1). */
+  sunlight: number;
+  time: number;
+}
+
+/**
+ * Céu e luz: fundo e névoa, Sol e luz ambiente, estrelas, o pontinho da Terra (FX-002) e a poeira no ar.
+ * As cores e a intensidade vêm do cenário (src/scenarios/); aqui só a mistura de dia, poeira, alerta e noite.
+ */
+export class Sky {
+  private readonly sun: THREE.DirectionalLight;
+  private readonly hemi: THREE.HemisphereLight;
+  private readonly stars: THREE.Points;
+  private readonly earthDot: THREE.Mesh;
+  private readonly dustParticles: THREE.Points;
+  private scenario!: Scenario;
+  private readonly colors = { day: new THREE.Color(), dust: new THREE.Color(), alert: new THREE.Color(), night: new THREE.Color() };
+
+  constructor(
+    private readonly scene: THREE.Scene,
+    root: THREE.Object3D,
+    scenario: Scenario,
+  ) {
+    scene.background = new THREE.Color(scenario.sky.day);
+    scene.fog = new THREE.Fog(new THREE.Color(scenario.sky.day), 45, 140);
+
+    this.hemi = new THREE.HemisphereLight(0xfff1e0, PALETTE.soil, 1.3);
+    root.add(this.hemi);
+    this.sun = new THREE.DirectionalLight(0xfff0dc, 2.2);
+    this.sun.position.set(-30, 40, 20);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(this.sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 120 });
+    this.sun.shadow.bias = -0.0005;
+    root.add(this.sun);
+
+    this.stars = buildStars();
+    root.add(this.stars);
+    // Visto de Marte, a Terra é só um pontinho azul (FX-002).
+    this.earthDot = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7fb6ff, transparent: true, opacity: 0, fog: false }));
+    this.earthDot.position.set(-60, 70, -150);
+    root.add(this.earthDot);
+    this.dustParticles = buildDustParticles();
+    root.add(this.dustParticles);
+    this.setScenario(scenario);
+  }
+
+  setScenario(s: Scenario): void {
+    this.scenario = s;
+    this.colors.day.setHex(s.sky.day);
+    this.colors.dust.setHex(s.sky.dust);
+    this.colors.alert.setHex(s.sky.alert);
+    this.colors.night.setHex(s.sky.night);
+    // Sem ar, a Terra não é um pontinho: ela aparece grande (nos extras do cenário).
+    this.earthDot.visible = !s.airless;
+    this.hemi.groundColor.setHex(s.terrain.soil);
+    this.sun.color.setHex(s.sun.color);
+    this.sun.position.set(...s.sun.position);
+    (this.dustParticles.material as THREE.PointsMaterial).color.setHex(s.terrain.dust);
+  }
+
+  update(f: SkyFrame): void {
+    const s = this.scenario;
+    const n = f.night;
+    const sky = this.colors.day.clone().lerp(this.colors.dust, f.dust);
+    if (f.alert) sky.lerp(this.colors.alert, 0.45);
+    sky.lerp(this.colors.night, n);
+    (this.scene.background as THREE.Color).copy(sky);
+    const fog = this.scene.fog as THREE.Fog;
+    fog.color.copy(sky);
+    // Sem ar: quase sem névoa (só esconde a borda do mapa) e a poeira não sobe no céu.
+    fog.near = s.airless ? 150 : THREE.MathUtils.lerp(45, 14, f.dust);
+    fog.far = s.airless ? 300 : THREE.MathUtils.lerp(140, 70, f.dust);
+
+    // Sem ar, a poeira fica nos painéis, mas não escurece o céu (não há vento para levantá-la).
+    const skyDust = s.airless ? 0 : f.dust;
+    this.sun.intensity = THREE.MathUtils.lerp(s.sun.intensity * (1 - skyDust * 0.5) * (0.2 + 0.8 * f.sunlight), 0.15, n);
+    this.hemi.intensity = THREE.MathUtils.lerp(s.hemiIntensity, 0.35, n);
+    // Sem ar, as estrelas aparecem até de dia.
+    (this.stars.material as THREE.PointsMaterial).opacity = s.airless ? Math.max(0.75, n) : n;
+    (this.earthDot.material as THREE.MeshBasicMaterial).opacity = n;
+
+    const dp = this.dustParticles;
+    (dp.material as THREE.PointsMaterial).opacity = s.airless ? 0 : THREE.MathUtils.lerp(0, 0.7, Math.min(1, f.dust * 1.5)) * (1 - n * 0.6);
+    dp.position.x = ((f.time * 3) % 20) - 10;
+  }
+}
+
+function buildStars(): THREE.Points {
+  const rng = seededRandom(11);
+  const n = 600;
+  const arr = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const theta = rng() * Math.PI * 2;
+    const phi = rng() * Math.PI * 0.42;
+    const r = 200;
+    arr[i * 3] = Math.sin(phi) * Math.cos(theta) * r;
+    arr[i * 3 + 1] = Math.cos(phi) * r;
+    arr[i * 3 + 2] = Math.sin(phi) * Math.sin(theta) * r;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.4, sizeAttenuation: false, transparent: true, opacity: 0, fog: false }));
+}
+
+function buildDustParticles(): THREE.Points {
+  const rng = seededRandom(5);
+  const n = 900;
+  const arr = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    arr[i * 3] = (rng() - 0.5) * 80;
+    arr[i * 3 + 1] = rng() * 12;
+    arr[i * 3 + 2] = (rng() - 0.5) * 80;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  return new THREE.Points(geo, new THREE.PointsMaterial({ color: PALETTE.dust, size: 0.18, transparent: true, opacity: 0 }));
+}

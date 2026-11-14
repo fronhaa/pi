@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { ProblemKind } from '@/sim/types';
-import { PROBLEM_SPOTS } from './MarsBase';
+import { PROBLEM_SPOTS } from './base/layout';
 
 /**
  * Marcadores dos problemas na cena: "!" flutuando, anel pulsando no chão e barra de progresso.

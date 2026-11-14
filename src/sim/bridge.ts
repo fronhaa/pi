@@ -1,7 +1,8 @@
 import { CONFIG } from './config.ts';
 import { Mission } from './mission.ts';
 import { parseMissions, pickHistorical, type MissionsFile } from './historical.ts';
-import { PROBLEMS } from './problems.ts';
+import { applyAction, type MissionAction } from './actions.ts';
+import { needsEva } from './eva.ts';
 import type { EnergyPlan, Flare, HistoricalMission } from './types.ts';
 
 /**
@@ -35,8 +36,16 @@ export function newMission(seed: number, flaresJson: string, historicalJson: str
   mission = new Mission(seed >>> 0, flares, historical, location === 'moon' ? 'moon' : 'mars');
 }
 
+/**
+ * Aplica qualquer interação (src/sim/actions.ts) e devolve o resultado em JSON.
+ * As funções abaixo (answerCard, endSol…) são atalhos dela que o servidor Go já chama.
+ */
+export function apply(actionJson: string): string {
+  return JSON.stringify(applyAction(current(), JSON.parse(actionJson) as MissionAction));
+}
+
 export function answerCard(option: string): void {
-  current().answerCard(option);
+  applyAction(current(), { type: 'answerCard', option });
 }
 
 export function isPlanValid(planJson: string): boolean {
@@ -44,7 +53,7 @@ export function isPlanValid(planJson: string): boolean {
 }
 
 export function endSol(planJson: string): string {
-  return JSON.stringify(current().endSol(JSON.parse(planJson) as EnergyPlan));
+  return JSON.stringify(applyAction(current(), { type: 'endSol', plan: JSON.parse(planJson) as EnergyPlan }).report);
 }
 
 /** Prévia do plano (a mesma conta do fim do sol). "null" se a carta ainda não foi respondida ou o plano é inválido. */
@@ -55,7 +64,7 @@ export function previewSol(planJson: string): string {
   return JSON.stringify(m.previewSol(plan));
 }
 
-/** EVA proibida hoje (tempestade avisada)? Regra em Mission.evaBanned. */
+/** EVA proibida hoje (tempestade avisada)? Regra em src/sim/eva.ts. */
 export function evaBanned(): boolean {
   return current().evaBanned;
 }
@@ -64,19 +73,19 @@ export function evaBanned(): boolean {
 export function canResolve(uid: number): boolean {
   const m = current();
   const p = m.state.problems.find((x) => x.uid === uid);
-  return !!p && !(m.evaBanned && PROBLEMS[p.kind].outside);
+  return !!p && !(m.evaBanned && needsEva(p.kind));
 }
 
 export function openProblem(uid: number): void {
-  current().openProblem(uid);
+  applyAction(current(), { type: 'openProblem', uid });
 }
 
 export function setProblemProgress(uid: number, progress: number): void {
-  current().setProblemProgress(uid, progress);
+  applyAction(current(), { type: 'problemProgress', uid, progress });
 }
 
 export function resolveProblem(uid: number): void {
-  current().resolveProblem(uid);
+  applyAction(current(), { type: 'resolveProblem', uid });
 }
 
 /** Missões históricas: a mesma leitura e o mesmo sorteio do jogo solo. */

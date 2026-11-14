@@ -3,6 +3,7 @@ import { CARDS, CARD_IDS, MARS_ONLY_CARDS, applyCardOption, clamp, onCardDrawn }
 import { createRng, type Rng } from './rng.ts';
 import { PROBLEMS, scheduleProblems } from './problems.ts';
 import { simulateDay, stormDose, type DayResult } from './day.ts';
+import { isEvaBanned } from './eva.ts';
 import type { EnergyPlan, Flare, GameState, HistoricalMission, Message, Problem, ReportLine, Resources, ScheduledStorm, SolReport } from './types.ts';
 
 /** Cartas substituídas pelos problemas da tripulação (GDD: "Eles substituem as cartas..."). */
@@ -265,12 +266,9 @@ export class Mission {
 
   // ---------- problemas pela base (tempo da tripulação) ----------
 
-  /**
-   * EVA proibida hoje: a Terra avisou que a tempestade chega esta noite (GDD, "EVA: sair da base").
-   * Sem o aviso (antena desalinhada), a tripulação não sabe, e a regra não vale.
-   */
+  /** EVA proibida hoje (regra em src/sim/eva.ts, isEvaBanned). */
   get evaBanned(): boolean {
-    return CONFIG.eva.banOnStormDay && this.state.messages.some((m) => m.kind === 'stormToday');
+    return isEvaBanned(this.state);
   }
 
   private problem(uid: number): Problem {

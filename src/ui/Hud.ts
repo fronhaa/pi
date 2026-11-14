@@ -8,9 +8,10 @@ import { CONFIG as SIM, doseFor3 } from '@/sim/config';
 export type PlanPreview = ReturnType<Mission['previewSol']>;
 import { formatDate, getLang, t, type StringKey } from '@/i18n';
 import type { MarsMessage } from '@/net/protocol';
+import type { Role } from '@/sim/crew';
 import { h, openDialog, patchChildren } from './dom';
 
-type RoleId = 'commander' | 'engineer' | 'medic' | 'scientist';
+type RoleId = Role;
 
 export interface DayView {
   remaining: number;
