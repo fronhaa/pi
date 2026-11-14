@@ -69,6 +69,14 @@ Se o mesh estiver rotacionado, aplique a mesma rotação ao collider
 - Os obstáculos são as caixas de `MarsBase.obstacles` (módulos, cúpula, torre, painéis, bateria, abrigo).
   **Os postos (`POSTS`) precisam ficar fora dessas caixas**, senão o astronauta nasce preso.
 - Clique no chão: anda em linha reta até o ponto. Não há busca de caminho; se ficar preso 1,5 s, desiste.
+- **Piloto automático à noite** (`goInside`, `comeOut`): cada astronauta segue um caminho calculado por
+  [`crewPath.ts`](../src/scene/crewPath.ts) (grafo de visibilidade sobre os cantos das caixas de `obstacles`,
+  alargadas pelo raio da cápsula) até a porta em `ENTRANCES` (`MarsBase.ts`): habitat para dormir, abrigo na tempestade.
+  Ao chegar, o corpo é **desativado** (`setEnabled(false)`) e escondido, para não bloquear a porta. De manhã, ele é
+  reposicionado ao lado da porta (`setTranslation`, a única exceção ao "mova por velocidade") e volta ao posto.
+  Preso por 1,5 s no piloto automático conta como "chegou". Seta ou clique do jogador cancela o piloto daquele astronauta.
+  **`ENTRANCES` precisa ficar fora das caixas de `obstacles`**, como os `POSTS`.
+- Velocidades da volta: `NIGHT_WALK_SPEED` e `STORM_RUN_SPEED` em [`constants.ts`](../src/core/constants.ts).
 - Pulo só com os pés no chão (`castRay` para baixo, ignorando o próprio corpo). Espaço num botão focado aperta o botão, não pula.
 - A tripulação não passa de 30 m do centro da base.
 - Em teste automático no navegador, o jogo expõe `window.__jezero` **só em desenvolvimento**.

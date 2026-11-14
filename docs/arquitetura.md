@@ -31,14 +31,14 @@ interface ──decisões──► simulação ──estado──► interface e
 
 | Pasta | Responsabilidade |
 | --- | --- |
-| [`src/sim/`](../src/sim) | Regras do jogo. `config.ts` tem **todos os números**; `mission.ts`, o ciclo do sol; `cards.ts`, as cartas. Imports com extensão `.ts` (o Node roda direto). |
-| [`src/scene/`](../src/scene) | Cena 3D: base na cratera Jezero (`MarsBase.ts`) e tripulação (`Crew.ts`). |
+| [`src/sim/`](../src/sim) | Regras do jogo. `config.ts` tem **todos os números**; `mission.ts`, o ciclo do sol; `cards.ts`, as cartas; `historical.ts`, as missões históricas. Imports com extensão `.ts` (o Node roda direto). |
+| [`src/scene/`](../src/scene) | Cena 3D: base na cratera Jezero (`MarsBase.ts`), tripulação (`Crew.ts`), movimento com física (`crewMotion.ts`, sob demanda) e caminho desviando das construções (`crewPath.ts`). |
 | [`src/ui/`](../src/ui) | Interface HTML sobre a cena: `Hud.ts` (barra, recursos, mensagens, plano), `dialogs.ts` (tutorial, cartas, relatório, fim, dados da NASA), `LoadingScreen.ts`. Sem framework. |
 | [`src/i18n/`](../src/i18n) | Textos em PT e EN (`strings.ts`). O TypeScript obriga toda chave a existir nos dois idiomas. |
-| [`src/data/`](../src/data) | Carregamento dos dados da NASA para o jogo. Coleta: [dados.md](dados.md). |
+| [`src/data/`](../src/data) | Carregamento dos dados da NASA para o jogo: `missions.ts` (missões históricas, padrão) e `flares.ts` (erupções, reserva). Coleta: [dados.md](dados.md). |
 | [`src/render/`](../src/render) | Materiais cel-shading, contorno e paleta da Art Bible. |
 | [`src/core/`](../src/core) | `Game.ts` (orquestra tudo, clique na cena), `Input.ts` (teclado), `Physics.ts` (Rapier, só via `crewMotion`), `constants.ts` (gravidade de Marte com fonte). |
-| [`public/data/`](../public/data) | Dados servidos ao jogo: erupções do DONKI (`donki-flares.json`) e missões históricas (`missions.json`, ainda não lidas pelo jogo). Gerados por scripts; não edite à mão. |
+| [`public/data/`](../public/data) | Dados servidos ao jogo: erupções do DONKI (`donki-flares.json`) e missões históricas (`missions.json`). Gerados por scripts; não edite à mão. |
 | [`scripts/`](../scripts) | `balance.ts` (equilíbrio), `fetch-donki.mjs` e `fetch-missions.mjs` (dados, ver [dados.md](dados.md) e [apis-nasa.md](apis-nasa.md)), `new-adr.mjs` (docs). |
 
 Import com alias: `import { Mission } from '@/sim/mission'` (`@` = `src/`). Dentro de `src/sim/`, use caminhos relativos com `.ts`.

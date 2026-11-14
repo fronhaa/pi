@@ -101,7 +101,7 @@ Extraídos da coleta de 2026-11-14. Confira sempre pelo `link` no JSON.
 
 ## Missões históricas: DONKI (CME) e JPL Horizons
 
-**Estado: planejado.** O arquivo existe, mas o jogo ainda não o lê ([GDD](game-design.md#calendário-da-missão-janelas-históricas-reais), backlog #15).
+**Estado: em uso.** É a fonte padrão das tempestades do jogo ([GDD](game-design.md#calendário-da-missão-janelas-históricas-reais)). Sem o arquivo, o jogo volta às erupções de `donki-flares.json`.
 
 | | |
 | --- | --- |
