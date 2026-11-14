@@ -133,6 +133,16 @@ export const PROBLEM_SPOTS: Record<ProblemKind, THREE.Vector3> = {
  */
 export const ROVER_TRACK = { cx: 2, cz: 2, rx: 26, rz: 15 } as const;
 
+/**
+ * Áreas que só o rover evita (círculos no chão), além das caixas de colisão dos prédios: os sacos de
+ * regolito em volta do abrigo e a borda da cúpula passam das caixas (que são feitas para os astronautas,
+ * que precisam chegar perto da porta do abrigo e da estufa).
+ */
+export const ROVER_KEEP_OUT: readonly { x: number; z: number; r: number }[] = [
+  { x: SHELTER_CENTER.x, z: SHELTER_CENTER.z, r: 4.2 },
+  { x: DOME_CENTER.x, z: DOME_CENTER.z, r: DOME_RADIUS + 0.3 },
+];
+
 /** Distância (m) de um ponto até a faixa sem pedras. */
 export function distanceToRoverTrack(x: number, z: number): number {
   const { cx, cz, rx, rz } = ROVER_TRACK;

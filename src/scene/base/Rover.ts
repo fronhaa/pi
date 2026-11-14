@@ -1,32 +1,33 @@
 import * as THREE from 'three';
 import { PALETTE, toonMesh } from '@/render/toon';
 import type { SceneryModel } from '@/render/sceneryModel';
-import { terrainHeight, type Obstacle } from './layout';
+import { ROVER_KEEP_OUT, ROVER_TRACK, terrainHeight, type Obstacle } from './layout';
 import type { Rock } from './terrain';
 
 // Valores de cena (só visual), não regras do jogo.
 
 /** Centro da base: o rover mede daqui o quanto está longe. */
-const BASE_CENTER = { x: 2, z: 2 };
+const BASE_CENTER = { x: ROVER_TRACK.cx, z: ROVER_TRACK.cz };
 /**
  * Até onde o rover vai explorar (m do centro da base): mais blocos de ciência, destinos mais longe.
- * Com 1 bloco ele fica perto (até ~25 m); com 6 ou mais chega a ~50 m, ainda dentro do zoom máximo da câmera.
+ * Com 1 bloco ele fica perto (até ~33 m); com 5 ou mais chega a ~52 m, ainda dentro do zoom máximo da câmera.
  */
-const RANGE_MIN = 20;
+const RANGE_MIN = 28;
 const RANGE_PER_BLOCK = 5;
-const RANGE_MAX = 50;
+const RANGE_MAX = 52;
 /** Largura da faixa de destinos: ele explora entre (alcance − isto) e o alcance. */
 const RANGE_BAND = 14;
-/** Mais perto que isto do centro ficam os prédios e os painéis: nenhum destino aqui. */
-const RANGE_INNER_MIN = 15;
+const RANGE_INNER_MIN = 20;
 /**
- * Miolo da base (prédios, painéis): o rover não atravessa, contorna por fora num círculo deste raio.
- * Sem isso ele podia entrar entre os prédios e ficar sem saída.
+ * A base inteira (prédios, painéis, abrigo) fica dentro desta elipse: o rover nunca a atravessa.
+ * Para ir ao outro lado ele contorna pela elipse de fora (ORBIT), que passa longe dos prédios.
  */
-const CORE_RADIUS = 14;
-const ORBIT_RADIUS = 19;
+const CORE = { rx: ROVER_TRACK.rx, rz: ROVER_TRACK.rz };
+const ORBIT = { rx: ROVER_TRACK.rx + 4, rz: ROVER_TRACK.rz + 4 };
 /** Quanto ele avança no contorno por vez (rad): o ponto de passagem anda junto com ele. */
-const ORBIT_STEP = 0.9;
+const ORBIT_STEP = 0.6;
+/** Antes de andar, confere esta distância à frente do nariz (m); fechado, gira parado. */
+const NOSE_CHECK = 1.5;
 /** Velocidade andando (m/s) e giro máximo (rad/s): ele vira aos poucos, como um veículo de verdade. */
 const DRIVE_SPEED = 2.4;
 const TURN_RATE = 1.3;
@@ -206,9 +207,27 @@ export class Rover {
     return Math.hypot(x - BASE_CENTER.x, z - BASE_CENTER.z);
   }
 
-  /** O ponto fica dentro (ou colado) de um prédio? */
-  private insideObstacle(x: number, z: number, margin: number): boolean {
-    return this.obstacles.some((o) => Math.abs(x - o.center.x) < o.half.x + margin && Math.abs(z - o.center.z) < o.half.z + margin);
+  /** Dentro da elipse da base (com `margin` m a mais)? */
+  private inCore(x: number, z: number, margin = 0): boolean {
+    const u = (x - BASE_CENTER.x) / (CORE.rx + margin);
+    const v = (z - BASE_CENTER.z) / (CORE.rz + margin);
+    return u * u + v * v < 1;
+  }
+
+  /**
+   * Folga (m) entre o rover, se ele estivesse neste ponto, e a coisa mais perto: prédios (caixas), áreas
+   * proibidas (abrigo com os sacos, cúpula) e pedras. Negativa = encostando ou dentro.
+   */
+  private clearance(x: number, z: number): number {
+    let best = Infinity;
+    for (const o of this.obstacles) {
+      const dx = Math.abs(x - o.center.x) - o.half.x - ROVER_HALF;
+      const dz = Math.abs(z - o.center.z) - o.half.z - ROVER_HALF;
+      best = Math.min(best, dx > 0 || dz > 0 ? Math.hypot(Math.max(dx, 0), Math.max(dz, 0)) : Math.max(dx, dz));
+    }
+    for (const k of ROVER_KEEP_OUT) best = Math.min(best, Math.hypot(x - k.x, z - k.z) - k.r - ROVER_HALF);
+    for (const k of this.rocks) best = Math.min(best, Math.hypot(x - k.x, z - k.z) - k.r - ROVER_HALF);
+    return best;
   }
 
   /**
@@ -220,7 +239,7 @@ export class Rover {
     const p = this.root.position;
     const rocks = this.rocks.filter((k) => {
       const d = this.fromBase(k.x, k.z);
-      return d >= near && d <= far && k !== this.lastRock && Math.hypot(k.x - p.x, k.z - p.z) > 8;
+      return d >= near && d <= far && !this.inCore(k.x, k.z, 4) && k !== this.lastRock && Math.hypot(k.x - p.x, k.z - p.z) > 8;
     });
     let x: number;
     let z: number;
@@ -237,53 +256,51 @@ export class Rover {
         const d = near + Math.random() * (far - near);
         x = BASE_CENTER.x + Math.cos(a) * d;
         z = BASE_CENTER.z + Math.sin(a) * d;
-      } while (this.insideObstacle(x, z, 2) && ++tries < 20);
+      } while ((this.inCore(x, z, 4) || this.clearance(x, z) < 1) && ++tries < 40);
     }
     const dist = Math.hypot(x - p.x, z - p.z);
     this.target = { x, z, stop, rock, driving: 0, limit: (dist / DRIVE_SPEED) * 2.5 + 8 };
     this.lastRock = rock;
   }
 
-  /** A linha reta nesta direção, até `length` m, passa livre de prédios, pedras (menos a do destino) e astronautas? */
+  /**
+   * A linha reta nesta direção, até `length` m, passa livre de prédios, pedras e astronautas?
+   * Se ele já está encostado em algo (ex.: desatolou ao lado de uma pedra), só vale direção que o afaste.
+   */
   private pathFree(heading: number, length: number, crew: THREE.Vector3[]): boolean {
     const p = this.root.position;
     const fx = Math.cos(heading);
     const fz = -Math.sin(heading);
-    // O que já encosta nele agora (ex.: desatolou ao lado de uma pedra) não bloqueia: ele precisa conseguir sair dali.
-    const touching = (x: number, z: number, r: number) => Math.hypot(x - p.x, z - p.z) < r;
-    const steps = Math.max(1, Math.ceil(length));
+    let last = this.clearance(p.x, p.z);
+    const steps = Math.max(2, Math.ceil(length / 0.5));
     for (let i = 1; i <= steps; i++) {
       const s = (i / steps) * length;
       const x = p.x + fx * s;
       const z = p.z + fz * s;
       if (this.fromBase(x, z) > RANGE_MAX + 6) return false;
-      if (this.insideObstacle(x, z, ROVER_HALF) && !this.insideObstacle(p.x, p.z, ROVER_HALF)) return false;
-      for (const k of this.rocks) {
-        if (k === this.target?.rock || touching(k.x, k.z, k.r + ROVER_HALF)) continue;
-        if (Math.hypot(k.x - x, k.z - z) < k.r + ROVER_HALF) return false;
-      }
-      for (const c of crew) if (Math.hypot(c.x - x, c.z - z) < CREW_SAFE) return false;
+      const c = this.clearance(x, z);
+      if (c < 0 && c <= last) return false;
+      last = c;
+      for (const m of crew) if (Math.hypot(m.x - x, m.z - z) < CREW_SAFE) return false;
     }
     return true;
   }
 
   /**
-   * Próximo ponto da viagem: o destino, se a linha reta até ele não corta o miolo da base; senão, um ponto
-   * no contorno, um pouco à frente, pelo lado mais curto. Dentro do miolo, primeiro sai para fora.
+   * Próximo ponto da viagem: o destino, se a linha reta até ele não corta a base; senão, um ponto no
+   * contorno de fora, um pouco à frente, pelo lado mais curto. Dentro da base, primeiro sai para o contorno.
    */
   private waypoint(): { x: number; z: number; final: boolean } {
     const t = this.target!;
     const p = this.root.position;
     const { x: cx, z: cz } = BASE_CENTER;
-    const orbit = (a: number) => ({ x: cx + Math.cos(a) * ORBIT_RADIUS, z: cz + Math.sin(a) * ORBIT_RADIUS, final: false });
-    const ap = Math.atan2(p.z - cz, p.x - cx);
-    if (this.fromBase(p.x, p.z) < CORE_RADIUS) return orbit(ap);
-    // Ponto do segmento rover → destino mais perto do centro da base.
-    const dx = t.x - p.x;
-    const dz = t.z - p.z;
-    const k = THREE.MathUtils.clamp(((cx - p.x) * dx + (cz - p.z) * dz) / (dx * dx + dz * dz || 1), 0, 1);
-    if (this.fromBase(p.x + dx * k, p.z + dz * k) >= CORE_RADIUS) return { x: t.x, z: t.z, final: true };
-    const at = Math.atan2(t.z - cz, t.x - cx);
+    const orbit = (a: number) => ({ x: cx + Math.cos(a) * ORBIT.rx, z: cz + Math.sin(a) * ORBIT.rz, final: false });
+    const ap = Math.atan2((p.z - cz) / ORBIT.rz, (p.x - cx) / ORBIT.rx);
+    if (this.inCore(p.x, p.z)) return orbit(ap);
+    let crosses = false;
+    for (let i = 1; i < 24 && !crosses; i++) crosses = this.inCore(p.x + ((t.x - p.x) * i) / 24, p.z + ((t.z - p.z) * i) / 24);
+    if (!crosses) return { x: t.x, z: t.z, final: true };
+    const at = Math.atan2((t.z - cz) / ORBIT.rz, (t.x - cx) / ORBIT.rx);
     const diff = Math.atan2(Math.sin(at - ap), Math.cos(at - ap));
     return orbit(ap + THREE.MathUtils.clamp(diff, -ORBIT_STEP, ORBIT_STEP));
   }
@@ -404,10 +421,14 @@ export class Rover {
     this.animateTools(false, dt, time);
     if (this.blocked || heading === null) return;
 
-    // Vira aos poucos para a direção escolhida e anda mais devagar nas curvas fechadas.
+    // Vira aos poucos para a direção escolhida e anda mais devagar nas curvas fechadas. Se o nariz ainda
+    // aponta para algo (a curva não terminou), gira parado em vez de avançar: nunca entra em prédio ou pedra.
     const diff = Math.atan2(Math.sin(heading - this.heading), Math.cos(heading - this.heading));
     this.heading += THREE.MathUtils.clamp(diff, -TURN_RATE * dt, TURN_RATE * dt);
-    const speed = DRIVE_SPEED * Math.max(0.35, Math.cos(diff));
+    // Perto do destino, olha só até o ponto de parada (senão a própria pedra de estudo "fecharia" a frente).
+    const remain = Math.hypot(t.x - p.x, t.z - p.z) - t.stop;
+    const noseFree = this.pathFree(this.heading, Math.min(NOSE_CHECK, Math.max(0.3, remain + 0.3)), crew);
+    const speed = noseFree ? DRIVE_SPEED * Math.max(0.35, Math.cos(diff)) : 0;
     const step = speed * dt;
     const x = p.x + Math.cos(this.heading) * step;
     const z = p.z - Math.sin(this.heading) * step;
