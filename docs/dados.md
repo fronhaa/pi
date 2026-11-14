@@ -23,12 +23,29 @@ Regras:
 
 1. Pegue uma chave grátis em <https://api.nasa.gov/> (sai na hora, por e-mail).
 2. Copie `.env.example` para `.env` e preencha `NASA_API_KEY=...`. O `.env` **não** vai para o git.
-3. Rode `npm run fetch-data` e confira o resumo impresso (quantidade de eventos).
-4. Commite os dois arquivos gerados.
+3. Rode `npm run fetch-data` e confira o resumo impresso (quantidade de eventos e requisições usadas).
+4. Commite os arquivos gerados **e o cache** (`data/cache/donki/`).
 
-A API aceita **no máximo 60 dias por requisição**, então o script faz ~200 requisições
-(blocos de 60 dias × 3 tipos). A chave própria permite 1.000/hora; a `DEMO_KEY` pública
-(~10/hora, compartilhada) não dá conta.
+### Limite da API e cache
+
+A api.nasa.gov tem limite de requisições por hora (por chave; a `DEMO_KEY` pública é compartilhada e
+quase sempre está esgotada). Como ela aceita **no máximo 60 dias por requisição**, baixar 2016 até hoje
+custa **~200 requisições**. Para não gastar isso toda vez, o script guarda cada bloco de 60 dias em
+`data/cache/donki/<tipo>/<início>.json` (só os campos usados; ~370 KB no total) e **reaproveita**:
+
+| Situação | O que o script faz |
+| --- | --- |
+| Bloco antigo, baixado quando já estava "assentado" (30 dias depois do fim) | Usa o cache, **sem requisição** |
+| Bloco recente (o DONKI ainda corrige eventos) | Baixa de novo e atualiza o cache |
+| Limite estourou no meio (HTTP 429) | O que já veio fica salvo; rode de novo depois e ele continua dali |
+| `DONKI_FORCE=1 npm run fetch-data` | Ignora o cache e baixa tudo (~200 requisições) |
+
+Medido em 2026-11-14: a primeira coleta fez 201 requisições; **a segunda fez 6** (2 blocos recentes × 3 tipos)
+e gerou arquivos idênticos.
+
+**O jogo nunca chama a API.** Ele só lê `public/data/donki-flares.json`. Assim, nenhum jogador gasta
+o limite. Se um dia houver busca "ao vivo" no navegador, ela precisa de cache no próprio navegador e
+continuar caindo para os dados baixados quando a API falhar ou recusar.
 
 ### O que é coletado
 
