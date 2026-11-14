@@ -1,6 +1,7 @@
 # Mars Exploration: Missão Jezero: documento de design do jogo (GDD)
 
-> Origem: documento de design do time ("Tab 1"), versão de 14/11/2026.
+> Documento vivo. Origem: GDD do time ("Tab 1"), versão de 14/11/2026, que substitui o rascunho "Base Marte Pi" (ver o histórico do git).
+> Requisitos do desafio: [desafio.md](desafio.md). Mudou uma regra do jogo? Atualize aqui no mesmo PR; todo número real precisa de fonte.
 > Este guia define a **jogabilidade**. A **arte** é definida pela Art Bible (documento externo do time).
 > Mudança de jogabilidade entra primeiro aqui; mudança de arte entra primeiro na Art Bible (ver [Alinhamento com a Art Bible](#alinhamento-com-a-art-bible)).
 
