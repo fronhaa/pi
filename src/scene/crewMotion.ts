@@ -26,7 +26,12 @@ export interface CrewMotionOptions {
   camera: THREE.Camera;
   onSelect?: (role: Role) => void;
   onFirstJump?: () => void;
+  /** Rover animado pela cena: ganha um corpo cinemático que bloqueia os astronautas. */
+  rover?: THREE.Object3D;
 }
+
+/** Caixa de colisão do rover (meias medidas, m): corpo + rodas. Centro a 0,6 m do chão. */
+const ROVER_HALF = { x: 1.05, y: 0.6, z: 0.8 };
 
 export async function createCrewMotion(opts: CrewMotionOptions): Promise<CrewMotion> {
   const physics = await Physics.create();
@@ -47,6 +52,7 @@ export class CrewMotion {
   private readonly insideRoles = new Set<Role>();
   /** Destino final de uma ordem do jogador/tarefa (identidade usada por CrewTasks para saber se a ordem mudou). */
   private readonly dests: Partial<Record<Role, THREE.Vector3>> = {};
+  private roverBody: RAPIER.RigidBody | null = null;
   private readonly ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
   private accumulator = 0;
   private jumped = false;
@@ -58,6 +64,12 @@ export class CrewMotion {
     const world = physics.world;
     // Chão plano em volta da base (o relevo só começa depois de 30 m; ver terrainHeight).
     world.createCollider(RAPIER.ColliderDesc.cuboid(BOUNDS + 5, 0.5, BOUNDS + 5).setTranslation(0, -0.5, 0));
+    // Rover: corpo cinemático (a cena move, a física só usa para bloquear/empurrar os astronautas).
+    if (opts.rover) {
+      this.roverBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+      world.createCollider(RAPIER.ColliderDesc.cuboid(ROVER_HALF.x, ROVER_HALF.y, ROVER_HALF.z).setTranslation(0, ROVER_HALF.y, 0), this.roverBody);
+      this.syncRover(true);
+    }
     for (const o of opts.obstacles) {
       world.createCollider(RAPIER.ColliderDesc.cuboid(o.half.x, o.half.y, o.half.z).setTranslation(o.center.x, o.center.y, o.center.z));
     }
@@ -208,7 +220,22 @@ export class CrewMotion {
     this.sync(dt);
   }
 
+  /** Copia a pose do rover (animada pela cena) para o corpo cinemático. */
+  private syncRover(teleport = false): void {
+    const r = this.opts.rover;
+    if (!r || !this.roverBody) return;
+    const q = r.quaternion;
+    if (teleport) {
+      this.roverBody.setTranslation({ x: r.position.x, y: r.position.y, z: r.position.z }, true);
+      this.roverBody.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true);
+    } else {
+      this.roverBody.setNextKinematicTranslation({ x: r.position.x, y: r.position.y, z: r.position.z });
+      this.roverBody.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
+    }
+  }
+
   private fixedUpdate(): void {
+    this.syncRover();
     const input = this.opts.input;
     if (this.enabled) {
       const digits: [string, Role][] = [['Digit1', 'commander'], ['Digit2', 'engineer'], ['Digit3', 'medic'], ['Digit4', 'scientist']];

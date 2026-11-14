@@ -93,6 +93,8 @@ export class MarsBase {
   /** Rodas (giram conforme a distância percorrida) e direção do nariz (segue o movimento real). */
   private readonly roverWheels: THREE.Object3D[] = [];
   private roverHeading: number | null = null;
+  /** "Volante": metros de lado por metro à frente (−0,6 a 0,6). Gira aos poucos, como um veículo de verdade. */
+  private roverSteer = 0;
   /** Pedras que o rover precisa evitar (posição e raio no chão). */
   private readonly roverRocks: { x: number; z: number; r: number }[] = [];
   private roverWarning!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
@@ -475,6 +477,11 @@ export class MarsBase {
   }
 
   /** Animações por frame (só visual). */
+  /** O rover (para a física dar a ele um corpo que bloqueia os astronautas). */
+  get roverObject(): THREE.Object3D {
+    return this.rover;
+  }
+
   /** Desvio lateral atual do rover (m). */
   get roverDetour(): number {
     return this.roverOffset;
@@ -589,23 +596,27 @@ export class MarsBase {
       if (!this.roverBlocked) {
         const a0 = this.roverAngle;
         this.roverAngle += dt * 0.06 * s.scienceBlocks;
-        // Troca de faixa limitada a uma curva natural: no máximo ~0,6 m de lado por metro à frente (~30°).
         const forward = (this.roverAngle - a0) * Math.hypot(Math.sin(a0) * (26 + this.roverOffset), Math.cos(a0) * (15 + this.roverOffset));
-        const step = forward * 0.6;
-        this.roverOffset += THREE.MathUtils.clamp(this.roverOffsetTarget - this.roverOffset, -step, step);
+        // Volante: quer virar até ~30° (0,6) para o lado do desvio, aliviando perto da faixa-alvo; gira no máximo 1,5/s.
+        const remaining = this.roverOffsetTarget - this.roverOffset;
+        const desired = THREE.MathUtils.clamp(remaining / 1.5, -0.6, 0.6);
+        this.roverSteer += THREE.MathUtils.clamp(desired - this.roverSteer, -1.5 * dt, 1.5 * dt);
+        const lateral = this.roverSteer * forward;
+        // Não passa da faixa-alvo.
+        this.roverOffset = Math.abs(lateral) > Math.abs(remaining) && Math.sign(lateral) === Math.sign(remaining) ? this.roverOffsetTarget : this.roverOffset + lateral;
       }
       const { x, z } = this.roverPoint(this.roverAngle, this.roverOffset);
       const y = terrainHeight(x, z);
       const moved = Math.hypot(x - this.rover.position.x, z - this.rover.position.z);
       if (moved > 1e-4 && moved < 2) {
-        // Nariz mira um ponto ~0,5 m à frente na trajetória planejada (sem "drift" nas curvas e desvios).
-        const speedHere = Math.hypot(Math.sin(this.roverAngle) * (26 + this.roverOffset), Math.cos(this.roverAngle) * (15 + this.roverOffset));
-        const aheadOff = this.roverOffset + THREE.MathUtils.clamp(this.roverOffsetTarget - this.roverOffset, -0.3, 0.3);
-        const ahead = this.roverPoint(this.roverAngle + 0.5 / speedHere, aheadOff);
-        const target = Math.atan2(-(ahead.z - z), ahead.x - x);
-        if (this.roverHeading === null) this.roverHeading = target;
-        const diff = Math.atan2(Math.sin(target - this.roverHeading), Math.cos(target - this.roverHeading));
-        this.roverHeading += diff * Math.min(1, dt * 15);
+        // Nariz = direção exata do movimento: tangente da elipse + componente lateral do volante (sem "drift").
+        const a = this.roverAngle;
+        const tx = -Math.sin(a) * (26 + this.roverOffset);
+        const tz = Math.cos(a) * (15 + this.roverOffset);
+        const tl = Math.hypot(tx, tz);
+        const vx = tx / tl + this.roverSteer * Math.cos(a);
+        const vz = tz / tl + this.roverSteer * Math.sin(a);
+        this.roverHeading = Math.atan2(-vz, vx);
         // Rodas giram conforme a distância (raio 0,3 m).
         for (const w of this.roverWheels) w.rotation.z -= moved / 0.3;
       }

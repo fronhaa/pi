@@ -155,6 +155,7 @@ export class Game {
       this.motion = await createCrewMotion({
         crew: this.crew,
         obstacles: this.base.obstacles,
+        rover: this.base.roverObject,
         input: this.input,
         camera: this.camera,
         onSelect: (role) => {
