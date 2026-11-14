@@ -102,6 +102,21 @@ var JezeroSim = (function(exports) {
 				shieldBag: 8
 			}
 		},
+		/**
+		* Cartas do rover (GDD, "Cartas de decisão"). Números de jogo (INTERPRETADO); os fatos reais
+		* por trás delas têm fonte no GDD (MOXIE, AutoNav do Perseverance, Spirit atolado).
+		*/
+		rover: {
+			moxie: {
+				battery: -15,
+				life: 10
+			},
+			route: {
+				safeScience: 5,
+				shortcutScience: 15,
+				shortcutStuckChance: .5
+			}
+		},
 		stars: { doseFor3: 50 }
 	};
 	// src/sim/cards.ts
@@ -137,6 +152,14 @@ var JezeroSim = (function(exports) {
 		subsurfaceIce: {
 			id: "subsurfaceIce",
 			options: [{ id: "drill" }, { id: "notNow" }]
+		},
+		moxie: {
+			id: "moxie",
+			options: [{ id: "run" }, { id: "save" }]
+		},
+		roverRoute: {
+			id: "roverRoute",
+			options: [{ id: "safe" }, { id: "shortcut" }]
 		}
 	};
 	var CARD_IDS = Object.keys(CARDS);
@@ -195,6 +218,15 @@ var JezeroSim = (function(exports) {
 			case "subsurfaceIce:drill":
 				add("battery", -20);
 				add("life", 20);
+				break;
+			case "moxie:run":
+				add("battery", CONFIG.rover.moxie.battery);
+				add("life", CONFIG.rover.moxie.life);
+				break;
+			case "roverRoute:safe":
+				add("science", CONFIG.rover.route.safeScience);
+				break;
+			case "roverRoute:shortcut": add("science", CONFIG.rover.route.shortcutScience);
 		}
 		lines.unshift({ key: `card.${id}.${option}.result` });
 		return lines;
@@ -401,6 +433,12 @@ var JezeroSim = (function(exports) {
 				"cardLines",
 				[]
 			);
+			_defineProperty(
+				this,
+				/** Fatos reais já mostrados nesta missão (cada um aparece uma vez só). */
+				"factsShown",
+				/* @__PURE__ */ new Set()
+			);
 			_defineProperty(this, "uid", 0);
 			_defineProperty(
 				this,
@@ -545,11 +583,47 @@ var JezeroSim = (function(exports) {
 			if (!card) throw new Error("Nenhuma carta pendente");
 			if (!card.options.some((o) => o.id === optionId)) throw new Error(`Opção inválida: ${optionId}`);
 			const lines = applyCardOption(card.id, optionId, this.state.res, this.rng);
+			if (card.id === "roverRoute" && optionId === "shortcut") lines.push(this.shortcutOutcome());
 			this.cardLines.push(...lines);
 			this.state.pendingCard = null;
 			this.updateBlocks();
 			this.checkLoss();
 			return lines;
+		}
+		/**
+		* Atalho do rover: com chance, ele atola hoje (vira o problema "Rover atolado", que precisa de resgate).
+		* Se o rover já ia atolar hoje, não cria outro.
+		*/
+		shortcutOutcome() {
+			if (!this.rng.chance(CONFIG.rover.route.shortcutStuckChance)) return {
+				key: "card.roverRoute.ok",
+				tone: "good"
+			};
+			const s = this.state;
+			if (!s.problems.some((p) => p.kind === "roverStuck" && p.status !== "done")) {
+				const w = CONFIG.problems.spawnWindow;
+				s.problems.push({
+					uid: ++this.uid,
+					kind: "roverStuck",
+					spawnAt: w.min,
+					status: "pending",
+					progress: 0
+				});
+				s.problems.sort((a, b) => a.spawnAt - b.spawnAt);
+			}
+			return {
+				key: "card.roverRoute.stuck",
+				tone: "bad"
+			};
+		}
+		/** Fato real ligado ao que aconteceu, mostrado uma vez por missão (GDD, "Fatos reais dos rovers"). */
+		factOnce(key) {
+			if (this.factsShown.has(key)) return [];
+			this.factsShown.add(key);
+			return [{
+				key,
+				tone: "neutral"
+			}];
 		}
 		problem(uid) {
 			const p = this.state.problems.find((x) => x.uid === uid);
@@ -708,6 +782,9 @@ var JezeroSim = (function(exports) {
 				status: "open",
 				spawnAt: 0
 			}));
+			if (s.sol === 1) lines.push(...this.factOnce("fact.battery"));
+			if (s.sol === s.dustStormSol) lines.push(...this.factOnce("fact.opportunity"));
+			if (s.problems.some((p) => p.kind === "roverStuck" && p.status !== "pending")) lines.push(...this.factOnce("fact.spirit"));
 			const report = {
 				sol: s.sol,
 				plan: _objectSpread2({}, plan),

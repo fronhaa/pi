@@ -45,7 +45,7 @@ export interface EnergyPlan {
   science: number;
 }
 
-export type CardId = 'dustyPanels' | 'mysteryRock' | 'greenhouseLeak' | 'cargoShip' | 'brokenSensor' | 'subsurfaceIce';
+export type CardId = 'dustyPanels' | 'mysteryRock' | 'greenhouseLeak' | 'cargoShip' | 'brokenSensor' | 'subsurfaceIce' | 'moxie' | 'roverRoute';
 
 export interface CardOption {
   id: string;

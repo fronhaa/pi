@@ -17,6 +17,8 @@ export class Mission {
   private readonly rng: Rng;
   /** Linhas geradas durante o sol (carta, problemas resolvidos), entram no relatório do mesmo sol. */
   private cardLines: ReportLine[] = [];
+  /** Fatos reais já mostrados nesta missão (cada um aparece uma vez só). */
+  private readonly factsShown = new Set<string>();
   private uid = 0;
   /** Antena desalinhada na noite anterior: sem mensagens no próximo sol. */
   private nextCommsDown = false;
@@ -159,11 +161,34 @@ export class Mission {
     if (!card) throw new Error('Nenhuma carta pendente');
     if (!card.options.some((o) => o.id === optionId)) throw new Error(`Opção inválida: ${optionId}`);
     const lines = applyCardOption(card.id, optionId, this.state.res, this.rng);
+    if (card.id === 'roverRoute' && optionId === 'shortcut') lines.push(this.shortcutOutcome());
     this.cardLines.push(...lines);
     this.state.pendingCard = null;
     this.updateBlocks(); // limpar painéis muda a energia de hoje
     this.checkLoss();
     return lines;
+  }
+
+  /**
+   * Atalho do rover: com chance, ele atola hoje (vira o problema "Rover atolado", que precisa de resgate).
+   * Se o rover já ia atolar hoje, não cria outro.
+   */
+  private shortcutOutcome(): ReportLine {
+    if (!this.rng.chance(CONFIG.rover.route.shortcutStuckChance)) return { key: 'card.roverRoute.ok', tone: 'good' };
+    const s = this.state;
+    if (!s.problems.some((p) => p.kind === 'roverStuck' && p.status !== 'done')) {
+      const w = CONFIG.problems.spawnWindow;
+      s.problems.push({ uid: ++this.uid, kind: 'roverStuck', spawnAt: w.min, status: 'pending', progress: 0 });
+      s.problems.sort((a, b) => a.spawnAt - b.spawnAt);
+    }
+    return { key: 'card.roverRoute.stuck', tone: 'bad' };
+  }
+
+  /** Fato real ligado ao que aconteceu, mostrado uma vez por missão (GDD, "Fatos reais dos rovers"). */
+  private factOnce(key: string): ReportLine[] {
+    if (this.factsShown.has(key)) return [];
+    this.factsShown.add(key);
+    return [{ key, tone: 'neutral' }];
   }
 
   // ---------- problemas pela base (tempo da tripulação) ----------
@@ -276,6 +301,11 @@ export class Mission {
     }
     for (const p of carried) lines.push({ key: 'report.problem.carried', params: { problem: `problem.${p.kind}` } });
     this.carryOver = carried.map((p) => ({ ...p, status: 'open' as const, spawnAt: 0 }));
+
+    // Fatos reais dos rovers, ligados ao que a criança acabou de viver (uma vez por missão).
+    if (s.sol === 1) lines.push(...this.factOnce('fact.battery'));
+    if (s.sol === s.dustStormSol) lines.push(...this.factOnce('fact.opportunity'));
+    if (s.problems.some((p) => p.kind === 'roverStuck' && p.status !== 'pending')) lines.push(...this.factOnce('fact.spirit'));
 
     const report: SolReport = { sol: s.sol, plan: { ...plan }, before, after: { ...r }, storm: stormResult, lines };
     s.reports.push(report);
