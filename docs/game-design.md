@@ -499,6 +499,10 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 | Plano de energia (baixo) | Blocos de energia distribuídos com + e −, dicas como "precisa de 3 para não cair", e o botão "Terminar o sol" |
 | Janelas | Tutorial (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
 
+### Prévia do plano de energia
+
+Ao lado de cada linha do plano aparece o resultado previsto para esta noite ("Vida: 70 → 76"), em verde quando sobe e vermelho quando cai, e acima do botão os avisos: bateria acabando, tempestade esta noite (com a dose), tempestade de amanhã (com a dose que daria com a blindagem desta noite), suporte de vida em perigo e dose passando de 50 (perde a 3ª estrela). A criança vê a troca **antes** de decidir. A prévia usa o mesmo cálculo do fim do sol (`src/sim/day.ts`), então nunca mostra um número diferente do que acontece; ela não conta os problemas do dia, que ainda não apareceram, e diz isso.
+
 ### Linguagem
 
 - Frases curtas e palavras do dia a dia, para leitura de 7 a 12 anos.

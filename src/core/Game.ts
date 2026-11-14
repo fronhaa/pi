@@ -95,6 +95,7 @@ export class Game {
     container.appendChild(uiRoot);
     this.hud = new Hud(uiRoot, {
       onEndSol: (plan) => this.startDay(plan),
+      preview: (plan) => (this.mission && this.mission.isPlanValid(plan) && !this.mission.state.pendingCard ? this.mission.previewSol(plan) : null),
       onSendProblem: (uid) => this.tasks.assign(this.selected, uid),
       onPause: () => this.togglePause(),
       onEndDay: () => this.endDay(),
