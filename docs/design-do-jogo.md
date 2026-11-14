@@ -306,6 +306,14 @@ A direção de arte oficial do projeto é a Art Bible v1.0 (documento externo do
 
 O estilo oficial é o cel-shading semi-realista da Art Bible: proporções naturais, geometria detalhada, sombras em 3 a 4 níveis, contornos escuros controlados e cores naturais. O protótipo ainda está mais simplificado e saturado, e a migração está no backlog. A referência é a ilustração enviada pelo time, adaptada para 3D leve no navegador. Ela vale pelo clima e pela paleta, mas os logos da NASA e o planeta gigante no céu não entram no jogo.
 
+![Ilustração de referência enviada pelo time: astronauta diante da base na cratera, com cúpula, torre, painéis e rover](img/referencia-time.jpg)
+
+*Referência enviada pelo time. Vale pelo clima e pela paleta; os logos da NASA e o planeta gigante no céu não entram no jogo (ver [O que não usar](#o-que-não-usar)).*
+
+![Cena do protótipo: módulos, cúpula, torre JZ-1, abrigo de regolito, painéis solares, rover e três astronautas](img/prototipo-cena.png)
+
+*Como a cena está hoje no protótipo, sem a interface por cima.*
+
 ### Paleta
 
 | Uso | Cor oficial (Art Bible) | Protótipo hoje |
