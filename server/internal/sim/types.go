@@ -89,6 +89,8 @@ type Message struct {
 	DelayMin  float64 `json:"delayMin,omitempty"`
 	ImpactSol int     `json:"impactSol,omitempty"`
 	Sol       int     `json:"sol,omitempty"`
+	// Left: dias de sombra que faltam (mensagem "shadowNow", só na base lunar).
+	Left int `json:"left,omitempty"`
 }
 
 type ReportLine struct {
@@ -149,13 +151,16 @@ type HistoricalMission struct {
 }
 
 type GameState struct {
-	Seed         uint32             `json:"seed"`
+	Seed uint32 `json:"seed"`
+	// Location: "mars" ou "moon". As salas do servidor são sempre "mars" (base lunar só no solo, por enquanto).
+	Location     string             `json:"location"`
 	Historical   *HistoricalMission `json:"historical"`
 	Sol          int                `json:"sol"`
 	Res          Resources          `json:"res"`
 	Blocks       int                `json:"blocks"`
 	Storms       []ScheduledStorm   `json:"storms"`
 	DustStormSol int                `json:"dustStormSol"`
+	ShadowSol    int                `json:"shadowSol"`
 	DustHold     int                `json:"dustHold"`
 	CardSols     map[int]CardID     `json:"cardSols"`
 	PendingCard  *Card              `json:"pendingCard"`

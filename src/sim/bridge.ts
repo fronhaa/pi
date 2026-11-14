@@ -27,10 +27,11 @@ export function state(): string {
   return JSON.stringify({ ...s, cardSols: Object.fromEntries(s.cardSols) });
 }
 
-export function newMission(seed: number, flaresJson: string, historicalJson: string): void {
+/** `location` é opcional: o servidor Go de hoje não manda e a sala fica em Marte (Lua só no solo, por enquanto). */
+export function newMission(seed: number, flaresJson: string, historicalJson: string, location?: string): void {
   const flares = JSON.parse(flaresJson) as Flare[];
   const historical = JSON.parse(historicalJson) as HistoricalMission | null;
-  mission = new Mission(seed >>> 0, flares, historical);
+  mission = new Mission(seed >>> 0, flares, historical, location === 'moon' ? 'moon' : 'mars');
 }
 
 export function answerCard(option: string): void {

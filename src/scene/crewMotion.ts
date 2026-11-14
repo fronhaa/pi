@@ -84,6 +84,11 @@ export class CrewMotion {
     this.select('commander');
   }
 
+  /** Gravidade do lugar (m/s²): Marte ou Lua. O mesmo pulo sobe mais onde a gravidade é menor. */
+  setGravity(g: number): void {
+    this.physics.world.gravity = { x: 0, y: -g, z: 0 };
+  }
+
   select(role: Role): void {
     this.selected = role;
     for (const r of ROLES) this.opts.crew.members[r].setSelected(r === role);

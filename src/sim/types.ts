@@ -1,4 +1,6 @@
-import type { FlareClass } from './config.ts';
+import type { FlareClass, Location } from './config.ts';
+
+export type { Location };
 
 /**
  * Evento solar que dispara uma tempestade. `real` = veio do DONKI (com data e link).
@@ -61,6 +63,9 @@ export type Message =
   | { kind: 'stormToday'; flare: Flare; delayMin: number }
   | { kind: 'dustAlert'; delayMin: number; sol: number }
   | { kind: 'dustNow' }
+  /** Só na Lua: sombra das montanhas amanhã / hoje (`left` = dias de sombra que faltam, contando hoje). */
+  | { kind: 'shadowAlert'; delayMin: number; sol: number }
+  | { kind: 'shadowNow'; left: number }
   | { kind: 'allClear'; delayMin: number }
   | { kind: 'noSignal' };
 
@@ -105,6 +110,8 @@ export interface ScheduledStorm {
 
 export interface GameState {
   seed: number;
+  /** Onde fica a base (docs/game-design.md, "Base lunar"). */
+  location: Location;
   /** Missão histórica em jogo, ou null quando as tempestades são sorteadas (erupções ou simuladas). */
   historical: HistoricalMission | null;
   sol: number;
@@ -112,7 +119,10 @@ export interface GameState {
   /** Blocos de energia gerados hoje (já considera a poeira). */
   blocks: number;
   storms: ScheduledStorm[];
+  /** Sol da tempestade de poeira (só Marte; 0 na Lua). */
   dustStormSol: number;
+  /** Primeiro dia da sombra das montanhas (só Lua; 0 em Marte). Dura CONFIG.moon.shadow.sols dias. */
+  shadowSol: number;
   /** Sóis restantes em que a poeira da tempestade não é limpa pelo vento. */
   dustHold: number;
   cardSols: Map<number, CardId>;

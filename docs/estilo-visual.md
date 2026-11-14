@@ -44,6 +44,24 @@ Não use `MeshStandardMaterial` / `MeshPhongMaterial` em objetos do jogo: quebra
 
 Cor nova? Adicione em `PALETTE` **e** nesta tabela, dizendo a origem.
 
+### Base lunar (`MOON_PALETTE`)
+
+Na Lua (`MarsBase.setLocation('moon')`), só as cores de **terreno** mudam: os materiais que usam `soil`, `rock`, `lit` e
+`dust` (chão, pedras, mesetas, abrigo, sacos) trocam para os cinzas abaixo. Prédios, trajes e plantas ficam iguais.
+
+| Nome | Hex | Uso |
+| --- | --- | --- |
+| `soil` | `#7D7C83` | Regolito lunar (chão, fundo das crateras) |
+| `rock` | `#A3A2A9` | Pedras, abrigo, bordas de cratera |
+| `lit` | `#C4C3C9` | Camadas claras das bordas ao fundo |
+| `dust` | `#B1AEA6` | Sacos de regolito, painéis empoeirados |
+| `sky` | `#0B0D16` | Céu preto até de dia (sem atmosfera) |
+| `earth` / `earthLand` | `#3F7FD6` / `#5F9A4F` | A Terra grande e baixa no horizonte (no polo sul ela fica sempre perto do horizonte) |
+
+Outras diferenças na Lua: estrelas visíveis de dia, quase sem névoa, sem partículas de poeira no ar, Sol branco e baixo
+(sombras compridas, como no polo sul), mesetas achatadas (viram bordas de cratera) e crateras extras longe da base.
+Nos dias de sombra das montanhas (`SceneState.shadow`), a luz do Sol cai para 30%.
+
 ## Espessura do contorno
 
 | Objeto | `thickness` |

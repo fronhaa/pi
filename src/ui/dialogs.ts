@@ -1,4 +1,4 @@
-import { CONFIG } from '@/sim/config';
+import { CONFIG, doseFor3 } from '@/sim/config';
 import type { Card, GameState, HistoricalMission, SolReport } from '@/sim/types';
 import type { FlareSource } from '@/data/flares';
 import type { MissionSource } from '@/data/missions';
@@ -12,6 +12,19 @@ export function showTutorial(onDone: () => void, step = 1): void {
     title: t(`tutorial.${step}.title` as StringKey),
     body: [h('p', {}, t(`tutorial.${step}.text` as StringKey)), h('p', { class: 'steps' }, `${step} / 3`)],
     actions: [{ label: last ? t('tutorial.start') : t('tutorial.next'), primary: true, onClick: () => (last ? onDone() : showTutorial(onDone, step + 1)) }],
+    row: true,
+  });
+}
+
+/** Antes da missão solo: base em Marte ou na Lua (docs/game-design.md, "Base lunar"). */
+export function showPlaceChoice(onChoose: (place: 'mars' | 'moon') => void): void {
+  openDialog({
+    title: t('place.title'),
+    body: [h('p', {}, t('place.text')), h('p', {}, t('place.mars.hint')), h('p', {}, t('place.moon.hint'))],
+    actions: [
+      { label: t('place.mars'), primary: true, onClick: () => onChoose('mars') },
+      { label: t('place.moon'), onClick: () => onChoose('moon') },
+    ],
     row: true,
   });
 }
@@ -66,7 +79,7 @@ export function showEnd(state: GameState, onAgain: () => void): void {
   const criteria = [
     [o.status === 'won', 'end.star1'],
     [o.status === 'won' && r.science >= CONFIG.science.goal, 'end.star2'],
-    [o.status === 'won' && r.science >= CONFIG.science.goal && r.dose < CONFIG.stars.doseFor3, 'end.star3'],
+    [o.status === 'won' && r.science >= CONFIG.science.goal && r.dose < doseFor3(state.location), 'end.star3'],
   ] as const;
   // A lição mais relevante para o que aconteceu vem primeiro.
   const lessons: StringKey[] =
@@ -86,7 +99,7 @@ export function showEnd(state: GameState, onAgain: () => void): void {
       h('p', {}, text),
       h('div', { class: 'stars', 'aria-label': t('end.stars', { n: stars }) },
         ...[1, 2, 3].map((i) => h('span', { class: i <= stars ? '' : 'off', 'aria-hidden': 'true' }, '★'))),
-      h('ul', { class: 'criteria' }, ...criteria.map(([ok, key]) => h('li', {}, `${ok ? '✅' : '⬜'} ${t(key)}`))),
+      h('ul', { class: 'criteria' }, ...criteria.map(([ok, key]) => h('li', {}, `${ok ? '✅' : '⬜'} ${t(key, { limit: doseFor3(state.location) })}`))),
       hist ? missionRecap(hist) : null,
       h('h3', {}, t('end.learned')),
       h('ul', {}, ...lessons.map((k) => h('li', {}, lessonText(k)))),
@@ -136,9 +149,9 @@ export function showNasaData(source: FlareSource, missions: MissionSource, curre
           : null,
         h('li', {}, h('strong', {}, t('data.osdr.name')), planned(), h('p', {}, t('data.osdr.use')), link('https://osdr.nasa.gov/bio/repo/')),
         h('li', {}, h('strong', {}, t('data.rad.name')), h('span', { class: 'badge real' }, t('data.rad.badge')), h('p', {}, t('data.rad.use')),
-          link('https://www.nasa.gov/news-release/nasa-rover-results-include-first-age-measurement-on-mars-and-help-for-human-exploration/')),
+          link(t('data.rad.link'))),
         h('li', {}, h('strong', {}, t('data.radlab.name')), planned(), h('p', {}, t('data.radlab.use')), link('https://visualization.osdr.nasa.gov/radlab/gui/data-api/')),
-        h('li', {}, h('strong', {}, t('data.marstrek.name')), planned(), h('p', {}, t('data.marstrek.use')), link('https://trek.nasa.gov/mars/')),
+        h('li', {}, h('strong', {}, t('data.marstrek.name')), planned(), h('p', {}, t('data.marstrek.use')), link(t('data.marstrek.link'))),
       ),
     ],
     actions: [{ label: t('data.close'), primary: true, onClick: () => {} }],

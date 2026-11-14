@@ -63,6 +63,37 @@ export const CONFIG = {
   },
 
   stars: { doseFor3: 50 },
+
+  /**
+   * Base lunar (polo sul da Lua): só o que MUDA em relação a Marte; o resto das regras é igual.
+   * Números de jogo (INTERPRETADO); os fatos reais por trás deles têm fonte no GDD ("Base lunar").
+   */
+  moon: {
+    /** Sem atmosfera: a radiação de todo dia é cerca de 2x a de Marte (Chang'e 4 LND × Curiosity RAD). */
+    dosePerSol: 2,
+    /** Sem ar para frear as partículas, a tempestade solar pesa mais. */
+    stormFactor: 1.2,
+    /** Sem vento: a poeira não sai sozinha dos painéis. */
+    windCleanPerSol: 0,
+    /** Um astronauta limpando os painéis (problema resolvido) tira esta poeira. */
+    crewCleanDust: 20,
+    /** Sombra das montanhas do polo sul: dias seguidos com pouca luz (substitui a tempestade de poeira). */
+    shadow: { firstSol: 4, lastSol: 11, sols: 3, blocks: 4 },
+    /** A luz leva ~1,3 s da Terra à Lua (384.400 km). Só para mostrar; as mensagens chegam na hora. */
+    commDelaySec: 1.3,
+    /** A 3ª estrela: dose abaixo disto (a radiação de todo dia já é o dobro da de Marte). */
+    doseFor3: 70,
+    /** Pedir ajuda à Terra custa pouco: a resposta chega em segundos. */
+    askEarthScience: -3,
+  },
 } as const;
 
 export type FlareClass = keyof typeof CONFIG.solarStorms.intensity;
+
+/** Onde fica a base. Marte é o padrão (modo em grupo só em Marte por enquanto). */
+export type Location = 'mars' | 'moon';
+
+/** Dose máxima para a 3ª estrela (na Lua é mais alta: a dose de todo dia é o dobro). */
+export function doseFor3(location: Location): number {
+  return location === 'moon' ? CONFIG.moon.doseFor3 : CONFIG.stars.doseFor3;
+}

@@ -2,7 +2,7 @@ import { CONFIG } from '@/sim/config';
 import type { EnergyPlan, Flare, GameState, ProblemKind, Resources } from '@/sim/types';
 import { PROBLEMS } from '@/sim/problems';
 import type { Mission } from '@/sim/mission';
-import { CONFIG as SIM } from '@/sim/config';
+import { CONFIG as SIM, doseFor3 } from '@/sim/config';
 
 /** Prévia calculada pela simulação (Mission.previewSol). */
 export type PlanPreview = ReturnType<Mission['previewSol']>;
@@ -175,6 +175,9 @@ export class Hud {
   private renderResources(): void {
     const r = this.nightView?.res ?? this.state?.res;
     if (!r) return;
+    // Faixas da dose: amarelo a partir da 3ª estrela perdida, vermelho mais adiante (na Lua a dose diária é maior).
+    const doseWarn = doseFor3(this.state?.location ?? 'mars');
+    const doseBad = Math.max(70, doseWarn + 15);
     const level = (v: number, invert = false) => {
       const k = invert ? 100 - v : v;
       return k >= 50 ? 'good' : k >= 25 ? 'warn' : 'bad';
@@ -184,7 +187,7 @@ export class Hud {
       resource('res.battery', 'help.battery', r.battery, CONFIG.battery.max, level(r.battery)),
       resource('res.life', 'help.life', r.life, CONFIG.life.max, level(r.life)),
       resource('res.shield', 'help.shield', r.shield, CONFIG.shield.max, level(r.shield)),
-      resource('res.dose', 'help.dose', r.dose, CONFIG.dose.max, r.dose >= 70 ? 'bad' : r.dose >= 50 ? 'warn' : 'good', [50, 70]),
+      resource('res.dose', 'help.dose', r.dose, CONFIG.dose.max, r.dose >= doseBad ? 'bad' : r.dose >= doseWarn ? 'warn' : 'good', [doseWarn, doseBad]),
       resource('res.science', 'help.science', r.science, CONFIG.science.goal, 'sci', [], t('res.goal', { n: CONFIG.science.goal })),
     );
   }
@@ -274,7 +277,9 @@ export class Hud {
       if (pv.after.life <= 0) warnings.push({ text: t('preview.lifeZero'), tone: 'bad' });
       else if (pv.after.life <= 25) warnings.push({ text: t('preview.lifeLow', { v: fmt(pv.after.life) }), tone: 'bad' });
       if (pv.after.dose >= SIM.dose.max) warnings.push({ text: t('preview.doseMax'), tone: 'bad' });
-      else if (s.res.dose < SIM.stars.doseFor3 && pv.after.dose >= SIM.stars.doseFor3) warnings.push({ text: t('preview.doseStar', { v: fmt(pv.after.dose) }), tone: 'warn' });
+      else if (s.res.dose < doseFor3(s.location) && pv.after.dose >= doseFor3(s.location)) {
+        warnings.push({ text: t('preview.doseStar', { v: fmt(pv.after.dose), limit: doseFor3(s.location) }), tone: 'warn' });
+      }
     }
 
     const row = (k: PlanKey) => {
@@ -404,5 +409,9 @@ function messageEl(m: MarsMessage): HTMLElement {
       return h('div', { class: 'msg' }, t('msg.allClear'), delay);
     case 'noSignal':
       return h('div', { class: 'msg storm' }, t('msg.noSignal'));
+    case 'shadowAlert':
+      return h('div', { class: 'msg dust' }, t('msg.shadowAlert', { n: SIM.moon.shadow.sols }), delay);
+    case 'shadowNow':
+      return h('div', { class: 'msg dust' }, m.left > 1 ? t('msg.shadowNow', { n: m.left }) : t('msg.shadowNow.last'));
   }
 }
