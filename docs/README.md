@@ -9,6 +9,7 @@ Ela vive junto com o código, então é versionada, revisada em PR e nunca fica 
 | --- | --- |
 | [desafio.md](desafio.md) | Todo mundo, antes de tudo. O que o desafio da NASA pede, em checklist. |
 | [game-design.md](game-design.md) | Todo mundo. GDD da Missão Jezero: loop, recursos, cartas, cooperativo, dados da NASA, backlog. |
+| [art-bible.md](art-bible.md) | Artistas e quem gera concept art. Direção de arte oficial: estilo, paleta, escala, códigos de asset, aprovação. |
 | [dados.md](dados.md) | Quem mexe nos dados reais da NASA: fontes, coleta e como atualizar. |
 | [arquitetura.md](arquitetura.md) | Todo mundo, no primeiro dia. Pastas, loop do jogo, quem é dono de quê. |
 | [fisica.md](fisica.md) | Quem vai criar objetos, personagens ou fases. |
@@ -36,7 +37,8 @@ São quatro tipos de documento, cada um com seu papel:
 | Mudou como um sistema funciona (loop, física, input, render) | O guia correspondente |
 | Escolheu/trocou biblioteca, técnica ou padrão importante | Novo ADR (`npm run docs:adr -- "título"`) |
 | Criou uma pasta/módulo novo em `src/` | `arquitetura.md` (tabela de pastas) |
-| Adicionou cor, material ou regra de arte | `estilo-visual.md` |
+| Mudou direção de arte (estilo, paleta, escala, materiais) | `art-bible.md`, com nova versão no registro de alterações |
+| Adicionou cor, material ou regra de arte no código | `estilo-visual.md` |
 | Mudou comando, dependência de sistema ou setup | `README.md` raiz |
 
 ### Como garantimos que isso acontece

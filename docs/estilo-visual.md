@@ -1,8 +1,12 @@
 # Estilo visual: regras técnicas
 
-A **direção de arte oficial é a Art Bible** (documento externo do time). O resumo e as decisões de
-alinhamento estão em [game-design.md](game-design.md#direção-visual). Este guia cobre só **como aplicar
-isso no código**. Código: [`src/render/toon.ts`](../src/render/toon.ts). Decisão técnica: [ADR 0002](decisoes/0002-estilo-toon.md).
+> **Direção de arte oficial:** [art-bible.md](art-bible.md). Este guia diz só **como aplicá-la no código**.
+> Código: [`src/render/toon.ts`](../src/render/toon.ts). Decisão técnica: [ADR 0002](decisoes/0002-estilo-toon.md).
+>
+> Já alinhado: paleta de 7 cores, 4 faixas sem sombra preta, contorno fino, escala 1 m, sem logos.
+> Ainda a migrar (item 14 do [backlog](game-design.md#backlog-do-hackathon-por-prioridade)): geometria mais
+> detalhada (hoje são primitivas, mais simples do que a [seção 2.1](art-bible.md#21-estilo-visual-escolhido) pede)
+> e o pôr do sol com halo azulado ([seção 5](art-bible.md#5-padrão-de-iluminação)).
 
 ## Ingredientes
 
