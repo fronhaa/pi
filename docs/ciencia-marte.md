@@ -27,7 +27,7 @@
 | F10 | A estufa dá comida fresca e bem-estar | A horta da Estação (Veggie) acrescenta comida fresca à dieta e ajuda no bem-estar | [NASA: Growing Plants in Space (2023)](https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/) | Colheita na estufa | 1 e 2 (suporte de vida) |
 | F11 | A rotina de uma tripulação em Marte | Na simulação CHAPEA: caminhadas em Marte, robôs, manutenção do habitat, exercício e cultivo | [NASA: CHAPEA Mission 2](https://www.nasa.gov/humans-in-space/chapea/chapea-mission-2/) e [NASA: missão 1 (2023)](https://www.nasa.gov/missions/analog-field-testing/chapea/first-chapea-crew-begins-378-day-mission/) | Tutorial do dia / guia do professor | Contexto (papéis) |
 | F12 | Andar com pouca gravidade é diferente | Menos força nos pés, passos mais lentos, menos tempo com o pé no chão; a pessoa passa a correr numa velocidade menor | [NASA Ames, ICES-2021-142 (2021)](https://ntrs.nasa.gov/api/citations/20210019591/downloads/ICES-2021-142.pdf), p. 5 | Astronautas andando dentro e fora da base | Contexto (gravidade) |
-| F13 | Na Lua, os astronautas pulavam como coelhos | O traje da Apollo dobrava pouco nas pernas; pular compensava. O próximo traje terá mais mobilidade nas pernas | [NASA APPEL, podcast Small Steps, Giant Leaps, ep. 20 (2019)](https://www.nasa.gov/podcasts/small-steps-giant-leaps/small-steps-giant-leaps-episode-20-exploration-spacesuit-design/) | Caminhada longa de traje; missão lunar, se entrar | Contexto (traje) |
+| F13 | Na Lua, os astronautas pulavam como coelhos | O traje da Apollo dobrava pouco nas pernas; pular compensava. O próximo traje terá mais mobilidade nas pernas | [NASA APPEL, podcast Small Steps, Giant Leaps, ep. 20 (2019)](https://www.nasa.gov/podcasts/small-steps-giant-leaps/small-steps-giant-leaps-episode-20-exploration-spacesuit-design/) | Caminhada longa de traje; base lunar | Contexto (traje) |
 | F8 | A poeira não pode entrar | Poeira fina; 0,3 a 0,5% de perclorato no solo (tireoide); entra pelos trajes e câmaras | [NASA/SP-20260005907, Martian Dust Exposure Limits (2026)](https://www.nasa.gov/wp-content/uploads/2026/07/martian-dust-exposure-limits-sp-20260005907.pdf) | Problema fora da base (câmara de descompressão, +1 de dose) | 2. Proteção custa |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
@@ -126,7 +126,7 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Fato:** os trajes da Apollo tinham **pouca mobilidade nas pernas** (a parte de baixo do traje); por isso os astronautas **pulavam pela superfície** ("bunny hopping"). O primeiro traje de voo da nova geração deve incorporar **mais mobilidade nas pernas**. ([NASA APPEL, ep. 20](https://www.nasa.gov/podcasts/small-steps-giant-leaps/small-steps-giant-leaps-episode-20-exploration-spacesuit-design/))
 - **Criança (PT):** "Na Lua, os astronautas pulavam como coelhos. O traje dobrava pouco nas pernas!"
 - **Criança (EN):** "On the Moon, astronauts hopped like bunnies. Their suits barely bent at the legs!"
-- **No jogo:** caminhada longa de traje (ex.: rover atolado) e, se entrar, a missão lunar.
+- **No jogo:** caminhada longa de traje (ex.: rover atolado) e na base lunar.
 - **Atenção:** a fonte diz que o novo traje **pretende** ter mais mobilidade; não diga que os astronautas de Marte "não vão mais pular".
 
 ## Ligação com os objetivos de aprendizagem

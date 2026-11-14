@@ -466,7 +466,7 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 
 ### Movimentação realista: dentro e fora da base
 
-**Decisão (14/11/2026):** andar tem que parecer Marte (e a Lua, se entrar). Hoje todos andam a 2,4 m/s, param e viram na hora, e dentro da base **teleportam** entre o módulo e a estufa (`showCrewInside` copia a posição a cada quadro).
+**Decisão (14/11/2026):** andar tem que parecer Marte (e a Lua, na base lunar). Hoje todos andam a 2,4 m/s, param e viram na hora, e dentro da base **teleportam** entre o módulo e a estufa (`showCrewInside` copia a posição a cada quadro).
 
 **Base científica:** com pouca gravidade, o corpo pesa menos: força nos pés, frequência dos passos e tempo com o pé no chão diminuem, e a pessoa passa a correr mais cedo ([F12](ciencia-marte.md#f12-andar-com-pouca-gravidade-é-diferente)). De traje, as pernas dobram pouco; na Lua, a Apollo pulava ([F13](ciencia-marte.md#f13-na-lua-os-astronautas-pulavam-como-coelhos)). A gravidade já é real ([fisica.md](fisica.md#ajustes-globais)).
 
@@ -482,7 +482,7 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 
 **Números:** velocidades, cadência e aceleração são **valores de jogo** (não ganham fonte, regra de [fisica.md](fisica.md#pulo)) e ficam em `src/core/constants.ts`. A aceleração máxima segue a física: com aderência μ (valor de jogo, ~0,6), o pé empurra no máximo μ·g ≈ **2,2 m/s² em Marte** (5,9 na Terra, 1,0 na Lua). Para não frustrar a criança, o tempo para parar fica **abaixo de 1 s** em Marte.
 
-**Na Lua (só se a missão lunar entrar):** gravidade de 1,624 m/s²; fora, o trote vira **pulinhos de coelho**, com o cartão de F13.
+**Na [base lunar](#base-lunar) (modo solo):** a gravidade já troca para a da Lua (`MOON_G`); fora, o trote vira **pulinhos de coelho**, com o cartão de F13.
 
 **Para a criança ver e aprender:**
 
