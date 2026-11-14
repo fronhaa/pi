@@ -8,7 +8,7 @@ Ela vive junto com o código, então é versionada, revisada em PR e nunca fica 
 | Documento | Para quem / quando ler |
 | --- | --- |
 | [desafio.md](desafio.md) | Todo mundo, antes de tudo. O que o desafio da NASA pede, em checklist. |
-| [game-design.md](game-design.md) | Todo mundo. Como o jogo funciona para o jogador: loop, recursos, eventos, dados reais. |
+| [game-design.md](game-design.md) | Todo mundo. GDD da Missão Jezero: loop, recursos, cartas, cooperativo, dados da NASA, backlog. |
 | [arquitetura.md](arquitetura.md) | Todo mundo, no primeiro dia. Pastas, loop do jogo, quem é dono de quê. |
 | [fisica.md](fisica.md) | Quem vai criar objetos, personagens ou fases. |
 | [estilo-visual.md](estilo-visual.md) | Artistas e devs mexendo em materiais, modelos ou cores. |
