@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
+  // Caminhos relativos: o build funciona em qualquer host estático, inclusive em subpasta (GitHub Pages).
+  base: './',
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

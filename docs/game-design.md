@@ -78,7 +78,7 @@ dose = max(1, round(intensidade × (1 − blindagem / 100 × 0,85)))
 
 Essa é uma escala do jogo, classificada como INTERPRETADO, e não a dose real na superfície de Marte. O jogo informa isso ao jogador.
 
-Todos esses números são simplificados para o jogo e ficam em um único arquivo de configuração (no protótipo, `src/sim/config.js`). O que é real é a erupção, não a escala da dose ([Art Bible, seção 7.5](art-bible.md#75-donki)).
+Todos esses números são simplificados para o jogo e ficam em um único arquivo de configuração (`src/sim/config.ts`). O que é real é a erupção, não a escala da dose ([Art Bible, seção 7.5](art-bible.md#75-donki)).
 
 ## Eventos e decisões
 
@@ -115,12 +115,15 @@ A derrota não pode parecer castigo. A tela final explica o que aconteceu, lista
 
 **Equilíbrio esperado.** Testado com 2.000 partidas simuladas por estratégia (`npm run balance`):
 
-| Estratégia | Resultado |
-| --- | --- |
-| Só ciência, sem guardar bateria | Perde sempre: a bateria acaba à noite |
-| Só segurança, sem ciência | Sempre sobrevive, sempre 1 estrela |
-| Ignora a blindagem | Perde 31% das vezes por radiação |
-| Reage aos alertas e guarda reserva | Sempre sobrevive, 80% das vezes com 3 estrelas |
+| Estratégia | Protótipo original | Este repositório, erupções reais (M5+ e X) | Este repositório, erupções simuladas (C, M, X) |
+| --- | --- | --- | --- |
+| Só ciência, sem guardar bateria | Perde sempre | Perde sempre (suporte de vida) | Perde sempre |
+| Só segurança, sem ciência | Sempre sobrevive, 1 estrela | Sempre sobrevive, 1 estrela | Sempre sobrevive, 1 estrela |
+| Ignora a blindagem | Perde 31% por radiação | **Perde 73% por radiação** | Perde 35% por radiação |
+| Reage aos alertas e guarda reserva | Sobrevive, 80% com 3 estrelas | Sobrevive sempre, ~69% com 3 estrelas | Sobrevive sempre, ~73% com 3 estrelas |
+
+Medição de 2026-11-14 (`npm run balance`, 2.000 partidas por estratégia). Com erupções reais o jogo fica
+mais difícil, porque o DONKI só registra erupções a partir de M5.0 (não há classe C, a "fraca"). A forma se mantém.
 
 Qualquer mudança nos números deve manter essa forma: as duas estratégias extremas falham e a estratégia atenta vence.
 
@@ -274,7 +277,7 @@ As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros c
 
 | Fonte | Uso no jogo | Estado no protótipo |
 | --- | --- | --- |
-| [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) (erupções solares), via [api.nasa.gov](https://api.nasa.gov/) | Classe e data de cada tempestade; resumo do clima espacial real na tela inicial | Pronto: busca ao vivo, depois snapshot, depois simulado |
+| [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) (erupções solares), via [api.nasa.gov](https://api.nasa.gov/) | Classe e data de cada tempestade; resumo do clima espacial real na tela inicial | Snapshot real pronto (305 erupções M5+ e X, de 2016 até a coleta); busca ao vivo pendente. Resumo na tela inicial pendente |
 | [OSDR](https://osdr.nasa.gov/bio/repo/) (pesquisa de saúde no espaço) | Três estudos reais na tela final, rotulados como pesquisas em biologia espacial | Pronto, mas a leitura da resposta não foi testada |
 | [RadLab](https://visualization.osdr.nasa.gov/radlab/gui/data-api/) (dose medida na ISS) | Contexto sobre radiação no espaço, sempre rotulado "medido na ISS, em órbita da Terra"; nunca como dose em Marte | Planejado |
 | [Mars Trek](https://trek.nasa.gov/mars/) (relevo de Marte) | Terreno real da cratera Jezero | Planejado; hoje o terreno é gerado por código |
@@ -295,8 +298,8 @@ O jogo segue a [Art Bible (seção 7)](art-bible.md#7-fundamentação-científic
 
 **Ordem de carregamento das erupções:**
 
-1. API do DONKI ao vivo, chamada do navegador do jogador, com os últimos 60 dias.
-2. O arquivo `public/data/donki-flares.json`, gerado por `npm run fetch-data` com dados reais dos últimos 120 dias.
+1. API do DONKI ao vivo, chamada do navegador do jogador, com os últimos 60 dias. **Pendente.** Atenção: o endpoint `DONKI/FLR` responde 404 (testado em 2026-11-14); a busca ao vivo precisa usar `DONKI/notifications?type=FLR` (ver [dados.md](dados.md)).
+2. O arquivo `public/data/donki-flares.json`, gerado por `npm run fetch-data` com erupções reais de 2016 até a coleta.
 3. Erupções simuladas, marcadas como tal.
 
 Ao sortear as tempestades, o jogo prefere as erupções reais de classe M e X da lista carregada, que são as que mais pesam na dose.
@@ -440,9 +443,12 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 - Botões têm rótulo para leitor de tela, e as mensagens são anunciadas.
 - A cena aceita girar e aproximar, mas o jogo inteiro funciona só com a interface.
 
-## Tecnologia e arquitetura (protótipo do hackathon)
+## Tecnologia e arquitetura
 
-> **Atenção:** esta seção descreve o **protótipo** original (JavaScript puro, sem Rapier, nomes de arquivos `main.js`, `game.js` etc.). A base deste repositório é outra (TypeScript + Three.js + Rapier, ver [arquitetura.md](arquitetura.md) e o [ADR 0001](decisoes/0001-stack.md)). Ao portar, mantenha o princípio central (simulação pura separada da cena) e registre a decisão em um ADR.
+> Este repositório implementa o jogo em TypeScript a partir deste GDD, com o mesmo princípio do protótipo original
+> (simulação pura separada da cena). Detalhes: [arquitetura.md](arquitetura.md) e
+> [ADR 0004](decisoes/0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md).
+> O diagrama abaixo mostra os papéis; os nomes de arquivo correspondentes aqui estão entre parênteses na tabela.
 
 O jogo é um site estático, sem servidor e sem banco de dados. A regra principal: as regras do jogo ficam numa simulação pura, sem tela e sem 3D, para poderem ser testadas e balanceadas sozinhas.
 
@@ -473,13 +479,17 @@ A interface manda as decisões para a simulação e repassa o estado resultante 
 
 | Item | Escolha |
 | --- | --- |
-| Linguagem | JavaScript, sem framework de interface |
-| 3D | Three.js r187: material toon de 3 faixas, contorno por casco invertido, sombras |
+| Linguagem | TypeScript, sem framework de interface |
+| Simulação | `src/sim/` (`config.ts`, `mission.ts`, `cards.ts`); teste de equilíbrio em `scripts/balance.ts` |
+| Cena | `src/scene/` (`MarsBase.ts`, `Crew.ts`) e `src/render/toon.ts` |
+| Interface e textos | `src/ui/` e `src/i18n/` (PT e EN) |
+| 3D | Three.js r187: material toon de 4 faixas, contorno por casco invertido, sombras |
+| Física | Rapier, só sob demanda na etapa de movimentação (fora do pacote principal) |
 | Build | Vite 8; `npm run build` gera a pasta `dist/` com caminhos relativos |
 | Hospedagem | Qualquer host estático (GitHub Pages, Netlify, Cloudflare Pages) |
-| Chave da NASA | `VITE_NASA_API_KEY` no `.env`; sem ela, usa a `DEMO_KEY` |
-| Tamanho | Cerca de 160 KB compactado |
-| Código-fonte | `missao-jezero.zip`, com README de instalação |
+| Chave da NASA | `NASA_API_KEY` no `.env`, só para `npm run fetch-data` (não vai para o navegador) |
+| Tamanho | Cerca de 165 KB compactado (sem o Rapier) |
+| Código-fonte | Este repositório; o protótipo original (`missao-jezero.zip`) é só referência |
 
 ## Critérios de aceite
 
@@ -496,8 +506,8 @@ O jogo está pronto para o envio quando todos os itens abaixo passam num navegad
 
 ### Dados reais
 
-- [ ] O snapshot de erupções reais do DONKI está no projeto (`npm run fetch-data`).
-- [ ] Em produção, as tempestades mostram a data real e um link para o DONKI.
+- [x] O snapshot de erupções reais do DONKI está no projeto (`npm run fetch-data`).
+- [x] Em produção, as tempestades mostram a data real e um link para o DONKI.
 - [x] Quando não há dado real, o jogo diz "simulado" e nunca "ao vivo".
 - [x] A tela "Dados da NASA" lista as fontes com selo de estado e links.
 - [ ] A tela final mostra estudos reais do OSDR (testar a busca).

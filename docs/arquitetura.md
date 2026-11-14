@@ -1,84 +1,73 @@
 # Arquitetura
 
+O que o jogo é: [game-design.md](game-design.md). Por que a arquitetura é assim:
+[ADR 0004](decisoes/0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md).
+
 ## Visão geral
 
 ```
-index.html  (tela de carregamento em HTML/CSS: aparece na hora, sem JS)
-main.ts     (~1,5 KB gzip)
-  └── import('@/core/Game')  ← carregado sob demanda (~1,8 MB: Three + Rapier)
-        └── Game.create()
-              ├── Physics.create()   (carrega o WASM do Rapier)
-              ├── Renderer / Scene / Camera / Luzes (Three.js)
-              ├── Input
-              ├── buildTestLevel()   (fase)
-              └── Player
+index.html   tela de carregamento em HTML/CSS (aparece na hora, sem JS)
+main.ts      (~1,5 KB gzip)
+  └── import('@/core/Game')        ← carregado sob demanda (~160 KB gzip: Three.js + jogo)
+        ├── data/flares.ts         carrega public/data/donki-flares.json (erupções reais)
+        ├── sim/Mission            SIMULAÇÃO PURA: regras, números, eventos, cartas
+        ├── scene/MarsBase, Crew   CENA 3D: só desenha o estado
+        └── ui/Hud, dialogs        INTERFACE: mostra o estado e repassa decisões
 ```
 
-O `Game` é o orquestrador: cria tudo e roda o loop. Sistemas não se conhecem diretamente;
-recebem o que precisam pelo construtor (ex.: `Player` recebe `Physics` e `Input`).
+A regra principal (GDD, "Tecnologia e arquitetura"):
+
+```
+interface ──decisões──► simulação ──estado──► interface e cena
+```
+
+- A **simulação** não conhece DOM nem Three.js. Roda igual no navegador e no Node (`npm run balance`).
+- A **cena** nunca altera regras. Ela recebe um `SceneState` e mostra (poeira, plantas, sacos de regolito, bateria, alarme, noite).
+- A **interface** nunca calcula regras. Ela chama `mission.answerCard()` e `mission.endSol(plano)` e redesenha.
 
 ## Pastas
 
 | Pasta | Responsabilidade |
 | --- | --- |
-| [`src/core/`](../src/core) | Infra do motor: loop (`Game`), física (`Physics`), teclado (`Input`), constantes. |
-| [`src/render/`](../src/render) | Visual: materiais toon, contornos, paleta. Nada de física aqui. |
-| [`src/entities/`](../src/entities) | Coisas com comportamento: jogador, inimigos, itens. |
-| [`src/world/`](../src/world) | Fases/cenários: chão, plataformas, objetos do mapa. |
-| [`src/ui/`](../src/ui) | Interface em HTML por cima do canvas (tela de carregamento, futuramente menus/HUD). Sem framework. |
-| [`public/assets/`](../public/assets) | Modelos (`.glb`), texturas, áudio. Servidos como estão. |
-| [`docs/`](.) | Esta documentação. |
+| [`src/sim/`](../src/sim) | Regras do jogo. `config.ts` tem **todos os números**; `mission.ts`, o ciclo do sol; `cards.ts`, as cartas. Imports com extensão `.ts` (o Node roda direto). |
+| [`src/scene/`](../src/scene) | Cena 3D: base na cratera Jezero (`MarsBase.ts`) e tripulação (`Crew.ts`). |
+| [`src/ui/`](../src/ui) | Interface HTML sobre a cena: `Hud.ts` (barra, recursos, mensagens, plano), `dialogs.ts` (tutorial, cartas, relatório, fim, dados da NASA), `LoadingScreen.ts`. Sem framework. |
+| [`src/i18n/`](../src/i18n) | Textos em PT e EN (`strings.ts`). O TypeScript obriga toda chave a existir nos dois idiomas. |
+| [`src/data/`](../src/data) | Carregamento dos dados da NASA para o jogo. Coleta: [dados.md](dados.md). |
+| [`src/render/`](../src/render) | Materiais cel-shading, contorno e paleta da Art Bible. |
+| [`src/core/`](../src/core) | `Game.ts` (orquestra tudo). `Physics.ts`/`Input.ts` aguardam a etapa de movimentação. |
+| [`public/data/`](../public/data) | Dados servidos ao jogo (erupções do DONKI). |
+| [`scripts/`](../scripts) | `balance.ts` (equilíbrio), `fetch-donki.mjs` (dados), `new-adr.mjs` (docs). |
 
-Import com alias: `import { Physics } from '@/core/Physics'` (`@` = `src/`).
+Import com alias: `import { Mission } from '@/sim/mission'` (`@` = `src/`). Dentro de `src/sim/`, use caminhos relativos com `.ts`.
 
-## Inicialização e tamanho
-
-O Rapier é pesado ([ADR 0003](decisoes/0003-manter-rapier-apesar-do-tamanho-do-bundle.md)), por isso:
-
-1. `index.html` já contém a tela de carregamento (HTML/CSS inline), que aparece instantaneamente.
-2. `main.ts` é mínimo e só importa `ui/LoadingScreen`.
-3. O jogo inteiro (`core/Game` e tudo que ele importa) vem por `import()` dinâmico, num chunk separado.
-4. Se o carregamento falhar, a tela mostra erro e um botão "Tentar de novo".
-
-**Regra:** não importe nada de `core/`, `entities/`, `world/` ou `render/` em `main.ts` ou `ui/LoadingScreen.ts`.
-Um import estático ali puxa o Three/Rapier para o arquivo inicial e anula a tela de carregamento.
-Confira com `npm run build`: o `index-*.js` deve ter poucos KB.
-
-## O loop do jogo
+## Fluxo de um sol
 
 Arquivo: [`src/core/Game.ts`](../src/core/Game.ts)
 
-```
-a cada frame do navegador:
-  acumulador += tempo real desde o último frame (máx. 0,25 s)
-  enquanto acumulador >= FIXED_DT (1/60 s):
-      fixedUpdate()      ← gameplay: input → velocidades/forças
-      physics.step()     ← Rapier avança 1/60 s
-      input.endStep()
-      acumulador -= FIXED_DT
-  physics.sync()         ← copia posição/rotação dos corpos para os meshes
-  update()               ← só visual: câmera, animações, partículas
-  render()
-```
+1. `beginSol()`: interface mostra o estado; se houver carta, abre a janela e espera a escolha.
+2. O jogador distribui os blocos no plano de energia e clica em "Terminar o sol".
+3. `endSol()`: a simulação resolve dia e noite e devolve o relatório. A cena escurece (noite), a tripulação
+   some no abrigo se houver tempestade e a interface mostra os novos valores.
+4. Relatório do sol (causa e efeito). Depois, o próximo sol ou a tela final.
 
-**Por que passo fixo?** A física fica igual em 30, 60 ou 144 FPS. Pulo, velocidade e
-colisões não mudam conforme a máquina de quem joga. Ver [ADR 0001](decisoes/0001-stack.md).
+## Inicialização e tamanho
 
-### Onde colocar cada código
+1. `index.html` já contém a tela de carregamento (HTML/CSS inline).
+2. `main.ts` é mínimo e só importa `ui/LoadingScreen`.
+3. O jogo (`core/Game` e tudo que ele importa) vem por `import()` dinâmico.
+4. O Rapier **não** está no pacote principal; entra sob demanda na etapa de movimentação ([ADR 0004](decisoes/0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md)).
 
-| Tipo de lógica | Método |
-| --- | --- |
-| Ler input e mover algo, aplicar força, checar chão | `fixedUpdate()` |
-| Câmera, efeitos visuais, interpolação, UI | `update()` |
+**Regras:**
+- Não importe nada de `core/`, `scene/`, `sim/` ou `render/` em `main.ts` ou `ui/LoadingScreen.ts`.
+- Não importe `core/Physics.ts` estaticamente em lugar nenhum; use `import()`.
+- Confira com `npm run build`: o `index-*.js` deve ter poucos KB e nenhum chunk deve ter o Rapier.
 
-## Dono da posição: a física
+## Build e hospedagem
 
-Se um objeto tem corpo físico, **a física é dona da posição dele**. Não altere `mesh.position`
-de algo ligado com `physics.link()`, porque será sobrescrito no próximo `sync()`. Mova pelo corpo
-(`setLinvel`, `applyImpulse`, `setTranslation`). Detalhes em [fisica.md](fisica.md).
+`vite.config.ts` usa `base: './'`, então o `dist/` funciona em qualquer host estático, inclusive em subpasta (GitHub Pages).
 
-## Próximos passos previstos
+## Testes
 
-- Carregamento de modelos `.glb` (GLTFLoader) com material toon aplicado.
-- Interpolação visual entre passos de física, para suavizar em telas de 120 Hz+.
-- Sistema de cenas/fases (menu → fase → fim).
+- `npm run typecheck` e `npm run build` (também no CI).
+- `npm run balance`: 2.000 partidas por estratégia com a simulação real. Rode sempre que mudar `src/sim/config.ts`.
