@@ -70,9 +70,13 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
   do airlock (`ENTRANCES.habitat`) virada para a câmera. O rover usa a mesma lógica de andar, parar e desviar; as rodas
   `wheel_0..5` giram pela distância e, ao parar para estudar, tocam `scan` e `drill`. Até carregar (ou se falhar), ficam
   o módulo e o rover simples.
-- Dentro da base: o casco (`hull_shell`) é translúcido, como a cúpula, com um piso dentro. Quem está dentro aparece em
-  fila no casco (`HABITAT_SPOTS`) ou na estufa consertando o vazamento (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de
-  descompressão, some.
+- Habitat de dois módulos do mesmo `research-base.glb`: o **laboratório** (com o airlock, a bancada e o observatório) e o
+  **alojamento** acoplado pela porta de acoplamento da esquerda (`QUARTERS_OFFSET_X`, sem airlock nem placa "LAB"), com
+  dois beliches, uma cama por astronauta. As janelas acendem à noite.
+- Dentro do habitat: os cascos (`hull_shell`) são translúcidos, como a cúpula, com piso contínuo. Comandante e cientista
+  ficam no laboratório e engenheiro e médico no alojamento (`HABITAT_SPOTS`); quem conserta o vazamento vai para a estufa
+  (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de descompressão, somem.
+- O abrigo de regolito fica em `SHELTER_CENTER`, à esquerda do alojamento.
 - O resto é feito com primitivas (leve). Modelos `.glb` novos: exportar do Blender em glTF Binary,
   eixo Y para cima, em metros, com cores sólidas; ao carregar, trocar os materiais por `toonMaterial(cor)`.
   Coloque em `public/assets/models/` com nome em `kebab-case`.
