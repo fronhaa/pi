@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Role } from '@/sim/crew';
+import type { ProblemKind } from '@/sim/types';
 
 /**
  * Mapa da base: ONDE fica cada coisa (prédios, postos da tripulação, problemas, portas).
@@ -118,13 +119,13 @@ export const ENTRANCES = {
  * O rover atolado fica longe da base, para a caminhada longa custar tempo.
  * Problema novo em src/sim/problems.ts? Precisa de um lugar aqui (o TypeScript cobra).
  */
-export const PROBLEM_SPOTS = {
+export const PROBLEM_SPOTS: Record<ProblemKind, THREE.Vector3> = {
   dustyPanels: new THREE.Vector3(17, 0, 6.6),
   greenhouseLeak: new THREE.Vector3(2.3, 0, -4.6),
   antenna: new THREE.Vector3(9.7, 0, -0.6),
   roverStuck: new THREE.Vector3(22, 0, 13),
   tornBag: new THREE.Vector3(SHELTER_CENTER.x, 0, SHELTER_CENTER.z + 3.9),
-} as const;
+};
 
 /** Trilha do rover: elipse em volta da base e dos painéis (painéis vão até x ≈ 22). */
 export const ROVER_TRACK = { cx: 2, cz: 2, rx: 26, rz: 15 } as const;
