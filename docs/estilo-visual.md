@@ -77,6 +77,9 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
   ficam no laboratório e engenheiro e médico no alojamento (`HABITAT_SPOTS`); quem conserta o vazamento vai para a estufa
   (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de descompressão, somem.
 - O abrigo de regolito fica em `SHELTER_CENTER`, à esquerda do alojamento.
+- Os módulos do habitat ficam em 80% (`HABITAT_SCALE`), para o astronauta caber justo na cabine; a torre do airlock e o
+  armário continuam em 100% (a porta segue mais alta que o astronauta). Os vidros das janelas são meio transparentes e cada
+  módulo tem o seu piso. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
 - Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
   (GDD, "Atividades dentro da base", B): quem está dentro sem ordem há 8 s vai à esteira ou à bicicleta (`GYM_STATIONS`,
   animação de andar no lugar), descansa deitado no beliche e volta ao posto. Na primeira vez aparece o fato F9.

@@ -36,41 +36,54 @@ const HABITAT_DOOR_LOCAL_Z = 4.1;
 /** Abrigo de regolito (tempestade solar): à frente e à esquerda do habitat, longe da trilha do rover. */
 const SHELTER_CENTER = new THREE.Vector3(-13.5, 0, 8.5);
 /** Deslocamento do alojamento em relação ao laboratório: a port_b dele encaixa na port_a do laboratório. */
-const QUARTERS_OFFSET_X = -7;
+/**
+ * Escala dos módulos do habitat (cascos, pernas, teto). Em 100% o casco tem 3,3 m de diâmetro e o astronauta
+ * fica pequeno lá dentro; em 80% a cabine fica mais justa, como uma nave. A torre do airlock continua em 100%,
+ * para a porta seguir mais alta que o astronauta.
+ */
+const HABITAT_SCALE = 0.8;
+/** Comprimento útil do piso em cada módulo (entre as portas de acoplamento, ±3,25 m no modelo). */
+const MODULE_FLOOR_LENGTH = 6.5 * HABITAT_SCALE;
+const QUARTERS_OFFSET_X = -7 * HABITAT_SCALE;
 /** A academia encaixa do mesmo jeito na port_a do alojamento. */
 const GYM_OFFSET_X = 2 * QUARTERS_OFFSET_X;
 /** Altura das duas camas de cada beliche, acima do piso. */
-const BUNK_LEVELS = [0.35, 1.45] as const;
+const BUNK_LEVELS = [0.3, 1.12] as const;
 /** Fundo dos módulos, onde ficam os beliches e os aparelhos (z relativo ao centro do casco). */
-const BACK_Z = -0.7;
+const BACK_Z = -0.55;
 
-/** Piso dentro do casco (o casco vai de y = 1,0 a 4,3; neste piso sobra 2,7 m de altura). */
-const HABITAT_FLOOR_Y = 1.6;
+/** Piso dentro do casco (em 80% o casco vai de y = 0,8 a 3,4; neste piso sobra ~2,1 m de altura). */
+const HABITAT_FLOOR_Y = 1.25;
 
 /**
  * Onde cada papel fica DENTRO do habitat, visível pelo casco translúcido: comandante e cientista no
  * laboratório (perto do console), engenheiro e médico no alojamento (em frente aos beliches).
  */
 export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
-  commander: new THREE.Vector3(HABITAT_POSITION.x - 1.2, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.5),
-  scientist: new THREE.Vector3(HABITAT_POSITION.x + 1.2, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.5),
-  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 1.2, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.5),
-  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + 1.2, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.5),
+  commander: new THREE.Vector3(HABITAT_POSITION.x - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.45),
+  scientist: new THREE.Vector3(HABITAT_POSITION.x + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.45),
+  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.45),
+  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.45),
 };
+
+/** Centro de cada beliche em relação ao centro do alojamento. */
+const BUNK_DX = 1.25;
+/** Comprimento do boneco deitado (deitado ele fica em 80%, para caber entre as duas camas do beliche). */
+const LYING_LENGTH = 1.85 * 0.8;
 
 /** Cama de cada papel no alojamento (beliche, cabeça no travesseiro em −X): onde dorme à noite e descansa. */
 export const BUNK_SPOTS: Record<Role, THREE.Vector3> = {
-  engineer: bunkSpot(-1.5, 0),
-  medic: bunkSpot(-1.5, 1),
-  commander: bunkSpot(1.5, 0),
-  scientist: bunkSpot(1.5, 1),
+  engineer: bunkSpot(-BUNK_DX, 0),
+  medic: bunkSpot(-BUNK_DX, 1),
+  commander: bunkSpot(BUNK_DX, 0),
+  scientist: bunkSpot(BUNK_DX, 1),
 };
 
 function bunkSpot(dx: number, level: 0 | 1): THREE.Vector3 {
   // O boneco deitado tem os pés na origem: a origem fica na ponta da cama, longe do travesseiro.
   return new THREE.Vector3(
-    HABITAT_POSITION.x + QUARTERS_OFFSET_X + dx + 0.9,
-    HABITAT_FLOOR_Y + BUNK_LEVELS[level] + 0.42,
+    HABITAT_POSITION.x + QUARTERS_OFFSET_X + dx + LYING_LENGTH / 2,
+    HABITAT_FLOOR_Y + BUNK_LEVELS[level] + 0.36,
     HABITAT_POSITION.z + BACK_Z,
   );
 }
@@ -79,9 +92,11 @@ function bunkSpot(dx: number, level: 0 | 1): THREE.Vector3 {
  * Aparelhos da academia que um astronauta usa (F9: esteira e bicicleta, como na Estação Espacial).
  * `heading` segue a convenção do andar: 0 olha para −Z; aqui todos olham para a frente (+Z), para a câmera.
  */
+const GYM_DX = 1.8;
 export const GYM_STATIONS = [
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X - 2.2, HABITAT_FLOOR_Y + 0.14, HABITAT_POSITION.z), heading: Math.PI, speed: 1.8 },
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X, HABITAT_FLOOR_Y + 0.3, HABITAT_POSITION.z), heading: Math.PI, speed: 0.9 },
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X - GYM_DX, HABITAT_FLOOR_Y + 0.14, HABITAT_POSITION.z), heading: Math.PI, speed: 1.8 },
+  // Na bicicleta, pedalando em pé atrás do guidão (o boneco não tem pose sentada).
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X, HABITAT_FLOOR_Y + 0.05, HABITAT_POSITION.z - 0.35), heading: Math.PI, speed: 0.9 },
 ] as const;
 
 /** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
@@ -308,23 +323,28 @@ export class MarsBase {
     }
     for (const ox of [QUARTERS_OFFSET_X, GYM_OFFSET_X]) {
       const extra = hull.clone();
-      extra.position.x = ox;
+      extra.position.x = ox / HABITAT_SCALE; // o grupo inteiro está em HABITAT_SCALE
       fb.add(extra);
     }
     fb.position.copy(HABITAT_POSITION);
+    fb.scale.setScalar(HABITAT_SCALE);
+    tower.scale.setScalar(1 / HABITAT_SCALE);
+    tower.position.divideScalar(HABITAT_SCALE);
+    opening.scale.setScalar(1 / HABITAT_SCALE);
+    opening.position.set(0, 0.9 / HABITAT_SCALE, 3.61 / HABITAT_SCALE);
     this.root.add(fb);
 
     this.buildHabitatInterior();
 
     // Colisão: os três cascos com as pernas, torre do airlock e o armário de amostras ao lado da porta.
     const { x, z } = HABITAT_POSITION;
-    this.addObstacle(x + GYM_OFFSET_X / 2, z, 3.6 - GYM_OFFSET_X / 2, 2.5);
+    this.addObstacle(x + GYM_OFFSET_X / 2, z, 3.6 * HABITAT_SCALE - GYM_OFFSET_X / 2, 2.5 * HABITAT_SCALE);
     this.addObstacle(x, z + 2.4, 1.0, 1.5);
     this.addObstacle(x - 1.5, z + 3.06, 0.6, 0.35);
   }
 
   /**
-   * Por dentro do habitat (visto pelo casco translúcido): piso contínuo nos três módulos, console no
+   * Por dentro do habitat (visto pelo casco translúcido): um piso em cada módulo, console no
    * laboratório, dois beliches (4 camas, uma por astronauta) no alojamento e a academia (esteira,
    * bicicleta e aparelho de força, como na Estação Espacial, F9). Serve para os dois modelos.
    */
@@ -332,20 +352,23 @@ export class MarsBase {
     const { x, z } = HABITAT_POSITION;
     const y = HABITAT_FLOOR_Y;
     const inside = new THREE.Group();
-    const floor = toonMesh(new THREE.BoxGeometry(6.4 - GYM_OFFSET_X, 0.08, 2.2), PALETTE.tech, 0);
-    floor.position.set(GYM_OFFSET_X / 2, y - 0.04, 0);
-    inside.add(floor);
+    // Um piso por módulo: entre eles ficam as portas de acoplamento (um piso contínuo aparecia por fora).
+    for (const ox of [0, QUARTERS_OFFSET_X, GYM_OFFSET_X]) {
+      const floor = toonMesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH, 0.08, 1.9), PALETTE.tech, 0);
+      floor.position.set(ox, y - 0.04, 0);
+      inside.add(floor);
+    }
 
     // Laboratório: bancada com tela (ciência e comunicação com a Terra).
-    const desk = toonMesh(new THREE.BoxGeometry(2.2, 0.85, 0.6), PALETTE.light, 0.04);
-    desk.position.set(0, y + 0.43, -0.75);
+    const desk = toonMesh(new THREE.BoxGeometry(2.0, 0.8, 0.5), PALETTE.light, 0.04);
+    desk.position.set(0, y + 0.4, BACK_Z - 0.05);
     inside.add(desk);
     const screen = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.05), new THREE.MeshBasicMaterial({ color: 0x7fe6ea }));
-    screen.position.set(0, y + 1.25, -0.95);
+    screen.position.set(0, y + 1.15, BACK_Z - 0.25);
     inside.add(screen);
 
     // Alojamento: dois beliches encostados no fundo, cada um com duas camas.
-    for (const bx of [QUARTERS_OFFSET_X - 1.5, QUARTERS_OFFSET_X + 1.5]) {
+    for (const bx of [QUARTERS_OFFSET_X - BUNK_DX, QUARTERS_OFFSET_X + BUNK_DX]) {
       for (const level of BUNK_LEVELS) {
         const bed = toonMesh(new THREE.BoxGeometry(1.9, 0.18, 0.8), PALETTE.light, 0.04);
         bed.position.set(bx, y + level, BACK_Z);
@@ -358,8 +381,8 @@ export class MarsBase {
         inside.add(pillow);
       }
       for (const px of [-0.93, 0.93]) {
-        const post = toonMesh(new THREE.BoxGeometry(0.06, 1.7, 0.06), PALETTE.tech, 0);
-        post.position.set(bx + px, y + 0.85, BACK_Z + 0.38);
+        const post = toonMesh(new THREE.BoxGeometry(0.06, 1.4, 0.06), PALETTE.tech, 0);
+        post.position.set(bx + px, y + 0.7, BACK_Z + 0.38);
         inside.add(post);
       }
     }
@@ -367,18 +390,18 @@ export class MarsBase {
     // Academia: esteira e bicicleta viradas para a frente (GYM_STATIONS) e um aparelho de força no fundo.
     const g = GYM_OFFSET_X;
     const treadBase = toonMesh(new THREE.BoxGeometry(0.8, 0.12, 1.7), PALETTE.light, 0.04);
-    treadBase.position.set(g - 2.2, y + 0.06, 0);
+    treadBase.position.set(g - GYM_DX, y + 0.06, 0);
     inside.add(treadBase);
     const belt = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.02, 1.5), new THREE.MeshBasicMaterial({ color: PALETTE.shadow }));
-    belt.position.set(g - 2.2, y + 0.13, 0);
+    belt.position.set(g - GYM_DX, y + 0.13, 0);
     inside.add(belt);
     for (const side of [-0.38, 0.38]) {
       const rail = toonMesh(new THREE.BoxGeometry(0.05, 1.0, 0.05), PALETTE.tech, 0);
-      rail.position.set(g - 2.2 + side, y + 0.6, 0.75);
+      rail.position.set(g - GYM_DX + side, y + 0.6, 0.75);
       inside.add(rail);
     }
     const panel = toonMesh(new THREE.BoxGeometry(0.85, 0.2, 0.12), PALETTE.accent, 0);
-    panel.position.set(g - 2.2, y + 1.1, 0.75);
+    panel.position.set(g - GYM_DX, y + 1.1, 0.75);
     inside.add(panel);
 
     const bikeFrame = toonMesh(new THREE.BoxGeometry(0.3, 0.25, 1.1), PALETTE.light, 0.04);
@@ -394,15 +417,15 @@ export class MarsBase {
     stem.position.set(g, y + 0.62, 0.55);
     inside.add(stem);
 
-    const rack = toonMesh(new THREE.BoxGeometry(1.4, 1.9, 0.12), PALETTE.tech, 0.03);
-    rack.position.set(g + 2.2, y + 0.95, BACK_Z - 0.2);
+    const rack = toonMesh(new THREE.BoxGeometry(1.3, 1.6, 0.12), PALETTE.tech, 0.03);
+    rack.position.set(g + GYM_DX, y + 0.8, BACK_Z - 0.2);
     inside.add(rack);
-    const bar = toonMesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 8).rotateZ(Math.PI / 2), PALETTE.light, 0);
-    bar.position.set(g + 2.2, y + 1.3, BACK_Z + 0.1);
+    const bar = toonMesh(new THREE.CylinderGeometry(0.04, 0.04, 1.6, 8).rotateZ(Math.PI / 2), PALETTE.light, 0);
+    bar.position.set(g + GYM_DX, y + 1.15, BACK_Z + 0.1);
     inside.add(bar);
-    for (const side of [-0.75, 0.75]) {
+    for (const side of [-0.68, 0.68]) {
       const plate = toonMesh(new THREE.CylinderGeometry(0.25, 0.25, 0.08, 16).rotateZ(Math.PI / 2), PALETTE.accent, 0.04);
-      plate.position.set(g + 2.2 + side, y + 1.3, BACK_Z + 0.1);
+      plate.position.set(g + GYM_DX + side, y + 1.15, BACK_Z + 0.1);
       inside.add(plate);
     }
     inside.position.set(x, 0, z);
@@ -429,6 +452,8 @@ export class MarsBase {
     // Alojamento: o mesmo bloco, acoplado pela porta de acoplamento do lado esquerdo (como o doc do modelo
     // prevê). Uma porta só para a base inteira: sem torre do airlock, sem armário, sem observatório.
     // A academia encaixa do mesmo jeito no alojamento.
+    // Cabines em HABITAT_SCALE; a torre do airlock e o armário ficam em 100% e no mesmo lugar de antes.
+    m.root.scale.setScalar(HABITAT_SCALE);
     const extras = [QUARTERS_OFFSET_X, GYM_OFFSET_X].map((ox) => {
       const module = m.root.clone(true);
       for (const name of ['access_tower', 'sample_station', 'observatory_base', 'observatory_ring', 'observatory', 'dish', 'dish_pole']) {
@@ -443,6 +468,13 @@ export class MarsBase {
       this.root.add(module);
       return module;
     });
+
+    for (const name of ['access_tower', 'sample_station']) {
+      const o = m.root.getObjectByName(name);
+      if (!o) continue;
+      o.scale.setScalar(1 / HABITAT_SCALE);
+      o.position.divideScalar(HABITAT_SCALE);
+    }
 
     for (const module of [m.root, ...extras]) {
       // Casco translúcido (como a cúpula), para ver a tripulação lá dentro. Sem contorno e sem sombra,
@@ -463,6 +495,10 @@ export class MarsBase {
       const mesh = o as THREE.Mesh;
       if (mesh.isMesh && (mesh.material as THREE.Material).name === 'window') {
         const mat = mesh.material as THREE.MeshToonMaterial;
+        // Vidro meio transparente: as janelas ficam na altura da cabeça e escondiam a tripulação.
+        mat.transparent = true;
+        mat.opacity = 0.45;
+        mat.depthWrite = false;
         if (!this.windowGlass.includes(mat)) this.windowGlass.push(mat);
       }
     });

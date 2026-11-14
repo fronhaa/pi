@@ -7,6 +7,8 @@ import type { ChibiAction, ChibiAstronautInstance } from '@/render/chibiAstronau
 const CHIBI_WALK_SPEED = 1.15;
 /** Deitado de costas: cabeça para −X e rosto para cima (o `model` olha para −Z em pé). */
 const LIE_BASIS = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, -1, 0));
+/** Tamanho do boneco deitado no beliche (ver BUNK_SPOTS em MarsBase). */
+const LYING_SCALE = 0.8;
 /** Duração do clipe `jump`. */
 const CHIBI_JUMP_SECONDS = 1.35;
 
@@ -138,6 +140,8 @@ export class Astronaut {
     this.lying = on;
     if (on) this.model.quaternion.setFromRotationMatrix(LIE_BASIS);
     else this.model.rotation.set(0, this.model.rotation.y, 0);
+    // Deitado fica em 80%, para caber entre as duas camas do beliche.
+    this.model.scale.setScalar(on ? LYING_SCALE : 1);
   }
 
   /** Exercício (esteira, bicicleta): anima o andar sem sair do lugar. */
