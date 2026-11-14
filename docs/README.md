@@ -7,6 +7,7 @@ Ela vive junto com o código, então é versionada, revisada em PR e nunca fica 
 
 | Documento | Para quem / quando ler |
 | --- | --- |
+| [dados.md](dados.md) | Quem mexe nos dados reais da NASA: fontes, coleta e como atualizar. |
 | [arquitetura.md](arquitetura.md) | Todo mundo, no primeiro dia. Pastas, loop do jogo, quem é dono de quê. |
 | [fisica.md](fisica.md) | Quem vai criar objetos, personagens ou fases. |
 | [estilo-visual.md](estilo-visual.md) | Artistas e devs mexendo em materiais, modelos ou cores. |
