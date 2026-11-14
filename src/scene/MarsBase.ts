@@ -87,6 +87,9 @@ export class MarsBase {
   /** Rover parado porque há um astronauta na rota (e quanto tempo a rota está livre de novo). */
   private roverBlocked = false;
   private roverClearFor = 0;
+  /** Desvio lateral da elipse (m): + para fora, − para dentro. O rover recalcula e desvia de astronautas. */
+  private roverOffset = 0;
+  private roverOffsetTarget = 0;
   private roverWarning!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
 
   constructor(private readonly scene: THREE.Scene) {
@@ -454,33 +457,65 @@ export class MarsBase {
   }
 
   /** Animações por frame (só visual). */
+  /** Desvio lateral atual do rover (m). */
+  get roverDetour(): number {
+    return this.roverOffset;
+  }
+
   /** O rover está parado esperando um astronauta sair da rota? (para testes e interface) */
   get isRoverWaiting(): boolean {
     return this.roverBlocked;
   }
 
+  /** Posição na elipse do rover com desvio lateral `off` (m). */
+  private roverPoint(angle: number, off: number): { x: number; z: number } {
+    return { x: 2 + Math.cos(angle) * (26 + off), z: 2 + Math.sin(angle) * (15 + off) };
+  }
+
   /**
-   * O rover olha o trecho à frente na própria rota (elipse): se um astronauta estiver ali, ou colado nele, ele para.
-   * Volta a andar só depois de a rota ficar livre por um instante (evita "trancos").
+   * O trecho à frente (~7 m) da rota com desvio `off` passa perto de algum astronauta?
+   * Usa a mesma medida para a rota atual e para as rotas alternativas do desvio.
    */
-  private roverPathBlocked(crew: THREE.Vector3[]): boolean {
-    if (crew.length === 0) return false;
-    const LOOKAHEAD = 3.5; // m à frente
+  private routeHits(crew: THREE.Vector3[], off: number): THREE.Vector3 | null {
+    // O rover anda ~2,8 m/s e leva ~1 s para mudar de faixa: precisa enxergar longe o bastante para desviar a tempo.
+    const LOOKAHEAD = 7;
     const SAFE = 1.4; // meia-largura do rover (~0,65) + astronauta (~0,35) + folga
-    const NEAR = 1.7; // colado no rover (inclui a traseira e as laterais)
     const a = this.roverAngle;
-    const speed = Math.hypot(Math.sin(a) * 26, Math.cos(a) * 15); // m por radiano nesta parte da elipse
-    const pos = this.rover.position;
+    const speed = Math.hypot(Math.sin(a) * (26 + off), Math.cos(a) * (15 + off));
     for (const c of crew) {
-      if (Math.hypot(c.x - pos.x, c.z - pos.z) < NEAR) return true;
-      for (let i = 1; i <= 7; i++) {
-        const ai = a + ((i / 7) * LOOKAHEAD) / speed;
-        const x = 2 + Math.cos(ai) * 26;
-        const z = 2 + Math.sin(ai) * 15;
-        if (Math.hypot(c.x - x, c.z - z) < SAFE) return true;
+      for (let i = 1; i <= 10; i++) {
+        const p = this.roverPoint(a + ((i / 10) * LOOKAHEAD) / speed, off);
+        if (Math.hypot(c.x - p.x, c.z - p.z) < SAFE) return c;
       }
     }
-    return false;
+    return null;
+  }
+
+  /**
+   * Recalcula a rota: se há astronauta à frente, escolhe um desvio livre (3 m para dentro ou para fora,
+   * de preferência pelo lado oposto ao astronauta). Sem desvio livre, ou com astronauta colado: para.
+   * Sem ninguém na rota original, volta para ela.
+   */
+  private planRover(crew: THREE.Vector3[]): boolean {
+    const DETOUR = 3;
+    const NEAR = 1.7;
+    const pos = this.rover.position;
+    if (crew.some((c) => Math.hypot(c.x - pos.x, c.z - pos.z) < NEAR)) return true; // colado: para
+    if (!this.routeHits(crew, 0)) {
+      this.roverOffsetTarget = 0;
+      return false;
+    }
+    if (!this.routeHits(crew, this.roverOffsetTarget) && this.roverOffsetTarget !== 0) return false; // desvio atual serve
+    const who = this.routeHits(crew, 0)!;
+    // Lado do astronauta em relação à elipse: fora (> 1) ou dentro (< 1).
+    const outside = ((who.x - 2) / 26) ** 2 + ((who.z - 2) / 15) ** 2 > 1;
+    for (const off of outside ? [-DETOUR, DETOUR] : [DETOUR, -DETOUR]) {
+      if (!this.routeHits(crew, off)) {
+        this.roverOffsetTarget = off;
+        return false;
+      }
+    }
+    return true; // nenhuma rota livre: espera
   }
 
   update(dt: number, time: number, crew: THREE.Vector3[] = []): void {
@@ -521,8 +556,8 @@ export class MarsBase {
     } else if (s.scienceBlocks > 0 && !s.night) {
       this.rover.rotation.x = 0;
       this.rover.rotation.z = 0;
-      // Segurança: para se houver astronauta na rota; retoma após 0,6 s de rota livre.
-      if (this.roverPathBlocked(crew)) {
+      // Segurança: recalcula e desvia de astronautas; para só sem rota livre. Retoma após 0,6 s.
+      if (this.planRover(crew)) {
         this.roverBlocked = true;
         this.roverClearFor = 0;
       } else if (this.roverBlocked) {
@@ -530,11 +565,17 @@ export class MarsBase {
         if (this.roverClearFor > 0.6) this.roverBlocked = false;
       }
       // Elipse por fora da base e dos painéis (painéis vão até x ≈ 22).
-      if (!this.roverBlocked) this.roverAngle += dt * 0.06 * s.scienceBlocks;
-      const x = 2 + Math.cos(this.roverAngle) * 26;
-      const z = 2 + Math.sin(this.roverAngle) * 15;
-      const dx = -Math.sin(this.roverAngle) * 26;
-      const dz = Math.cos(this.roverAngle) * 15;
+      if (!this.roverBlocked) {
+        this.roverAngle += dt * 0.06 * s.scienceBlocks;
+        // Muda de faixa suavemente (3 m/s de lado).
+        const step = 3 * dt;
+        this.roverOffset += THREE.MathUtils.clamp(this.roverOffsetTarget - this.roverOffset, -step, step);
+      }
+      const off = this.roverOffset;
+      const { x, z } = this.roverPoint(this.roverAngle, off);
+      const sideways = THREE.MathUtils.clamp(this.roverOffsetTarget - off, -1, 1) * 0.35; // inclina o nariz para o lado do desvio
+      const dx = -Math.sin(this.roverAngle) * (26 + off) + Math.cos(this.roverAngle) * sideways * 10;
+      const dz = Math.cos(this.roverAngle) * (15 + off) + Math.sin(this.roverAngle) * sideways * 10;
       this.rover.rotation.y = Math.atan2(-dz, dx);
       this.rover.position.set(x, terrainHeight(x, z), z);
     } else {
