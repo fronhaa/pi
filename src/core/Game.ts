@@ -7,7 +7,8 @@ import { loadFlares, type FlareSource } from '@/data/flares';
 import { isFirstGame, loadMissions, markPlayed, type MissionSource } from '@/data/missions';
 import { pickHistorical } from '@/sim/historical';
 import { MarsBase } from '@/scene/MarsBase';
-import { Crew } from '@/scene/Crew';
+import { Crew, ROLES } from '@/scene/Crew';
+import { PROBLEMS } from '@/sim/problems';
 import { Hud } from '@/ui/Hud';
 import { showCard, showEnd, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
 import { formatDate, getLang, setLang, t } from '@/i18n';
@@ -18,7 +19,7 @@ import { Input } from './Input';
 import { CrewTasks } from './CrewTasks';
 import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
-import { ENTRANCES, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
+import { ENTRANCES, GREENHOUSE_WORK_SPOT, HABITAT_SPOTS, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
 import { ProblemMarkers } from '@/scene/ProblemMarkers';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CONFIG } from '@/sim/config';
@@ -107,6 +108,7 @@ export class Game {
   private offscreen!: OffscreenArrows;
   private hudTick = 0;
   private problemTipShown = false;
+  private evaFactShown = false;
 
   private constructor(
     container: HTMLElement,
@@ -131,6 +133,9 @@ export class Game {
 
     this.base = new MarsBase(this.scene);
     this.scene.add(this.crew.root);
+    void this.crew.loadChibi();
+    // A tripulação fica dentro da base por padrão; só aparece lá fora numa EVA (GDD).
+    this.crew.setSheltered(true);
 
     const uiRoot = document.createElement('div');
     uiRoot.id = 'ui';
@@ -142,6 +147,7 @@ export class Game {
         this.coop ? (this.coop.state?.mars?.preview ?? null)
         : this.mission && this.mission.isPlanValid(plan) && !this.mission.state.pendingCard ? this.mission.previewSol(plan) : null,
       onSendProblem: (uid) => this.assignSelected(uid),
+      onEvaReturn: () => this.tasks.returnNow(),
       onPause: () => this.togglePause(),
       onEndDay: () => this.endDay(),
       onSelect: (role) => this.select(role),
@@ -170,7 +176,18 @@ export class Game {
     this.scene.add(this.markers.root);
     // No modo em grupo, o CrewTasks conversa com o servidor por um adaptador (coopTaskMission).
     this.tasks = new CrewTasks(() => (this.coop ? this.coopTaskMission() : this.mission), this.crew);
-    this.tasks.onChange = () => this.refreshDayHud();
+    this.tasks.onChange = () => {
+      this.refreshDayHud();
+      this.hud.setPlaces(4 - this.tasks.outsideCount, this.tasks.outsideCount);
+    };
+    this.tasks.onEvaStart = ([a, b]) => {
+      const names = { a: t(`crew.${a}` as StringKey), b: t(`crew.${b}` as StringKey) };
+      // Primeira EVA: o fato real da NASA sobre quanto tempo se passa lá fora.
+      if (!this.evaFactShown) this.hud.toast(t('eva.fact'), t('eva.fact.source'));
+      else this.hud.toast(t('eva.start', names));
+      this.evaFactShown = true;
+    };
+    this.tasks.onEvaReturn = () => this.hud.toast(t('eva.back'));
     this.tasks.onResolved = (p) => {
       this.markers.remove(p.uid);
       if (p.kind === 'roverStuck') this.base.setRoverStuck(null);
@@ -237,9 +254,8 @@ export class Game {
       });
       this.input.reset();
       this.motion.enabled = !this.night && !this.paused;
-      this.tasks.motion = this.motion;
-      // Física chegou no meio da noite: a tripulação já está "dentro" (escondida); de manhã sai pela porta.
-      if (this.night) this.motion.forceInside();
+      // A tripulação está dentro (escondida); quem estiver numa EVA sai pela porta.
+      this.tasks.attachMotion(this.motion);
       this.motion.select(this.selected); // avisa o HUD via onSelect
     } catch (err) {
       console.warn('Física indisponível; o jogo segue só com a interface.', err);
@@ -290,7 +306,10 @@ export class Game {
         let o: THREE.Object3D | null = problemHit.object;
         while (o && o.userData.problemUid === undefined) o = o.parent;
         const p = o && this.mission.state.problems.find((x) => x.uid === o!.userData.problemUid);
-        if (p) text = `${t(`problem.${p.kind}` as StringKey)} · ${t('hover.send', { name: t(`crew.${this.selected}` as StringKey) })}`;
+        if (p) {
+          const action = PROBLEMS[p.kind].outside ? t('hover.eva') : t('hover.fixInside');
+          text = `${t(`problem.${p.kind}` as StringKey)} · ${action}`;
+        }
       } else {
         const crewHit = this.firstVisibleHit([this.crew.root]);
         role = crewHit ? this.roleOf(crewHit.object) : null;
@@ -378,7 +397,10 @@ export class Game {
       this.hud.toast(t('coop.crew.pickYours'));
       return;
     }
-    this.tasks.assign(this.selected, uid);
+    const r = this.tasks.assign(this.selected, uid);
+    if (r === 'storm') this.hud.toast(t('eva.banned'));
+    else if (r === 'full') this.hud.toast(t('eva.full'));
+    else if (r === 'nobody') this.hud.toast(t('eva.nobody'));
   }
 
   /** Solo: todos os astronautas. Em grupo: só os dos papéis deste jogador. */
@@ -477,6 +499,7 @@ export class Game {
     this.phase = 'night';
     this.paused = false;
     this.tasks.clear();
+    this.hud.setPlaces(4, 0);
     this.markers.clear();
     this.offscreen.clear();
     this.base.setRoverStuck(null);
@@ -518,9 +541,12 @@ export class Game {
       remaining: coopDay ? coopDay.remaining : Math.max(0, Math.ceil(CONFIG.problems.daySeconds - this.dayElapsed)),
       paused: this.paused,
       selected: this.selected,
+      evaBanned: this.mission.evaBanned,
+      evaActive: this.tasks.evaActive,
+      crew: ROLES.map((role) => ({ role, place: this.tasks.placeOf(role) })),
       problems: s.problems
         .filter((p) => p.status !== 'pending')
-        .map((p) => ({ uid: p.uid, kind: p.kind, status: p.status, progress: p.progress, worker: this.tasks.workerOf(p.uid), working: this.tasks.isWorking(p.uid) })),
+        .map((p) => ({ uid: p.uid, kind: p.kind, status: p.status, progress: p.progress, worker: this.tasks.workerOf(p.uid), phase: this.tasks.phaseOf(p.uid) })),
     });
   }
 
@@ -591,12 +617,8 @@ export class Game {
         this.night = false;
         this.stormNight = false;
         this.nightRes = null;
-        if (this.motion) {
-          this.motion.comeOut(ENTRANCES[entrance]);
-          this.motion.enabled = true;
-        } else {
-          this.crew.setSheltered(false);
-        }
+        // De manhã a tripulação continua dentro; só sai numa EVA (GDD).
+        if (this.motion) this.motion.enabled = true;
         this.hud.setBusy(false);
         onDone();
       });
@@ -972,6 +994,24 @@ export class Game {
     this.camera.updateProjectionMatrix();
   }
 
+  /**
+   * Quem está dentro aparece pelo casco translúcido: no seu módulo do habitat, ou na estufa se está
+   * consertando o vazamento. À noite (dormindo ou no abrigo) e na câmara de descompressão, some.
+   * A física não cuida de quem está dentro, então a posição e a animação são daqui.
+   */
+  private showCrewInside(dt: number): void {
+    const awake = this.phase === 'morning' || this.phase === 'day';
+    for (const r of ROLES) {
+      if (!this.motion!.isInside(r)) continue;
+      const a = this.crew.members[r];
+      a.root.visible = awake && this.tasks.placeOf(r) === 'inside';
+      if (!a.root.visible) continue;
+      a.root.position.copy(this.tasks.onInsideTask(r) ? GREENHOUSE_WORK_SPOT : HABITAT_SPOTS[r]);
+      a.faceCamera(this.camera.position);
+      a.idle(dt);
+    }
+  }
+
   private frame(time: number): void {
     this.timer.update(time);
     const rawDt = this.timer.getDelta();
@@ -980,7 +1020,9 @@ export class Game {
     const t = this.timer.getElapsed();
     this.controls.update();
     // O rover recebe onde estão os astronautas visíveis (quem está dentro da base não conta).
-    const crewPositions = Object.values(this.crew.members).filter((a) => a.root.visible).map((a) => a.root.position);
+    const crewPositions = ROLES.filter((r) => this.crew.members[r].root.visible && !this.motion?.isInside(r)).map(
+      (r) => this.crew.members[r].root.position,
+    );
     this.base.update(dt, t, crewPositions);
     if (this.phase === 'day' && !this.paused) {
       this.updateDay(dt);
@@ -993,8 +1035,11 @@ export class Game {
     this.markers.update(t, this.camera);
     this.updateOffscreen();
     this.coopCrewTick(dt);
-    if (this.motion) this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)
-    else this.crew.update(dt);
+    for (const r of ROLES) this.crew.members[r].setWorking(this.phase === 'day' && this.tasks.isRoleWorking(r));
+    if (this.motion) {
+      this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)
+      this.showCrewInside(dt);
+    } else this.crew.update(dt);
     const marker = this.targetMarker.material as THREE.MeshBasicMaterial;
     marker.opacity = Math.max(0, marker.opacity - dt * 0.8);
     this.renderer.render(this.scene, this.camera);

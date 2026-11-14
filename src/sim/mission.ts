@@ -120,7 +120,8 @@ export class Mission {
     this.nextCommsDown = false;
     // Antena desalinhada: os avisos da Terra deste sol se perdem (a tempestade vem do mesmo jeito).
     s.messages = s.commsDown ? [{ kind: 'noSignal' }] : this.buildMessages(sol);
-    s.problems = [...this.carryOver, ...scheduleProblems(sol, this.rng, () => ++this.uid)];
+    const carried = this.carryOver.map((p) => p.kind);
+    s.problems = [...this.carryOver, ...scheduleProblems(sol, this.rng, () => ++this.uid, carried)];
     this.carryOver = [];
 
     const cardId = s.cardSols.get(sol);
@@ -193,6 +194,14 @@ export class Mission {
 
   // ---------- problemas pela base (tempo da tripulação) ----------
 
+  /**
+   * EVA proibida hoje: a Terra avisou que a tempestade chega esta noite (GDD, "EVA: sair da base").
+   * Sem o aviso (antena desalinhada), a tripulação não sabe, e a regra não vale.
+   */
+  get evaBanned(): boolean {
+    return CONFIG.eva.banOnStormDay && this.state.messages.some((m) => m.kind === 'stormToday');
+  }
+
   private problem(uid: number): Problem {
     const p = this.state.problems.find((x) => x.uid === uid);
     if (!p) throw new Error(`Problema inexistente: ${uid}`);
@@ -244,8 +253,11 @@ export class Mission {
     const storm = this.stormToday;
 
     // Problemas: em noite de tempestade, trabalho pela metade continua amanhã (GDD); o resto cobra a conta hoje.
+    // Com a EVA proibida, os problemas de fora também ficam para amanhã: ninguém podia sair.
     const unresolved = s.problems.filter((p) => p.status !== 'done');
-    const carried = storm ? unresolved.filter((p) => p.progress > 0) : [];
+    const evaBanned = this.evaBanned;
+    const waitedEva = evaBanned ? unresolved.filter((p) => PROBLEMS[p.kind].outside) : [];
+    const carried = [...waitedEva, ...(storm ? unresolved.filter((p) => p.progress > 0 && !waitedEva.includes(p)) : [])];
     const failed = unresolved.filter((p) => !carried.includes(p));
 
     // O cálculo é o mesmo da prévia (src/sim/day.ts); aqui só montamos o relatório.
@@ -299,7 +311,10 @@ export class Mission {
       if (p.kind === 'antenna') this.nextCommsDown = true;
       if (p.kind !== 'roverStuck') lines.push({ key: `report.problem.failed.${p.kind}`, params: fx, tone: 'bad' });
     }
-    for (const p of carried) lines.push({ key: 'report.problem.carried', params: { problem: `problem.${p.kind}` } });
+    for (const p of carried) {
+      const key = waitedEva.includes(p) ? 'report.problem.evaBanned' : 'report.problem.carried';
+      lines.push({ key, params: { problem: `problem.${p.kind}` } });
+    }
     this.carryOver = carried.map((p) => ({ ...p, status: 'open' as const, spawnAt: 0 }));
 
     // Fatos reais dos rovers, ligados ao que a criança acabou de viver (uma vez por missão).

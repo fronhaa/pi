@@ -293,13 +293,13 @@ Além da energia, o jogo ensina um segundo recurso real: o tempo da tripulação
 
 Este modo e o modo Terra e Marte funcionam juntos: os dois fazem parte do jogo.
 
-**Controle, sem joystick.** A criança toca no astronauta e depois no problema. Ele anda até lá, trabalha e fica ocupado até terminar. No modo solo, um jogador comanda os quatro. No cooperativo, cada jogador de Marte é dono do astronauta do seu papel; com menos de 4 jogadores em Marte, alguém comanda mais de um.
+**Controle, sem joystick.** A criança aperta o botão do problema (ou toca no "!"). Para um problema de fora, sai uma dupla em EVA, que anda até lá, trabalha e volta sozinha (ver [EVA: sair da base](#eva-sair-da-base)). No modo solo, um jogador comanda os quatro. No cooperativo, cada jogador de Marte é dono do astronauta do seu papel; com menos de 4 jogadores em Marte, alguém comanda mais de um.
 
 **Dois jeitos de controlar, ao mesmo tempo** (decisão de 14/11/2026, sem menu de configuração):
 
 | Ação | Clique / toque | Teclado |
 | --- | --- | --- |
-| Escolher astronauta | Tocar nele | Teclas **1 a 4** (comandante, engenheiro de voo, oficial médico, cientista) |
+| Escolher astronauta | Botões da tripulação na lista do dia (🏠 dentro, 🚪 na câmara, 👩‍🚀 lá fora) ou tocar nele quando está lá fora | Teclas **1 a 4** (comandante, engenheiro de voo, oficial médico, cientista) |
 | Ver quem é (mouse) | Passar o mouse: destaque, cursor de mãozinha e o nome do papel; sobre um “!”, o problema e quem será enviado | — |
 | Achar problema fora da tela | Uma seta na borda aponta para cada problema fora do enquadramento, com o nome; tocar nela envia o astronauta selecionado | Tab até a seta e Enter |
 | Andar | Tocar no chão; ele anda sozinho até lá | **Setas** ou **WASD**, relativas à câmera |
@@ -311,7 +311,7 @@ A movimentação usa física (Rapier) com a gravidade de Marte, carregada em seg
 ### Como fica um sol com as duas opções
 
 1. **Vez da Terra** (só no cooperativo com Terra): vê o clima espacial e envia uma mensagem.
-2. **Manhã, por turno:** o plano de energia, como hoje. O astronauta de cada papel vai para o seu posto: engenheiro no abrigo, oficial médico na estufa, cientista no rover e comandante na antena.
+2. **Manhã, por turno:** o plano de energia, como hoje. A tripulação continua dentro da base.
 3. **Dia, em tempo real** (60 a 90 segundos, com pausa): problemas aparecem pela base e a tripulação decide quem vai aonde.
 4. **Noite:** tempestade e aquecedores. O relatório mostra a energia e o que foi ou não consertado.
 
@@ -331,17 +331,42 @@ Tempos e efeitos são valores iniciais de jogo, ainda a balancear.
 
 - Um lugar por vez. Mandar um astronauta ocupado para outro problema faz ele largar o que estava fazendo e perder o progresso.
 - Distância custa tempo: atravessar a base inteira leva cerca de 10 segundos.
-- Trabalho fora da base passa pela câmara de descompressão (3 segundos para sair e 3 para voltar). Cada tarefa fora soma +1 de dose, na escala do jogo (INTERPRETADO). Dentro, não soma.
-- Durante um alerta de tempestade, o comandante fica na antena.
+- Trabalho fora da base é uma EVA em dupla e passa pela câmara de descompressão (3 segundos para sair e 3 para voltar). Cada tarefa fora soma +1 de dose, na escala do jogo (INTERPRETADO). Dentro, não soma.
+- No sol em que a tempestade chega, com o aviso da Terra recebido, ninguém sai (EVA proibida). Os problemas de fora daquele sol ficam para o dia seguinte, sem castigo. Esta regra substitui a antiga "durante um alerta, o comandante fica na antena".
 - Na noite de tempestade, quem estiver fora corre para o abrigo; o que ficou pela metade continua no dia seguinte.
 - Aparecem só 1 ou 2 problemas por dia, a partir do sol 3, para não sobrecarregar crianças de 7 a 12 anos. Eles substituem as cartas "Painéis empoeirados" e "Vazamento na estufa"; as outras cartas continuam.
 - O dia sempre pode ser pausado, e pode correr mais devagar para crianças menores.
 
 **Ligação com o modo Terra e Marte.** A Terra não controla astronautas, mas pode avisar antes ("poeira a caminho dos painéis"). Se a antena ficar desalinhada, a mensagem da Terra não chega. Assim, consertar a antena passa a importar para os dois lados.
 
-**Implementado (14/11/2026):** dia de 75 s com pausa (P) e botão "Terminar o dia"; consertar clicando no "!" com o astronauta selecionado, pelo botão "Enviar" na lista de problemas ou chegando perto e apertando **E**; a tripulação contorna os prédios (busca de caminho). Decisões além do GDD: terminar o dia cedo conta os problemas que ainda não apareceram como não resolvidos; poeira não limpa = +20% de poeira; a câmara de descompressão soma 3 s às tarefas de fora. Ainda não: "comandante fica na antena durante alerta" e velocidade mais lenta para crianças menores. Equilíbrio medido (`npm run balance`, atenta resolvendo tudo): nunca perde; 3★ em ~19% (erupções reais) e ~43% (simuladas), contra ~69% antes dos problemas, por causa da dose +1 por tarefa fora. **Ajuste a decidir pelo time.**
+**Implementado (14/11/2026):** dia de 75 s com pausa (P) e botão "Terminar o dia"; consertar clicando no "!", pelo botão do problema na lista ("Sair em EVA" ou "Consertar de dentro") ou chegando perto e apertando **E** (dentro, **E** pega o problema de dentro); EVA em dupla (seção abaixo); a tripulação contorna os prédios (busca de caminho). Decisões além do GDD: terminar o dia cedo conta os problemas que ainda não apareceram como não resolvidos; poeira não limpa = +20% de poeira; a câmara de descompressão soma 3 s às tarefas de fora. Ainda não: velocidade mais lenta para crianças menores. Equilíbrio medido (`npm run balance`, atenta resolvendo tudo): nunca perde; 3★ em ~19% (erupções reais) e ~43% (simuladas), contra ~69% antes dos problemas, por causa da dose +1 por tarefa fora. **Ajuste a decidir pelo time.**
 
 **O que ensina:** tempo e lugar também são recursos limitados, a equipe precisa dividir tarefas, e sair da base tem um custo.
+
+### EVA: sair da base
+
+Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da base e sai só em saídas curtas e planejadas, as EVAs (atividade extraveicular, sair com traje espacial).
+
+**O dado real.** Nenhuma das APIs que o jogo usa (DONKI, Horizons, OSDR, RadLab, Mars Trek) traz tempo dentro e fora do habitat; o número vem de um relatório da NASA. Os trajes e equipamentos de EVA para a superfície estão sendo projetados para **até 24 horas de EVA por pessoa por semana**, em saídas de 6 a 8 horas, 3 a 4 vezes por semana ([NASA, *EVA Injury Evidence Report*, 2021, NTRS 20220004017](https://ntrs.nasa.gov/citations/20220004017)). Como a semana tem 168 horas, isso dá no máximo cerca de 14% do tempo fora, ou seja, **pelo menos 86% dentro**. A conta é nossa; o número de 24 horas é da NASA. O texto de origem da ideia ("80% a 90% dentro") não tinha fonte; a conta acima confirma a ordem de grandeza. A primeira missão de referência da NASA a Marte prevê dois tripulantes na superfície, com um rover pressurizado ([NASA, *Mars Surface Activities*, 2022, NTRS 20220000589](https://ntrs.nasa.gov/citations/20220000589)).
+
+**Regras no jogo** (números em `CONFIG.eva` e `CONFIG.problems`, classificação INTERPRETADO):
+
+| Regra | Como funciona | De onde vem |
+| --- | --- | --- |
+| Dentro por padrão | De manhã e de noite, todos ficam dentro. A cena só mostra astronautas lá fora durante uma EVA. O topo mostra "Dentro: 4 · Fora: 0" | Relatório da NASA acima (≥ 86% dentro) |
+| Problema de dentro | Vazamento na estufa: alguém de dentro conserta sem sair (2 s de corredor e o tempo da tarefa). Não soma dose | Escolha de jogo |
+| Problema de fora exige EVA | O botão é "Sair em EVA". Sai o astronauta escolhido (se estiver livre e dentro) e um parceiro livre | Escolha de jogo: em dupla, um ajuda o outro |
+| Câmara de descompressão | 3 s para sair e 3 s para voltar, com o astronauta escondido | Valor de jogo |
+| No máximo 2 fora | Só uma dupla por vez. Outro astronauta não sai enquanto ela trabalha ("Já tem uma dupla lá fora") | Escolha de jogo |
+| A dupla anda junta | Um trabalha, o outro fica a cerca de 2 m. Um trabalho por dupla | Escolha de jogo |
+| EVA curta | Terminou o conserto, a dupla volta sozinha. Parada lá fora sem tarefa, volta depois de 12 s. Há o botão "Voltar para dentro". Ainda com a dupla fora, dá para mandá-la a outro problema de fora sem passar de novo pela câmara | Escolha de jogo, para ensinar que se fica pouco tempo fora |
+| Sem EVA no dia da tempestade | Com a mensagem "a tempestade chega hoje", o botão vira "Sem EVA hoje". O conserto de fora fica para amanhã (relatório: "ninguém saiu por causa da tempestade"). Sem o aviso (antena desalinhada), a tripulação não sabe e pode sair | Escolha de jogo, ligada ao aviso real do DONKI. Não achamos documento primário da NASA com a regra exata; por isso fica como INTERPRETADO |
+
+**Fato na tela.** Na primeira EVA da partida aparece: "A NASA planeja até 24 horas de EVA por semana para cada astronauta. A semana tem 168 horas: quase todo o tempo é dentro." (fonte citada no aviso). O termo EVA tem "?".
+
+**Equilíbrio** (`npm run balance`, estratégia atenta resolvendo tudo o que pode): praticamente igual ao de antes. 3★ em ~21% (erupções reais, antes ~19%) e ~45% (simuladas, antes ~43%); nas missões históricas, varia de 0 a +3 pontos. Sobe um pouco porque, no dia da tempestade, ninguém sai e a dose de tarefa fora não soma.
+
+**Próxima entrega (ainda não feita):** dose por tempo fora em vez de +1 por tarefa, e um relógio de oxigênio do traje. Depois, rover pressurizado para o problema distante (mais rápido e sem dose, mas gasta bateria).
 
 ### Ordem de construção no hackathon
 
@@ -355,7 +380,8 @@ As três partes somam de 12 a 17 horas, o que aperta o prazo de dois dias. Se o 
 
 ### Pronto quando
 
-- [ ] Tocar no astronauta e depois no problema faz ele andar até lá e consertar.
+- [x] Apertar o botão do problema (ou tocar no "!") manda alguém de dentro ou uma dupla em EVA, que anda até lá e conserta.
+- [x] No máximo 2 fora; sem EVA no dia da tempestade.
 - [ ] Um astronauta ocupado só vai para outro problema largando o atual.
 - [ ] Problema sem atendimento aparece no relatório com a consequência.
 - [ ] Trabalho fora da base soma dose; dentro, não.
@@ -606,8 +632,9 @@ Isso é parte do ensino, não enfeite.
 | Blindagem | Um saco de terra em volta do abrigo para cada 8 pontos, até 12 sacos |
 | Bateria | Medidor no contêiner diminui e muda de verde para amarelo e vermelho |
 | Alerta ou tempestade | Luz vermelha piscando na torre e céu com tom avermelhado |
-| Noite | A tripulação anda até a escotilha do habitat e entra para dormir; o relatório do sol espera todos entrarem (no mínimo 2,2 s e no máximo 6 s; quem não chegar entra direto). De manhã, todos saem pela mesma porta e voltam andando aos postos, e o jogador pode assumir qualquer um no caminho |
-| Noite de tempestade | A tripulação corre para o abrigo de regolito, entra e sai por ali de manhã |
+| Tripulação | Fica dentro da base (escondida). Numa EVA, a dupla sai pela escotilha do habitat, anda até o problema e volta pela mesma porta |
+| Noite | Quem ainda está lá fora anda até a escotilha do habitat e entra; o relatório do sol espera todos entrarem (no mínimo 2,2 s e no máximo 6 s; quem não chegar entra direto). De manhã, todos continuam dentro |
+| Noite de tempestade | Quem está lá fora corre para o abrigo de regolito |
 | Mensagem da Terra | A antena pisca |
 | Energia na ciência | O rover anda um trecho (8 s), **para e estuda** (5 s: o braço desce até o chão, a ponta do instrumento pisca e a câmera vira para a pedra mais perto) e segue, como os rovers reais, que passam a maior parte do sol parados fazendo ciência: no recorde do Perseverance, foram cerca de 4 h 24 min dirigindo num sol de 24 h 39 min ([JPL](https://www.jpl.nasa.gov/images/pia26645-nasas-perseverance-breaks-own-rover-driving-record/)). Rovers reais não têm doca: o Perseverance e o Curiosity geram energia o tempo todo com um gerador nuclear e recarregam as baterias onde estão ([JPL](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/)). Depois de desatolado, ele volta andando do lugar onde atolou até o ponto mais perto da trilha (sem teleporte). Ao andar, o rover anda em volta da base; se um astronauta estiver na rota, ele recalcula e desvia (3 m para dentro ou para fora), também de pedras e prédios; sem rota livre ou com o astronauta colado, para e pisca uma luz âmbar. As rodas giram, ele inclina com o relevo e é sólido: astronautas não o atravessam |
 | Noite | Céu escurece, estrelas aparecem, janelas acendem |

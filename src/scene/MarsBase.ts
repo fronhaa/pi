@@ -26,6 +26,23 @@ export const POSTS = {
 
 export type Role = keyof typeof POSTS;
 
+/** Altura do piso dentro dos módulos do habitat (o cilindro tem centro em y = 2,1 e raio 1,5). */
+const HABITAT_FLOOR_Y = 1;
+
+/**
+ * Onde cada papel fica DENTRO do habitat (um módulo para cada), para dar para ver a tripulação lá dentro.
+ * Os módulos são translúcidos, como a cúpula da estufa.
+ */
+export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
+  engineer: new THREE.Vector3(-6, HABITAT_FLOOR_Y, 0.2),
+  medic: new THREE.Vector3(-2.2, HABITAT_FLOOR_Y, 0.2),
+  commander: new THREE.Vector3(1.6, HABITAT_FLOOR_Y, 0.2),
+  scientist: new THREE.Vector3(5.4, HABITAT_FLOOR_Y, 0.2),
+};
+
+/** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
+export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(1.0, 0.4, -4.6);
+
 /**
  * Onde a tripulação entra à noite (ponto no chão, em frente à porta): no habitat para dormir,
  * no abrigo de regolito na noite de tempestade solar. Precisam ficar FORA das caixas de `obstacles`.
@@ -220,11 +237,19 @@ export class MarsBase {
     geo.rotateZ(Math.PI / 2);
     const ring = new THREE.TorusGeometry(1.55, 0.12, 8, 24);
     ring.rotateY(Math.PI / 2);
+    // Casco translúcido (como a cúpula): dá para ver a tripulação lá dentro. Sem contorno e sem sombra,
+    // senão o interior fica escuro.
+    const shell = toonMaterial(PALETTE.light, { transparent: true, opacity: 0.35, depthWrite: false });
+    const floorGeo = new THREE.BoxGeometry(3.4, 0.08, 2);
     for (let i = 0; i < 4; i++) {
       const x = -6 + i * 3.8;
-      const mod = toonMesh(geo, PALETTE.light);
+      const mod = new THREE.Mesh(geo, shell);
       mod.position.set(x, 2.1, 0);
+      mod.receiveShadow = true;
       this.root.add(mod);
+      const floor = toonMesh(floorGeo, PALETTE.tech, 0);
+      floor.position.set(x, HABITAT_FLOOR_Y - 0.04, 0);
+      this.root.add(floor);
       for (const dx of [-1.8, 1.8]) {
         const r = toonMesh(ring, PALETTE.accent, 0);
         r.position.set(x + dx, 2.1, 0);
