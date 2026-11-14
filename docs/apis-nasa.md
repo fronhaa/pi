@@ -24,7 +24,7 @@ O jogo é um site estático: roda no navegador do jogador, sem servidor. Por iss
 | [RadLab](#radlab-dose-medida-na-iss) | ❌ | Comparação com dose medida na ISS | Depois do hackathon |
 | [Biblioteca de imagens](#biblioteca-de-imagens-e-vídeos-da-nasa) | ✅ | Arte da tela de título e do vídeo | Baixa prioridade |
 
-**Prioridade no hackathon:** as tempestades reais do DONKI já estão no jogo ([dados.md](dados.md)). Próximos: (1) missões históricas com atraso real do Horizons (dados prontos), (2) baixar OSDR e MEDA antes do deploy.
+**Prioridade no hackathon:** as missões históricas (DONKI e atraso real do Horizons) já estão no jogo. Próximos: (1) posição real do Sol em Jezero para a luz da cena, (2) baixar OSDR e MEDA antes do deploy.
 
 ## Configurar a chave da NASA
 
@@ -70,9 +70,7 @@ Tipos de evento:
 | `SEP` | Evento de partículas solares energéticas | ✅ | `sepID`, `eventTime`, `linkedEvents[]` |
 | `GST` | Tempestade geomagnética (na Terra) | ✅ | `gstID`, `startTime`, `allKpIndex[].kpIndex` |
 
-**Uso no jogo hoje:** as tempestades são erupções reais M5+ e X, extraídas das notificações do DONKI por `npm run fetch-data` e salvas em `public/data/donki-flares.json`. Coleta, cache e limitações: [dados.md](dados.md).
-
-**Planejado:** as [missões históricas](game-design.md#calendário-da-missão-janelas-históricas-reais) usam CMEs, pelo tipo de velocidade: S e C = fraca, O = média, R e ER = forte. Os dados já estão em `public/data/missions.json` (ver [abaixo](#missões-históricas-npm-run-datamissions)).
+**Uso no jogo:** as tempestades vêm das [missões históricas](game-design.md#calendário-da-missão-janelas-históricas-reais), com CMEs pelo tipo de velocidade: S e C = fraca, O = média, R e ER = forte (dados em `public/data/missions.json`, ver [abaixo](#missões-históricas-npm-run-datamissions)). Sem esse arquivo, o jogo sorteia erupções reais M5+ e X, extraídas das notificações do DONKI por `npm run fetch-data` (`public/data/donki-flares.json`). Coleta, cache e limitações: [dados.md](dados.md).
 
 Vale considerar também o `SEP`: as partículas solares energéticas são o que de fato aumenta a dose de radiação de um astronauta. Cinco das 6 missões têm eventos SEP no DONKI dentro dos 15 sóis (a missão 5 não tem); eles estão em `sepEvents` no `missions.json` e podem virar texto no relatório do sol.
 

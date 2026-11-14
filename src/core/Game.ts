@@ -4,17 +4,20 @@ import '@/ui/style.css';
 import { Mission } from '@/sim/mission';
 import type { EnergyPlan, Resources } from '@/sim/types';
 import { loadFlares, type FlareSource } from '@/data/flares';
+import { isFirstGame, loadMissions, markPlayed, type MissionSource } from '@/data/missions';
+import { pickHistorical } from '@/sim/historical';
 import { MarsBase } from '@/scene/MarsBase';
 import { Crew } from '@/scene/Crew';
 import { Hud } from '@/ui/Hud';
 import { showCard, showEnd, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
-import { getLang, setLang, t } from '@/i18n';
+import { formatDate, getLang, setLang, t } from '@/i18n';
 import { Input } from './Input';
 import type { CrewMotion } from '@/scene/crewMotion';
 import type { Role } from '@/scene/MarsBase';
 
 /** Duração da animação da noite antes do relatório (ms). */
 const NIGHT_MS = 2200;
+
 
 /**
  * Orquestra a missão: interface → simulação (decisões) → interface e cena (estado).
@@ -46,6 +49,7 @@ export class Game {
   private constructor(
     container: HTMLElement,
     private readonly flares: FlareSource,
+    private readonly missions: MissionSource,
   ) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -75,7 +79,7 @@ export class Game {
         this.plan = plan;
         this.updateScene();
       },
-      onNasaData: () => showNasaData(this.flares),
+      onNasaData: () => showNasaData(this.flares, this.missions, this.mission.state.historical),
       onToggleLang: () => {
         setLang(getLang() === 'pt' ? 'en' : 'pt');
         this.hud.render();
@@ -98,8 +102,8 @@ export class Game {
   }
 
   static async create(container: HTMLElement): Promise<Game> {
-    const flares = await loadFlares();
-    const game = new Game(container, flares);
+    const [flares, missions] = await Promise.all([loadFlares(), loadMissions()]);
+    const game = new Game(container, flares, missions);
     // Só em desenvolvimento: leitura do estado para testes automáticos no navegador.
     if (import.meta.env.DEV) Object.assign(window, { __jezero: game });
     return game;
@@ -166,7 +170,9 @@ export class Game {
 
   private newMission(): void {
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-    this.mission = new Mission(seed, this.flares.flares);
+    // Missão histórica real, se houver; senão, erupções reais sorteadas; senão, simuladas.
+    const historical = pickHistorical(this.missions.missions, seed, isFirstGame());
+    this.mission = new Mission(seed, this.flares.flares, historical);
     this.hud.setState(this.mission.state);
     this.updateScene();
   }
@@ -177,6 +183,9 @@ export class Game {
     this.hud.setState(s);
     this.hud.newSol();
     this.updateScene();
+    if (s.sol === 1 && s.historical) {
+      this.hud.toast(t('mission.start', { id: s.historical.id, date: formatDate(s.historical.startUtc) }), t('mission.source'));
+    }
     if (s.pendingCard) {
       showCard(s.pendingCard, (option) => {
         this.mission.answerCard(option);
@@ -218,6 +227,7 @@ export class Game {
   }
 
   private finish(): void {
+    markPlayed();
     this.hud.setState(this.mission.state);
     showEnd(this.mission.state, () => {
       this.newMission();
