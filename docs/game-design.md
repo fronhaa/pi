@@ -369,6 +369,39 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 
 **Próxima entrega (ainda não feita):** dose por tempo fora em vez de +1 por tarefa, e um relógio de oxigênio do traje. Depois, rover pressurizado para o problema distante (mais rápido e sem dose, mas gasta bateria).
 
+### Para onde o astronauta olha
+
+**Decisão (14/11/2026):** os astronautas não ficam encarando a câmera. Eles vivem a base e só se viram para quem controla quando são **tocados**.
+
+**Hoje (a corrigir):** `Game.showCrewInside` chama `Astronaut.faceCamera` em todo quadro para quem está dentro da base (`src/core/Game.ts`), então os quatro ficam sempre olhando para a tela.
+
+| Situação | Para onde olha |
+| --- | --- |
+| Parado dentro, sem ordem | Para a **estação do seu módulo** (bancada, janela, painel). De vez em quando (a cada 4 a 8 s, sorteado) vira devagar para outro ponto do módulo ou para um colega próximo |
+| Parado lá fora, sem ordem | Mantém a direção em que chegou; de vez em quando olha em volta, como dentro |
+| Andando | Para onde anda (já é assim, `setMotion`) |
+| Consertando ou em tarefa (`interact`) | Para o problema ou a estação. **Nunca** se vira para a câmera |
+| Na câmara, em EVA voltando, dormindo ou no abrigo | Não se vira |
+| **Tocado/selecionado e sem tarefa** | Vira **suavemente** para a câmera de quem controla (~0,4 s), fica ~2 s e volta a ficar livre |
+
+**Regras:**
+
+1. **Giro natural:** sempre interpolado (como o `setMotion` já faz), no máximo ~180°/s. Nada de pular de direção.
+2. Só o **corpo inteiro** gira (o modelo chibi não tem cabeça separada); se um dia tiver, a cabeça gira primeiro.
+3. Selecionar de novo o mesmo astronauta repete o olhar. Dar uma ordem durante o olhar cancela e ele vai cumprir.
+4. **Modo em grupo:** a seleção é de cada tela. O astronauta só se vira na tela de **quem o tocou** e só se for dono dele (ou comandar a EVA). Nas outras telas, continua livre. Nada vai para a rede.
+5. É só cena: não muda regra, `src/sim`, servidor nem protocolo.
+
+**Como implementar:**
+
+| # | Arquivo | O que fazer |
+| --- | --- | --- |
+| 1 | `src/scene/Crew.ts` | Trocar `faceCamera` (instantâneo) por um alvo de direção com giro suave: `lookAt(point, seconds)` e `lookFree(dt)` (sorteia pontos de olhar) |
+| 2 | `src/scene/MarsBase.ts` | Um ponto de olhar por módulo (`HABITAT_LOOK`), ao lado de `HABITAT_SPOTS` |
+| 3 | `src/core/Game.ts` | `showCrewInside` deixa de chamar `faceCamera` todo quadro; `select(role)` pede `lookAt(câmera, 2)` se o astronauta não tem tarefa e é controlado por esta tela |
+
+**Pronto quando:** com ninguém tocado, nenhum astronauta fica encarando a câmera; ao tocar num astronauta parado, ele vira devagar para a tela e volta ao que fazia; ao tocar em quem está consertando, ele continua de frente para o conserto.
+
 ### Ordem de construção no hackathon
 
 | Ordem | Parte | Esforço estimado | Por que nessa ordem |
