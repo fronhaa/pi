@@ -1,0 +1,9 @@
+# Contexto do docker build do servidor coop (server/Dockerfile). Só server/ e public/data/ são usados.
+node_modules
+dist
+.git
+.env*
+docs
+src
+scripts
+server/**/testdata

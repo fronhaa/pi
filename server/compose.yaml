@@ -1,0 +1,27 @@
+# Subir no VPS (de dentro da pasta server/):
+#   docker compose up -d --build
+# Ver logs:  docker compose logs -f
+# Detalhes, HTTPS e atualização: docs/servidor-coop.md
+services:
+  jezero-coop:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: jezero-coop:latest
+    container_name: jezero-coop
+    restart: unless-stopped
+    environment:
+      # Hosts de onde o jogo pode conectar. TROQUE pelo endereço onde o jogo está publicado.
+      ALLOWED_ORIGINS: "fronhaa.github.io,localhost:*"
+    ports:
+      # Só na máquina local: o proxy com HTTPS (Caddy/Nginx) expõe para fora como wss://.
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -25,6 +25,7 @@ e clique em **Terminar o sol**. Leia as mensagens da Terra: elas avisam das temp
 | `npm run build`      | Gera a versão de produção em `dist/`            |
 | `npm run preview`    | Serve o `dist/` localmente                      |
 | `npm run docs:adr -- "título"` | Cria um novo registro de decisão (ADR) |
+| `npm run sim:golden` | Regrava os traços de paridade do servidor Go (rode após mudar `src/sim/`; ver [docs/servidor-coop.md](docs/servidor-coop.md)) |
 | `npm run balance` | Teste de equilíbrio: 2.000 partidas por estratégia com a simulação real |
 | `npm run fetch-data` | Atualiza as tempestades solares reais (precisa de `NASA_API_KEY` no `.env`, ver [docs/dados.md](docs/dados.md)) |
 | `npm run data:missions` | Baixa da NASA os dados das missões históricas para `public/data/missions.json` (precisa do `.env`, ver `.env.example`) |
@@ -37,6 +38,7 @@ Tudo fica em [`docs/`](docs/README.md). Comece por lá:
 - [Dados da NASA](docs/dados.md): de onde vêm os dados reais e como atualizar
 - [Arquitetura](docs/arquitetura.md): como o código está organizado
 - [Física](docs/fisica.md): como criar objetos físicos e as regras de ouro
+- [Servidor do coop](docs/servidor-coop.md): servidor Go do modo cooperativo online, protocolo e deploy no VPS
 - [Estilo visual](docs/estilo-visual.md): paleta, toon shading e contornos
 - [Convenções](docs/convencoes.md): código, git, PRs e assets
 - [Decisões (ADRs)](docs/decisoes/README.md): o porquê das escolhas técnicas

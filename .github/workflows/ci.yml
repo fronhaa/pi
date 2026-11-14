@@ -17,3 +17,29 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+      # As regras do servidor Go precisam ser as mesmas de src/sim (docs/servidor-coop.md).
+      - name: Traços de paridade atualizados
+        run: |
+          npm run sim:golden
+          git diff --exit-code server/internal/sim/testdata/golden.json || {
+            echo "::error::src/sim mudou e os traços não foram regravados. Rode 'npm run sim:golden' e ajuste server/internal/sim."
+            exit 1
+          }
+
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - run: test -z "$(gofmt -l .)" || { gofmt -l .; echo "::error::rode gofmt -w ."; exit 1; }
+      - run: go vet ./...
+      - run: go test -race ./...
+      - name: Imagem Docker monta
+        working-directory: .
+        run: docker build -f server/Dockerfile -t jezero-coop:ci .
