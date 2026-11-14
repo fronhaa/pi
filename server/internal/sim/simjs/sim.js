@@ -93,6 +93,7 @@ var JezeroSim = (function(exports) {
 				max: 35
 			},
 			daySeconds: 75,
+			/** Câmara de descompressão: segundos para sair e para voltar (GDD). */
 			airlockSeconds: 3,
 			/** Dose ao terminar uma tarefa fora da base (escala do jogo, INTERPRETADO). */
 			outsideDose: 1,
@@ -101,6 +102,16 @@ var JezeroSim = (function(exports) {
 				lifeLeak: 10,
 				shieldBag: 8
 			}
+		},
+		/**
+		* EVA (saída da base com traje). A tripulação fica dentro por padrão; problema de fora exige EVA.
+		* Regras de jogo (INTERPRETADO), inspiradas no planejamento da NASA (GDD, "EVA: sair da base").
+		*/
+		eva: {
+			/** No máximo uma dupla fora ao mesmo tempo. */
+			maxOutside: 2,
+			/** No sol em que a tempestade chega (com o aviso da Terra recebido), ninguém sai. */
+			banOnStormDay: true
 		},
 		stars: { doseFor3: 50 }
 	};
@@ -257,12 +268,15 @@ var JezeroSim = (function(exports) {
 		}
 	};
 	var PROBLEM_KINDS = Object.keys(PROBLEMS);
-	/** Sorteia os problemas do dia: só a partir do sol 3, 1 ou 2 por dia, tipos diferentes. */
-	function scheduleProblems(sol, rng, nextUid) {
+	/**
+	* Sorteia os problemas do dia: só a partir do sol 3, 1 ou 2 por dia, tipos diferentes.
+	* `exclude`: tipos que já continuam de ontem (não aparecem duas vezes no mesmo lugar).
+	*/
+	function scheduleProblems(sol, rng, nextUid, exclude = []) {
 		const c = CONFIG.problems;
 		if (sol < c.firstSol) return [];
 		const count = rng.int(c.minPerDay, c.maxPerDay);
-		return rng.shuffle(PROBLEM_KINDS).slice(0, count).map((kind) => ({
+		return rng.shuffle(PROBLEM_KINDS.filter((k) => !exclude.includes(k))).slice(0, count).map((kind) => ({
 			uid: nextUid(),
 			kind,
 			spawnAt: rng.int(c.spawnWindow.min, c.spawnWindow.max),
@@ -495,7 +509,8 @@ var JezeroSim = (function(exports) {
 			s.commsDown = this.nextCommsDown;
 			this.nextCommsDown = false;
 			s.messages = s.commsDown ? [{ kind: "noSignal" }] : this.buildMessages(sol);
-			s.problems = [...this.carryOver, ...scheduleProblems(sol, this.rng, () => ++this.uid)];
+			const carried = this.carryOver.map((p) => p.kind);
+			s.problems = [...this.carryOver, ...scheduleProblems(sol, this.rng, () => ++this.uid, carried)];
 			this.carryOver = [];
 			const cardId = s.cardSols.get(sol);
 			if (cardId) {
@@ -551,6 +566,13 @@ var JezeroSim = (function(exports) {
 			this.checkLoss();
 			return lines;
 		}
+		/**
+		* EVA proibida hoje: a Terra avisou que a tempestade chega esta noite (GDD, "EVA: sair da base").
+		* Sem o aviso (antena desalinhada), a tripulação não sabe, e a regra não vale.
+		*/
+		get evaBanned() {
+			return CONFIG.eva.banOnStormDay && this.state.messages.some((m) => m.kind === "stormToday");
+		}
 		problem(uid) {
 			const p = this.state.problems.find((x) => x.uid === uid);
 			if (!p) throw new Error(`Problema inexistente: ${uid}`);
@@ -602,7 +624,8 @@ var JezeroSim = (function(exports) {
 			const lines = [...this.cardLines];
 			const storm = this.stormToday;
 			const unresolved = s.problems.filter((p) => p.status !== "done");
-			const carried = storm ? unresolved.filter((p) => p.progress > 0) : [];
+			const waitedEva = this.evaBanned ? unresolved.filter((p) => PROBLEMS[p.kind].outside) : [];
+			const carried = [...waitedEva, ...storm ? unresolved.filter((p) => p.progress > 0 && !waitedEva.includes(p)) : []];
 			const failed = unresolved.filter((p) => !carried.includes(p));
 			const day = simulateDay({
 				res: s.res,
@@ -700,10 +723,13 @@ var JezeroSim = (function(exports) {
 					tone: "bad"
 				});
 			}
-			for (const p of carried) lines.push({
-				key: "report.problem.carried",
-				params: { problem: `problem.${p.kind}` }
-			});
+			for (const p of carried) {
+				const key = waitedEva.includes(p) ? "report.problem.evaBanned" : "report.problem.carried";
+				lines.push({
+					key,
+					params: { problem: `problem.${p.kind}` }
+				});
+			}
 			this.carryOver = carried.map((p) => _objectSpread2(_objectSpread2({}, p), {}, {
 				status: "open",
 				spawnAt: 0
