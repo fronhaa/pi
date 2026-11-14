@@ -1,63 +1,71 @@
-# Estilo visual: cartoon
+# Estilo visual: regras técnicas
 
-Código: [`src/render/toon.ts`](../src/render/toon.ts). Decisão: [ADR 0002](decisoes/0002-estilo-toon.md).
+A **direção de arte oficial é a Art Bible** (documento externo do time). O resumo e as decisões de
+alinhamento estão em [game-design.md](game-design.md#direção-visual). Este guia cobre só **como aplicar
+isso no código**. Código: [`src/render/toon.ts`](../src/render/toon.ts). Decisão técnica: [ADR 0002](decisoes/0002-estilo-toon.md).
 
-## Os três ingredientes
+## Ingredientes
 
-1. **Toon shading (cel shading).** `MeshToonMaterial` com um `gradientMap` de **3 tons**.
-   A luz vira faixas chapadas em vez de degradê. Mudar os tons em `getGradientMap()` muda o
-   estilo do jogo todo (mais faixas = mais suave; 2 faixas = mais "quadrinho").
-2. **Contorno escuro (inverted hull).** Uma cópia do mesh, levemente maior, renderizando só as
-   faces de trás em cor escura. Barato e funciona bem em primitivas e modelos arredondados.
-3. **Paleta limitada e saturada**, com céu claro e névoa da cor do céu.
+1. **Cel-shading em 4 faixas, sem sombra preta.** `MeshToonMaterial` com `gradientMap` de 4 tons
+   (`105, 160, 210, 255`). O tom mais escuro é propositalmente claro.
+2. **Contorno escuro e fino (inverted hull)**, na cor de sombra profunda da paleta (`#473C3A`).
+3. **Paleta oficial da Art Bible**; laranja só em detalhes.
 
 ## Como usar
 
 ```ts
 import { toonMesh, toonMaterial, addOutline, PALETTE } from '@/render/toon';
 
-const bola = toonMesh(new THREE.SphereGeometry(0.5), PALETTE.yellow);       // com contorno 5%
-const chao = toonMesh(new THREE.BoxGeometry(10, 1, 10), PALETTE.ground, 0); // sem contorno
+const modulo = toonMesh(new THREE.CylinderGeometry(1.5, 1.5, 3.6, 20), PALETTE.light);  // contorno 3%
+const chao = new THREE.Mesh(geo, toonMaterial(PALETTE.soil));                           // sem contorno
 ```
 
 Não use `MeshStandardMaterial` / `MeshPhongMaterial` em objetos do jogo: quebra a consistência.
 
-## Paleta
+## Paleta (`PALETTE`)
 
-| Nome | Hex | Uso |
-| --- | --- | --- |
-| `outline` | `#1a1a2e` | Contornos, pupilas, texto do HUD |
-| `sky` | `#8ecae6` | Céu e névoa |
-| `ground` | `#95d5b2` | Chão |
-| `player` | `#ff8c42` | Personagem principal (só ele usa) |
-| `red` | `#ef476f` | Destaques, perigo |
-| `yellow` | `#ffd166` | Coletáveis, destaques |
-| `green` | `#06d6a0` | Objetos neutros |
-| `blue` | `#118ab2` | Objetos neutros, plataformas |
-| `white` | `#ffffff` | Olhos, brilhos |
+| Nome | Hex | Origem | Uso |
+| --- | --- | --- | --- |
+| `soil` | `#8E382B` | Art Bible | Solo marciano |
+| `rock` | `#C65B36` | Art Bible | Rochas avermelhadas, abrigo |
+| `lit` | `#E58A51` | Art Bible | Superfícies iluminadas (camadas das mesetas) |
+| `dust` | `#E6B47A` | Art Bible | Poeira clara, sacos de regolito, painéis empoeirados |
+| `shadow` | `#473C3A` | Art Bible | Sombras profundas, contornos, texto da interface |
+| `tech` | `#718B9A` | Art Bible | Equipamentos (mochila, postes, pernas dos módulos) |
+| `light` | `#C8D5D8` | Art Bible | Superfícies claras (módulos, trajes, torre) |
+| `accent` | `#E8792B` | Referência do time | **Só detalhes**: anéis dos módulos, faixa da torre, emblema JZ-1, comandante |
+| `panel` | `#2F4A6E` | Apoio | Painéis solares limpos |
+| `plant` / `plantDead` | `#6F9A4A` / `#7A5434` | Apoio | Estufa saudável / murchando |
+| `alarm`, `window` | `#FF3B2F`, `#FFD27A` | Apoio | Luz de alarme da torre, janelas acesas |
 
-Cor nova? Adicione em `PALETTE` **e** nesta tabela.
+Cor nova? Adicione em `PALETTE` **e** nesta tabela, dizendo a origem.
 
 ## Espessura do contorno
 
 | Objeto | `thickness` |
 | --- | --- |
-| Personagens / objetos pequenos | `0.05` (padrão) |
-| Detalhes pequenos (olhos) | `0.10`–`0.12` |
-| Objetos grandes (plataformas) | `0.02`–`0.03` |
-| Chão / cenário de fundo | `0` |
+| Padrão (módulos, torre, rover) | `0.03` |
+| Partes pequenas (astronautas, rochas, sacos) | `0.04`–`0.05` |
+| Muito grandes (mesetas ao fundo) | `0.012` |
+| Chão, anéis, faixas | `0` |
 
-O contorno escala junto com o objeto, por isso objetos grandes usam valores menores.
+## A cena mostra o estado do jogo
 
-## Modelos 3D (`.glb`)
+A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()` e `MarsBase.update()`
+([`src/scene/MarsBase.ts`](../src/scene/MarsBase.ts)); a cena nunca muda regras.
 
-- Exportar do Blender em **glTF Binary (.glb)**, eixo Y para cima, escala em metros.
-- Low-poly com normais suaves funcionam melhor com o contorno.
-- Cores sólidas por material (sem texturas realistas). Ao carregar, trocamos os materiais por
-  `toonMaterial(cor)`.
-- Coloque em `public/assets/models/` com nome em `kebab-case` (`nave-principal.glb`).
+## Escala e modelos
+
+- 1 unidade = 1 metro. Astronauta com ~1,85 m (Art Bible).
+- Hoje tudo é feito com primitivas (leve). Modelos `.glb` futuros: exportar do Blender em glTF Binary,
+  eixo Y para cima, em metros, com cores sólidas; ao carregar, trocar os materiais por `toonMaterial(cor)`.
+  Coloque em `public/assets/models/` com nome em `kebab-case`.
+
+## O que não usar
+
+- Logotipo, insígnia ou nome da NASA como marca. O emblema da missão é próprio: "JZ-1".
+- Planeta gigante no céu. A Terra é um pontinho azul que aparece à noite.
 
 ## Limitações conhecidas
 
-- O inverted hull falha em quinas muito agudas e em malhas não fechadas (aparecem "buracos" no contorno).
-  Alternativa futura: pós-processamento por detecção de bordas (normal/depth), via ADR.
+- O inverted hull falha em quinas agudas e malhas abertas. Alternativa futura: detecção de bordas em pós-processamento (via ADR).

@@ -1,6 +1,6 @@
 # 0003. Manter Rapier apesar do tamanho do bundle
 
-- **Status:** Aceito
+- **Status:** Aceito; substituído em parte por [0004](0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md) (Rapier fora do pacote principal)
 - **Data:** 2026-11-14
 
 ## Contexto

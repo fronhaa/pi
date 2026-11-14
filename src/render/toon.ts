@@ -1,29 +1,38 @@
 import * as THREE from 'three';
 
 /**
- * Helpers do estilo cartoon. Ver docs/estilo-visual.md
- * - toonMaterial: sombreamento em faixas (cel shading) via gradientMap.
- * - addOutline: contorno escuro pela técnica "inverted hull".
+ * Helpers do estilo cel-shading. Direção de arte: Art Bible (externa) + docs/estilo-visual.md.
+ * - toonMaterial: sombreamento em 4 faixas, sem sombra preta (Art Bible; GDD, alinhamento #6).
+ * - addOutline: contorno escuro e fino pela técnica "inverted hull".
  */
 
+/** Paleta oficial da Art Bible (7 cores) + cores de apoio documentadas em docs/estilo-visual.md. */
 export const PALETTE = {
-  outline: 0x1a1a2e,
-  sky: 0x8ecae6,
-  ground: 0x95d5b2,
-  player: 0xff8c42,
-  red: 0xef476f,
-  yellow: 0xffd166,
-  green: 0x06d6a0,
-  blue: 0x118ab2,
+  // Oficiais (Art Bible)
+  soil: 0x8e382b,
+  rock: 0xc65b36,
+  lit: 0xe58a51,
+  dust: 0xe6b47a,
+  shadow: 0x473c3a,
+  tech: 0x718b9a,
+  light: 0xc8d5d8,
+  // Apoio (detalhes e estados)
+  accent: 0xe8792b, // laranja: só em detalhes, como na referência do time
+  outline: 0x473c3a,
+  panel: 0x2f4a6e,
+  plant: 0x6f9a4a,
+  plantDead: 0x7a5434,
+  alarm: 0xff3b2f,
+  window: 0xffd27a,
   white: 0xffffff,
 } as const;
 
 let gradientMap: THREE.DataTexture | null = null;
 
-/** Textura 3x1 com 3 tons: define quantas "faixas" de luz o toon tem. */
+/** 4 tons, o mais escuro ainda claro o bastante para não virar "sombra preta". */
 function getGradientMap(): THREE.DataTexture {
   if (gradientMap) return gradientMap;
-  const tones = new Uint8Array([90, 170, 255]);
+  const tones = new Uint8Array([105, 160, 210, 255]);
   gradientMap = new THREE.DataTexture(tones, tones.length, 1, THREE.RedFormat);
   gradientMap.minFilter = THREE.NearestFilter;
   gradientMap.magFilter = THREE.NearestFilter;
@@ -32,31 +41,32 @@ function getGradientMap(): THREE.DataTexture {
   return gradientMap;
 }
 
-export function toonMaterial(color: THREE.ColorRepresentation): THREE.MeshToonMaterial {
-  return new THREE.MeshToonMaterial({ color, gradientMap: getGradientMap() });
+export function toonMaterial(color: THREE.ColorRepresentation, extra: THREE.MeshToonMaterialParameters = {}): THREE.MeshToonMaterial {
+  return new THREE.MeshToonMaterial({ color, gradientMap: getGradientMap(), ...extra });
 }
 
 const outlineMaterial = new THREE.MeshBasicMaterial({ color: PALETTE.outline, side: THREE.BackSide });
 
 /**
- * Adiciona contorno a um mesh: uma cópia levemente maior, só com as faces de trás, em cor escura.
- * Funciona bem para formas convexas/primitivas. Para modelos complexos, ver alternativas em docs/estilo-visual.md.
+ * Contorno: cópia levemente maior do mesh, só faces de trás, em cor escura.
+ * Funciona bem em formas convexas/primitivas; ver limitações em docs/estilo-visual.md.
  */
-export function addOutline(mesh: THREE.Mesh, thickness = 0.05): THREE.Mesh {
+export function addOutline(mesh: THREE.Mesh, thickness = 0.03): THREE.Mesh {
   const outline = new THREE.Mesh(mesh.geometry, outlineMaterial);
   outline.scale.setScalar(1 + thickness);
   outline.castShadow = false;
   outline.receiveShadow = false;
+  outline.userData.isOutline = true;
   mesh.add(outline);
   return outline;
 }
 
-/** Atalho: mesh toon com contorno e sombras ligadas. */
+/** Atalho: mesh toon com contorno e sombras. */
 export function toonMesh(
   geometry: THREE.BufferGeometry,
   color: THREE.ColorRepresentation,
-  outline = 0.05,
-): THREE.Mesh {
+  outline = 0.03,
+): THREE.Mesh<THREE.BufferGeometry, THREE.MeshToonMaterial> {
   const mesh = new THREE.Mesh(geometry, toonMaterial(color));
   mesh.castShadow = true;
   mesh.receiveShadow = true;

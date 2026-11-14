@@ -1,7 +1,13 @@
 # Física (Rapier)
 
+> **Estado atual:** o jogo da Missão Jezero ainda **não carrega o Rapier**. A física volta na etapa de
+> movimentação da tripulação (setas e clique), carregada sob demanda e com a gravidade de Marte
+> ([ADR 0004](decisoes/0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md)).
+> As receitas abaixo continuam valendo para essa etapa.
+
 Usamos [Rapier](https://rapier.rs/docs/user_guides/javascript/getting_started_js) via
 `@dimforge/rapier3d-compat`. Wrapper: [`src/core/Physics.ts`](../src/core/Physics.ts).
+**Nunca importe `Physics.ts` estaticamente**; use `import()` para ele não entrar no pacote principal.
 
 ## Conceitos em 30 segundos
 
@@ -40,8 +46,8 @@ physics.world.createCollider(
 );
 ```
 
-Se o mesh estiver rotacionado, aplique a mesma rotação ao collider (veja a rampa em
-[`src/world/Level.ts`](../src/world/Level.ts)).
+Se o mesh estiver rotacionado, aplique a mesma rotação ao collider
+(`collider.setRotation(mesh.quaternion)`).
 
 ## Regras de ouro
 
@@ -53,22 +59,17 @@ Se o mesh estiver rotacionado, aplique a mesma rotação ao collider (veja a ram
 6. **Prefira velocidades/impulsos** (`setLinvel`, `applyImpulse`) a `setTranslation` para mover,
    pois teleportar ignora colisões.
 
-## Jogador
+## Tripulação (próxima etapa)
 
-[`src/entities/Player.ts`](../src/entities/Player.ts): cápsula `dynamic` com **rotação travada**
-(`lockRotations`) para não tombar. A cada passo:
-
-- Define a velocidade horizontal pelo input e mantém a vertical (gravidade).
-- Pulo: só se `isGrounded()`, que lança um raio para baixo (`castRay`) ignorando o próprio corpo.
-- O visual (`model`) gira para a direção do movimento; o corpo físico não gira.
-
-Se precisarmos de escadas/degraus e rampas mais precisas, o próximo passo é migrar para o
-`KinematicCharacterController` do Rapier (registrar em ADR).
+Os astronautas ([`src/scene/Crew.ts`](../src/scene/Crew.ts)) vão virar cápsulas `dynamic` com rotação
+travada, como na receita acima. Os obstáculos estáticos da base já estão em `MarsBase.obstacles`.
+Controles combinados: ver [game-design.md](game-design.md).
 
 ## Ajustes globais
 
-[`src/core/constants.ts`](../src/core/constants.ts): `GRAVITY` (−20, mais "arcade" que os −9,81 reais),
-`FIXED_DT`, `MAX_FRAME_DT`.
+[`src/core/constants.ts`](../src/core/constants.ts): `GRAVITY`, `FIXED_DT`, `MAX_FRAME_DT`.
+Hoje `GRAVITY` é −20 (valor "arcade" da cena de teste). Na etapa de movimentação ele passa a ser a
+gravidade de Marte, com fonte da NASA registrada no código.
 
 ## Debug
 
