@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Coleta eventos solares reais do DONKI (NASA) e gera src/data/solar-events.json.
- * Uso: npm run data:donki   (lê NASA_API_KEY do .env; chave grátis em https://api.nasa.gov/)
+ * Coleta eventos solares reais do DONKI (NASA) e gera:
+ *   - data/donki-solar-events.json  dataset completo e curado (consulta e verificação; NÃO vai no build)
+ *   - public/data/donki-flares.json  versão enxuta que o jogo carrega (erupções M e X)
+ * Uso: npm run fetch-data   (lê NASA_API_KEY do .env; chave grátis em https://api.nasa.gov/)
  *
  * Opções (variáveis de ambiente):
  *   NASA_API_KEY   chave da api.nasa.gov (padrão: DEMO_KEY, limite ~10 req/h, costuma falhar)
@@ -13,7 +15,7 @@
  * Tipos coletados: SEP (partículas), FLR (erupções X, via notificações) e CME-MARS (impacto previsto em Marte).
  * Detalhes e critérios de curadoria: docs/dados.md
  */
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,10 +23,12 @@ const API_KEY = process.env.NASA_API_KEY || 'DEMO_KEY';
 const BASE = (process.env.DONKI_BASE_URL || 'https://api.nasa.gov/DONKI').replace(/\/$/, '');
 const START_YEAR = Number(process.env.DONKI_START || 2016);
 const END = process.env.DONKI_END || new Date().toISOString().slice(0, 10);
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data', 'solar-events.json');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const OUT_FULL = join(ROOT, 'data', 'donki-solar-events.json');
+const OUT_GAME = join(ROOT, 'public', 'data', 'donki-flares.json');
 
-/** Erupções a partir desta classe entram na lista (X = as mais fortes). */
-const MIN_FLARE_CLASS = 'X1.0';
+/** Erupções a partir desta classe entram na lista. O GDD usa M (média) e X (forte). */
+const MIN_FLARE_CLASS = 'M1.0';
 
 // ---------- coleta ----------
 
@@ -213,8 +217,23 @@ async function main() {
     events,
   };
 
-  writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n');
-  console.log(`\nGerado src/data/solar-events.json`, out.counts);
+  mkdirSync(dirname(OUT_FULL), { recursive: true });
+  writeFileSync(OUT_FULL, JSON.stringify(out, null, 2) + '\n');
+
+  // Versão do jogo: só o que a simulação usa, sem espaços (o arquivo é baixado pelo jogador).
+  const game = {
+    source: 'NASA DONKI',
+    sourceUrl: out.sourceUrl,
+    fetchedAt: out.fetchedAt,
+    flares: events
+      .filter((e) => e.type === 'FLR')
+      .map((e) => ({ id: e.id, time: e.time, cls: e.classType, link: e.link })),
+  };
+  mkdirSync(dirname(OUT_GAME), { recursive: true });
+  writeFileSync(OUT_GAME, JSON.stringify(game) + '\n');
+
+  console.log('\nGerado data/donki-solar-events.json', out.counts);
+  console.log(`Gerado public/data/donki-flares.json (${game.flares.length} erupções M/X)`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

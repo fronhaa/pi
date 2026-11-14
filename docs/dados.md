@@ -4,7 +4,7 @@ O desafio pede dados reais, com fonte visível e verificável ([desafio.md](desa
 Aqui fica **de onde vem cada dado, como foi coletado e como atualizar**.
 
 Regras:
-- Dados ficam **embutidos** em `src/data/` (o jogo funciona offline e sem chave). Nunca chamamos de "ao vivo".
+- Ordem de carregamento (ver [game-design.md](game-design.md#dados-reais-da-nasa)): **ao vivo** → **dados reais baixados** (`public/data/`, com a data) → **simulado**. A interface mostra um selo honesto com qual deles está em uso; dado baixado nunca é chamado de "ao vivo".
 - Todo evento guarda o `link` para a página original na NASA, para qualquer pessoa conferir.
 - O jogo pode **escalar** números para a jogabilidade, mas a tela "Dados da NASA" mostra o valor real.
 - **Previsão é previsão:** se o dado vem de modelo, o jogo diz "a NASA previu", nunca "aconteceu em Marte".
@@ -14,7 +14,8 @@ Regras:
 | | |
 | --- | --- |
 | Fonte | [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) (NASA / CCMC) via [api.nasa.gov](https://api.nasa.gov/) |
-| Arquivo gerado | `src/data/solar-events.json` (~350 KB; ~27 KB com gzip) |
+| Arquivo do jogo | `public/data/donki-flares.json`: erupções M e X, só os campos usados (~42 KB; **~5 KB com gzip**) |
+| Dataset completo | `data/donki-solar-events.json`: SEP, FLR e CME-MARS com todos os campos (~400 KB). **Não vai no build**; serve para consulta, verificação e ideias futuras |
 | Script | [`scripts/fetch-donki.mjs`](../scripts/fetch-donki.mjs) |
 | Período | 2016-01-01 até a data da coleta (`fetchedAt` no arquivo) |
 
@@ -22,8 +23,8 @@ Regras:
 
 1. Pegue uma chave grátis em <https://api.nasa.gov/> (sai na hora, por e-mail).
 2. Copie `.env.example` para `.env` e preencha `NASA_API_KEY=...`. O `.env` **não** vai para o git.
-3. Rode `npm run data:donki` e confira o resumo impresso (quantidade de eventos).
-4. Commite o `src/data/solar-events.json` atualizado.
+3. Rode `npm run fetch-data` e confira o resumo impresso (quantidade de eventos).
+4. Commite os dois arquivos gerados.
 
 A API aceita **no máximo 60 dias por requisição**, então o script faz ~200 requisições
 (blocos de 60 dias × 3 tipos). A chave própria permite 1.000/hora; a `DEMO_KEY` pública
@@ -34,7 +35,7 @@ A API aceita **no máximo 60 dias por requisição**, então o script faz ~200 r
 | `type` | O que é | Por que importa no jogo | Critério |
 | --- | --- | --- | --- |
 | **`SEP`** (*Solar Energetic Particle*) | Chuva de partículas muito rápidas vindas do Sol | É o que **aumenta a dose de radiação** fora da proteção da Terra | Todos os eventos (359 na coleta de 2026-11-14) |
-| **`FLR`** (*Solar Flare*) | Erupção solar, um clarão de raio-X | É o "aviso": erupções fortes muitas vezes vêm antes de partículas e CMEs | Classe **X**, as mais fortes (111) |
+| **`FLR`** (*Solar Flare*) | Erupção solar, um clarão de raio-X | **Dispara as tempestades do jogo**; a classe define a intensidade (M = média, X = forte) | A partir de **M5.0**: 194 M e 111 X |
 | **`CME-MARS`** (*Coronal Mass Ejection*) | Nuvem gigante de plasma lançada pelo Sol | O modelo da NASA **previu que ela atingiria Marte**, com data e hora | Impacto em Marte previsto pelo WSA-ENLIL (642) |
 
 ### Campos
@@ -68,7 +69,11 @@ Extraídos da coleta de 2026-11-14. Confira sempre pelo `link` no JSON.
 - **Nenhum evento SEP do DONKI foi medido em Marte.** Os instrumentos do catálogo (GOES, SOHO, ACE,
   STEREO-A) ficam perto da Terra ou em órbita do Sol. Por isso a ligação com Marte vem das
   previsões `CME-MARS`, que são **modelo**, não medição.
-- O endpoint `DONKI/FLR` da api.nasa.gov respondia **404** na coleta (2026-11-14). As erupções são
+- O DONKI só emite notificação para erupções a partir de **M5.0**. Por isso não há erupções C
+  (intensidade "fraca" do GDD) nem M1–M4 nos dados reais; a intensidade fraca só aparece no modo simulado.
+- O endpoint `DONKI/FLR` da api.nasa.gov respondia **404** na coleta (2026-11-14), inclusive para
+  chamadas do navegador. A busca **ao vivo** do jogo deve usar `DONKI/notifications?type=FLR`
+  (testado: responde 200 e permite CORS). Com `DEMO_KEY` responde 429 na maior parte do tempo. As erupções são
   extraídas das **notificações** do DONKI (linhas "Flare intensity" e "Activity ID"), que só existem
   para erupções significativas. Se o endpoint voltar, vale trocar.
 - Uma CME pode ter várias simulações; usamos a mais recente. Simulações com várias CMEs são
