@@ -2,7 +2,7 @@
 
 > Documento vivo. Origem: GDD do time ("Tab 1"), versão de 14/11/2026, que substitui o rascunho "Base Marte Pi" (ver o histórico do git).
 > Requisitos do desafio: [desafio.md](desafio.md). Mudou uma regra do jogo? Atualize aqui no mesmo PR; todo número real precisa de fonte.
-> Este guia define a **jogabilidade**. A **arte** é definida pela Art Bible (documento externo do time).
+> Este guia define a **jogabilidade**. A **arte** é definida pela [Art Bible](art-bible.md).
 > Mudança de jogabilidade entra primeiro aqui; mudança de arte entra primeiro na Art Bible (ver [Alinhamento com a Art Bible](#alinhamento-com-a-art-bible)).
 
 ## Visão geral
@@ -78,7 +78,7 @@ dose = max(1, round(intensidade × (1 − blindagem / 100 × 0,85)))
 
 Essa é uma escala do jogo, classificada como INTERPRETADO, e não a dose real na superfície de Marte. O jogo informa isso ao jogador.
 
-Todos esses números são simplificados para o jogo e ficam em um único arquivo de configuração (no protótipo, `src/sim/config.js`). O que é real é a erupção, não a escala da dose (Art Bible, seção 7.5).
+Todos esses números são simplificados para o jogo e ficam em um único arquivo de configuração (no protótipo, `src/sim/config.js`). O que é real é a erupção, não a escala da dose ([Art Bible, seção 7.5](art-bible.md#75-donki)).
 
 ## Eventos e decisões
 
@@ -287,7 +287,7 @@ As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros c
 - O jogo avisa que energia, vida, blindagem e dose são simplificados. Só é chamado de real o que veio de uma fonte.
 - As fontes são citadas dentro do jogo, com links.
 
-O jogo segue a Art Bible (seção 7):
+O jogo segue a [Art Bible (seção 7)](art-bible.md#7-fundamentação-científica):
 
 - a dose nunca aparece como medição real em Marte;
 - as medições do RadLab sempre aparecem como medidas na ISS, em órbita da Terra;
@@ -303,7 +303,7 @@ Ao sortear as tempestades, o jogo prefere as erupções reais de classe M e X da
 
 ## Direção visual
 
-A direção de arte oficial do projeto é a Art Bible v1.0 (documento externo do time). Esta seção descreve como o protótipo está hoje; as diferenças entre os dois estão em [Alinhamento com a Art Bible](#alinhamento-com-a-art-bible). Para regras técnicas de material e cor neste repositório, veja [estilo-visual.md](estilo-visual.md).
+A direção de arte oficial do projeto é a [Art Bible](art-bible.md) (v1.1). Esta seção descreve como o protótipo está hoje; as diferenças entre os dois estão em [Alinhamento com a Art Bible](#alinhamento-com-a-art-bible). Para regras técnicas de material e cor neste repositório, veja [estilo-visual.md](estilo-visual.md).
 
 O estilo oficial é o cel-shading semi-realista da Art Bible: proporções naturais, geometria detalhada, sombras em 3 a 4 níveis, contornos escuros controlados e cores naturais. O protótipo ainda está mais simplificado e saturado, e a migração está no backlog. A referência é a ilustração enviada pelo time, adaptada para 3D leve no navegador. Ela vale pelo clima e pela paleta, mas os logos da NASA e o planeta gigante no céu não entram no jogo.
 
@@ -369,7 +369,7 @@ Decisões de 14/11/2026:
 - o jogo é de gestão da base: este documento define a jogabilidade, e a Art Bible define a arte;
 - o nome passa a ser "Mars Exploration: Missão Jezero". Mars Exploration é o projeto, e Missão Jezero é a primeira missão.
 
-Todas as divergências abaixo foram resolvidas a partir dessas duas decisões. O que muda na Art Bible está registrado como a versão 1.1 dela.
+Todas as divergências abaixo foram resolvidas a partir dessas duas decisões. O que muda na Art Bible está registrado como a versão 1.1 dela ([registro de alterações](art-bible.md#21-registro-de-alterações)).
 
 | # | Tema | Art Bible v1.0 | Design ou protótipo | Decisão | Onde muda |
 | --- | --- | --- | --- | --- | --- |
@@ -391,7 +391,7 @@ Todas as divergências abaixo foram resolvidas a partir dessas duas decisões. O
 
 ### Registro de assets do protótipo
 
-Os códigos e estados seguem a Art Bible (seções 9 e 17).
+Os códigos e estados seguem a Art Bible ([seção 9](art-bible.md#9-categorias-oficiais-de-concept-art) e [seção 17](art-bible.md#17-organização-e-versionamento)).
 
 | Código | Asset | Classificação | Estado |
 | --- | --- | --- | --- |
@@ -411,7 +411,7 @@ Os códigos e estados seguem a Art Bible (seções 9 e 17).
 | FX-002 | Céu, pôr do sol, noite e Terra no céu | INTERPRETADO | WIP |
 | UI-001 | Interface do jogo (HUD) | FICCIONAL | WIP |
 
-**Regra para o projeto continuar íntegro:** qualquer mudança de jogabilidade entra primeiro neste documento. Qualquer mudança de arte entra primeiro na Art Bible, com justificativa e nova versão, como pede a seção 19 dela.
+**Regra para o projeto continuar íntegro:** qualquer mudança de jogabilidade entra primeiro neste documento. Qualquer mudança de arte entra primeiro na [Art Bible](art-bible.md), com justificativa e nova versão, como pede a [seção 19](art-bible.md#19-instruções-para-continuidade-da-direção-artística) dela.
 
 ## Interface, linguagem e acessibilidade
 

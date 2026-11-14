@@ -2,6 +2,10 @@
 
 Código: [`src/render/toon.ts`](../src/render/toon.ts). Decisão: [ADR 0002](decisoes/0002-estilo-toon.md).
 
+> **Direção de arte oficial:** [art-bible.md](art-bible.md) (cel-shading semi-realista, 3 a 4 níveis de sombra, paleta de 7 cores naturais, 1 unidade = 1 m).
+> Este guia descreve **como o código está hoje**, que ainda é mais saturado e tem 3 faixas.
+> A migração para a Art Bible é o item 14 do [backlog](game-design.md#backlog-do-hackathon-por-prioridade). Quando ela acontecer, atualize este guia e a `PALETTE` juntos.
+
 ## Os três ingredientes
 
 1. **Toon shading (cel shading).** `MeshToonMaterial` com um `gradientMap` de **3 tons**.
