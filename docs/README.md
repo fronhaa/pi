@@ -8,8 +8,10 @@ Ela vive junto com o código, então é versionada, revisada em PR e nunca fica 
 | Documento | Para quem / quando ler |
 | --- | --- |
 | [desafio.md](desafio.md) | Todo mundo, antes de tudo. O que o desafio da NASA pede, em checklist. |
+| [publico-e-impacto.md](publico-e-impacto.md) | **Todo mundo, antes de mexer em texto, interface ou mecânica.** Pilar crítico: crianças de 7 a 12 anos, simplicidade, impacto, pendências. |
 | [game-design.md](game-design.md) | Todo mundo. GDD da Missão Jezero: loop, recursos, cartas, cooperativo, dados da NASA, backlog. |
 | [art-bible.md](art-bible.md) | Artistas e quem gera concept art. Direção de arte oficial: estilo, paleta, escala, códigos de asset, aprovação. |
+| [apis-nasa.md](apis-nasa.md) | Quem vai buscar dados reais. Quais APIs da NASA usar, CORS, formato da resposta e uso no jogo. |
 | [dados.md](dados.md) | Quem mexe nos dados reais da NASA: fontes, coleta e como atualizar. |
 | [arquitetura.md](arquitetura.md) | Todo mundo, no primeiro dia. Pastas, loop do jogo, quem é dono de quê. |
 | [fisica.md](fisica.md) | Quem vai criar objetos, personagens ou fases. |

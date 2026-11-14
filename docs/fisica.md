@@ -55,7 +55,7 @@ Se o mesh estiver rotacionado, aplique a mesma rotação ao collider
 1. **A física é dona da posição.** Nunca mude `mesh.position` de algo linkado; mova o corpo.
 2. **Gameplay físico vai no `fixedUpdate()`**, nunca no `update()` de render.
 3. **Metade das dimensões**: `cuboid(hx, hy, hz)` e `capsule(halfHeight, radius)` usam meias medidas.
-4. **Unidade = metro.** Jogador tem ~1,7 m. Objetos muito pequenos (< 0,1) ou enormes (> 1000) ficam instáveis.
+4. **Unidade = metro.** A cápsula do astronauta tem ~1,74 m (a [Art Bible](art-bible.md#41-escala-global) pede ~1,85 m com traje; migração no backlog #14). Objetos muito pequenos (< 0,1) ou enormes (> 1000) ficam instáveis.
 5. **Objetos rápidos** (projéteis, jogador) usam `.setCcdEnabled(true)` para não atravessar paredes.
 6. **Prefira velocidades/impulsos** (`setLinvel`, `applyImpulse`) a `setTranslation` para mover,
    pois teleportar ignora colisões.
@@ -69,6 +69,14 @@ Se o mesh estiver rotacionado, aplique a mesma rotação ao collider
 - Os obstáculos são as caixas de `MarsBase.obstacles` (módulos, cúpula, torre, painéis, bateria, abrigo).
   **Os postos (`POSTS`) precisam ficar fora dessas caixas**, senão o astronauta nasce preso.
 - Clique no chão: anda em linha reta até o ponto. Não há busca de caminho; se ficar preso 1,5 s, desiste.
+- **Piloto automático à noite** (`goInside`, `comeOut`): cada astronauta segue um caminho calculado por
+  [`crewPath.ts`](../src/scene/crewPath.ts) (grafo de visibilidade sobre os cantos das caixas de `obstacles`,
+  alargadas pelo raio da cápsula) até a porta em `ENTRANCES` (`MarsBase.ts`): habitat para dormir, abrigo na tempestade.
+  Ao chegar, o corpo é **desativado** (`setEnabled(false)`) e escondido, para não bloquear a porta. De manhã, ele é
+  reposicionado ao lado da porta (`setTranslation`, a única exceção ao "mova por velocidade") e volta ao posto.
+  Preso por 1,5 s no piloto automático conta como "chegou". Seta ou clique do jogador cancela o piloto daquele astronauta.
+  **`ENTRANCES` precisa ficar fora das caixas de `obstacles`**, como os `POSTS`.
+- Velocidades da volta: `NIGHT_WALK_SPEED` e `STORM_RUN_SPEED` em [`constants.ts`](../src/core/constants.ts).
 - Pulo só com os pés no chão (`castRay` para baixo, ignorando o próprio corpo). Espaço num botão focado aperta o botão, não pula.
 - A tripulação não passa de 30 m do centro da base.
 - Em teste automático no navegador, o jogo expõe `window.__jezero` **só em desenvolvimento**.
@@ -80,6 +88,22 @@ Se o mesh estiver rotacionado, aplique a mesma rotação ao collider
 `GRAVITY` é a de Marte: **38% da Terra** segundo a NASA/JPL
 ([Mars 2020 Quick Facts](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/quick_facts/)),
 ou seja 0,38 × 9,81 ≈ 3,73 m/s² (valor calculado a partir da fonte).
+
+| Dado | Valor | Fonte |
+| --- | --- | --- |
+| Gravidade de Marte (usada) | 0,38 g ≈ 3,73 m/s² | [NASA/JPL, Mars 2020 Quick Facts](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/quick_facts/) (a página recusa acesso automático; confira no navegador) |
+| Gravidade de Marte (confirmação) | 3,7 m/s² = 0,37 g | [NASA Glenn, Beginner's Guide: Mars](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/mars/) (aberta em 14/11/2026) |
+| Gravidade da Lua (para a missão lunar, se entrar) | 1,624 m/s² no equador | [NASA Science, Compare Earth and the Moon](https://science.nasa.gov/moon/by-the-numbers/) (aberta em 14/11/2026) |
+
+As duas fontes de Marte concordam: a diferença (3,7 × 3,73) é arredondamento.
+
+### Pulo
+
+`JUMP_SPEED` em [`crewMotion.ts`](../src/scene/crewMotion.ts) é **2,2 m/s**: um pulo baixo, de astronauta de traje, que subiria ~0,25 m na Terra.
+A altura vem de h = v² / (2g): **~0,65 m em Marte**, 1/0,38 ≈ **2,6×** a da Terra. É esse número que o aviso do primeiro pulo mostra para a criança,
+então o jogo **precisa** reproduzi-lo. O teste do PR #9 mediu ~0,4 m: conferir ([pendência 2](publico-e-impacto.md#6-pendências-para-implementar)).
+
+Regra: **velocidades de jogo** (`WALK_SPEED`, `JUMP_SPEED`) não são dados reais e não ganham fonte; **constantes da natureza** (gravidade) só entram com fonte da NASA citada aqui e no comentário da constante.
 
 ## Debug
 

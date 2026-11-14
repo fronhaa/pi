@@ -297,18 +297,28 @@ function resource(nameKey: StringKey, helpKey: StringKey, value: number, max: nu
 export function flareBadge(f: Flare): HTMLElement {
   if (!f.real) return h('span', {}, h('span', { class: 'badge sim' }, t('flare.simulated')));
   return h('span', {},
-    h('span', { class: 'badge real' }, t('flare.real', { date: formatDate(f.time!) })),
+    h('span', { class: 'badge real' }, t(f.source === 'cme' ? 'flare.real.cme' : 'flare.real', { date: formatDate(f.time!) })),
     f.link ? h('a', { href: f.link, target: '_blank', rel: 'noopener noreferrer' }, t('flare.link')) : null,
   );
+}
+
+/** Texto do aviso: erupção (classe) ou nuvem de plasma de missão histórica (força e velocidade). */
+function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
+  if (f.source !== 'cme') {
+    return when === 'alert' ? t('msg.stormAlert', { label: f.label, sol: sol ?? 0 }) : t('msg.stormToday', { label: f.label });
+  }
+  const strength = t(`storm.strength.${f.cls}` as StringKey);
+  const speed = f.speedKmS ? f.speedKmS.toLocaleString(getLang() === 'pt' ? 'pt-BR' : 'en') : '?';
+  return when === 'alert' ? t('msg.stormAlert.cme', { strength, speed, sol: sol ?? 0 }) : t('msg.stormToday.cme', { strength });
 }
 
 function messageEl(m: Message): HTMLElement {
   const delay = 'delayMin' in m ? h('span', { class: 'meta' }, t('msg.delay', { n: m.delayMin })) : null;
   switch (m.kind) {
     case 'stormAlert':
-      return h('div', { class: 'msg storm' }, t('msg.stormAlert', { label: m.flare.label, sol: m.impactSol }), h('span', { class: 'meta' }, flareBadge(m.flare)), delay);
+      return h('div', { class: 'msg storm' }, stormText(m.flare, 'alert', m.impactSol), h('span', { class: 'meta' }, flareBadge(m.flare)), delay);
     case 'stormToday':
-      return h('div', { class: 'msg storm' }, t('msg.stormToday', { label: m.flare.label }), h('span', { class: 'meta' }, flareBadge(m.flare)), delay);
+      return h('div', { class: 'msg storm' }, stormText(m.flare, 'today'), h('span', { class: 'meta' }, flareBadge(m.flare)), delay);
     case 'dustAlert':
       return h('div', { class: 'msg dust' }, t('msg.dustAlert'), delay);
     case 'dustNow':

@@ -4,21 +4,27 @@ import '@/ui/style.css';
 import { Mission } from '@/sim/mission';
 import type { EnergyPlan, Resources } from '@/sim/types';
 import { loadFlares, type FlareSource } from '@/data/flares';
+import { isFirstGame, loadMissions, markPlayed, type MissionSource } from '@/data/missions';
+import { pickHistorical } from '@/sim/historical';
 import { MarsBase } from '@/scene/MarsBase';
 import { Crew } from '@/scene/Crew';
 import { Hud } from '@/ui/Hud';
 import { showCard, showEnd, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
-import { getLang, setLang, t } from '@/i18n';
+import { formatDate, getLang, setLang, t } from '@/i18n';
 import { Input } from './Input';
 import { CrewTasks } from './CrewTasks';
+import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
-import { PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
+import { ENTRANCES, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
 import { ProblemMarkers } from '@/scene/ProblemMarkers';
 import { CONFIG } from '@/sim/config';
 import type { StringKey } from '@/i18n';
 
-/** Duração da animação da noite antes do relatório (ms). */
+/** Duração mínima da noite antes do relatório (ms). */
 const NIGHT_MS = 2200;
+/** A noite espera a tripulação entrar, mas no máximo isto (ms); quem não chegou entra direto. */
+const NIGHT_MAX_MS = 6000;
+
 
 /**
  * Orquestra a missão: interface → simulação (decisões) → interface e cena (estado).
@@ -60,6 +66,7 @@ export class Game {
   private constructor(
     container: HTMLElement,
     private readonly flares: FlareSource,
+    private readonly missions: MissionSource,
   ) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -93,7 +100,7 @@ export class Game {
         this.plan = plan;
         this.updateScene();
       },
-      onNasaData: () => showNasaData(this.flares),
+      onNasaData: () => showNasaData(this.flares, this.missions, this.mission.state.historical),
       onToggleLang: () => {
         setLang(getLang() === 'pt' ? 'en' : 'pt');
         this.hud.render();
@@ -127,8 +134,8 @@ export class Game {
   }
 
   static async create(container: HTMLElement): Promise<Game> {
-    const flares = await loadFlares();
-    const game = new Game(container, flares);
+    const [flares, missions] = await Promise.all([loadFlares(), loadMissions()]);
+    const game = new Game(container, flares, missions);
     // Só em desenvolvimento: leitura do estado para testes automáticos no navegador.
     if (import.meta.env.DEV) Object.assign(window, { __jezero: game });
     return game;
@@ -160,7 +167,9 @@ export class Game {
       this.input.reset();
       this.motion.enabled = !this.night && !this.paused;
       this.tasks.motion = this.motion;
-      this.motion.select(this.selected);
+      // Física chegou no meio da noite: a tripulação já está "dentro" (escondida); de manhã sai pela porta.
+      if (this.night) this.motion.forceInside();
+      this.motion.select(this.selected); // avisa o HUD via onSelect
     } catch (err) {
       console.warn('Física indisponível; o jogo segue só com a interface.', err);
       this.hud.setCrew('off');
@@ -310,7 +319,9 @@ export class Game {
 
   private newMission(): void {
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-    this.mission = new Mission(seed, this.flares.flares);
+    // Missão histórica real, se houver; senão, erupções reais sorteadas; senão, simuladas.
+    const historical = pickHistorical(this.missions.missions, seed, isFirstGame());
+    this.mission = new Mission(seed, this.flares.flares, historical);
     this.hud.setState(this.mission.state);
     this.updateScene();
   }
@@ -322,6 +333,9 @@ export class Game {
     this.hud.setState(s);
     this.hud.newSol();
     this.updateScene();
+    if (s.sol === 1 && s.historical) {
+      this.hud.toast(t('mission.start', { id: s.historical.id, date: formatDate(s.historical.startUtc) }), t('mission.source'));
+    }
     if (s.pendingCard) {
       showCard(s.pendingCard, (option) => {
         this.mission.answerCard(option);
@@ -344,26 +358,49 @@ export class Game {
     this.night = true;
     this.stormNight = stormTonight;
     this.nightRes = report.after;
-    this.crew.setSheltered(stormTonight);
-    if (this.motion) this.motion.enabled = false;
     this.hud.showNight(report.after, report.sol);
     this.updateScene();
 
-    window.setTimeout(() => {
+    // A tripulação volta para dentro: anda até o habitat para dormir ou corre para o abrigo na tempestade.
+    // O relatório espera todos entrarem (mínimo NIGHT_MS, máximo NIGHT_MAX_MS).
+    const entrance: keyof typeof ENTRANCES = stormTonight ? 'shelter' : 'habitat';
+    const started = performance.now();
+    let reported = false;
+    const report_ = () => {
+      if (reported) return;
+      reported = true;
+      window.clearTimeout(cap);
+      this.motion?.forceInside();
       showReport(report, m.state, () => {
         this.night = false;
         this.stormNight = false;
         this.nightRes = null;
-        this.crew.setSheltered(false);
-        if (this.motion) this.motion.enabled = true;
+        if (this.motion) {
+          this.motion.comeOut(ENTRANCES[entrance]);
+          this.motion.enabled = true;
+        } else {
+          this.crew.setSheltered(false);
+        }
         this.hud.setBusy(false);
         if (m.state.outcome.status === 'playing') this.beginSol();
         else this.finish();
       });
-    }, NIGHT_MS);
+    };
+    const cap = window.setTimeout(report_, NIGHT_MAX_MS);
+    if (this.motion) {
+      this.motion.enabled = false;
+      this.motion.goInside(ENTRANCES[entrance], stormTonight ? STORM_RUN_SPEED : NIGHT_WALK_SPEED, () => {
+        window.setTimeout(report_, Math.max(0, NIGHT_MS - (performance.now() - started)));
+      });
+    } else {
+      // Sem física: a tripulação some (está dentro) e a noite dura o tempo mínimo.
+      this.crew.setSheltered(true);
+      window.setTimeout(report_, NIGHT_MS);
+    }
   }
 
   private finish(): void {
+    markPlayed();
     this.hud.setState(this.mission.state);
     showEnd(this.mission.state, () => {
       this.newMission();

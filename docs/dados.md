@@ -98,3 +98,15 @@ Extraídos da coleta de 2026-11-14. Confira sempre pelo `link` no JSON.
 - Ausência de registro no DONKI não prova ausência de evento.
 - O endpoint direto `kauai.ccmc.gsfc.nasa.gov` (sem chave) não respondia da rede de desenvolvimento.
   Se funcionar na sua rede: `DONKI_BASE_URL=https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get`.
+
+## Missões históricas: DONKI (CME) e JPL Horizons
+
+**Estado: em uso.** É a fonte padrão das tempestades do jogo ([GDD](game-design.md#calendário-da-missão-janelas-históricas-reais)). Sem o arquivo, o jogo volta às erupções de `donki-flares.json`.
+
+| | |
+| --- | --- |
+| Fontes | DONKI `CME` e `SEP` via [api.nasa.gov](https://api.nasa.gov/); distância Terra-Marte do [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) (sem chave, sem CORS) |
+| Arquivo | `public/data/missions.json`: 6 janelas de 15 sóis com 3 CMEs cada, atraso real por sol e eventos SEP (~30 KB) |
+| Script | [`scripts/fetch-missions.mjs`](../scripts/fetch-missions.mjs), via `npm run data:missions` (~18 requisições, sem cache) |
+
+Formato, regras de validação e como trocar uma missão: [apis-nasa.md](apis-nasa.md#missões-históricas-npm-run-datamissions).

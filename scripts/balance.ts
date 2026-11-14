@@ -9,7 +9,8 @@
 import { readFileSync } from 'node:fs';
 import { CONFIG } from '../src/sim/config.ts';
 import { Mission } from '../src/sim/mission.ts';
-import type { EnergyPlan, Flare, Problem } from '../src/sim/types.ts';
+import { parseMissions } from '../src/sim/historical.ts';
+import type { EnergyPlan, Flare, HistoricalMission, Problem } from '../src/sim/types.ts';
 
 type Strategy = {
   name: string;
@@ -27,6 +28,14 @@ function loadRealFlares(): Flare[] {
     return data.flares.map((f: { cls: string; time: string; link: string }) => ({
       cls: f.cls[0], label: f.cls, real: true, time: f.time, link: f.link,
     }));
+  } catch {
+    return [];
+  }
+}
+
+function loadHistorical(): HistoricalMission[] {
+  try {
+    return parseMissions(JSON.parse(readFileSync(new URL('../public/data/missions.json', import.meta.url), 'utf8')));
   } catch {
     return [];
   }
@@ -97,10 +106,10 @@ const strategies: Strategy[] = [
   },
 ];
 
-function run(strategy: Strategy, flares: Flare[]) {
+function run(strategy: Strategy, flares: Flare[], historical: HistoricalMission | null = null) {
   const tally = { lostLife: 0, lostDose: 0, stars: [0, 0, 0, 0] };
   for (let seed = 1; seed <= N; seed++) {
-    const m = new Mission(seed, flares);
+    const m = new Mission(seed, flares, historical);
     while (m.state.outcome.status === 'playing') {
       if (m.state.pendingCard) {
         m.answerCard(strategy.card(m));
@@ -131,6 +140,19 @@ for (const [label, flares] of [['erupções reais do DONKI', loadRealFlares()], 
   console.log('Estratégia'.padEnd(38), 'vida 0', 'dose', ' 1★ ', ' 2★ ', ' 3★');
   for (const s of strategies) {
     const t = run(s, flares as Flare[]);
+    console.log(s.name.padEnd(38), pct(t.lostLife).padStart(6), pct(t.lostDose), pct(t.stars[1]), pct(t.stars[2]), pct(t.stars[3]));
+  }
+}
+
+// Missões históricas: tempestades fixas por missão, então cada uma é testada separadamente.
+const historical = loadHistorical();
+if (historical.length === 0) console.log('\n(sem public/data/missions.json; pulando missões históricas)');
+for (const h of historical) {
+  const storms = h.storms.map((x) => `sol ${x.sol} ${x.flare.label}`).join(', ');
+  console.log(`\n${N} partidas por estratégia, missão histórica ${h.id} (${h.difficulty}; ${storms})\n`);
+  console.log('Estratégia'.padEnd(38), 'vida 0', 'dose', ' 1★ ', ' 2★ ', ' 3★');
+  for (const s of strategies) {
+    const t = run(s, [], h);
     console.log(s.name.padEnd(38), pct(t.lostLife).padStart(6), pct(t.lostDose), pct(t.stars[1]), pct(t.stars[2]), pct(t.stars[3]));
   }
 }

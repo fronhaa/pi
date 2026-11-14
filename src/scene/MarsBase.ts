@@ -27,6 +27,15 @@ export const POSTS = {
 export type Role = keyof typeof POSTS;
 
 /**
+ * Onde a tripulação entra à noite (ponto no chão, em frente à porta): no habitat para dormir,
+ * no abrigo de regolito na noite de tempestade solar. Precisam ficar FORA das caixas de `obstacles`.
+ */
+export const ENTRANCES = {
+  habitat: new THREE.Vector3(1.6, 0, 2.4),
+  shelter: new THREE.Vector3(-11.9, 0, 7.9),
+} as const;
+
+/**
  * Onde cada problema acontece (GDD, "Problemas pela base"). Pontos alcançáveis: FORA das caixas de `obstacles`.
  * O rover atolado fica longe da base, para a caminhada longa custar tempo.
  */
@@ -201,6 +210,13 @@ export class MarsBase {
         this.root.add(leg2);
       }
     }
+    // Escotilha de entrada (ARC-001): por aqui a tripulação entra para dormir (ver ENTRANCES).
+    const hatch = toonMesh(new THREE.BoxGeometry(1.1, 1.7, 0.5), PALETTE.light);
+    hatch.position.set(ENTRANCES.habitat.x, 0.85, 1.55);
+    this.root.add(hatch);
+    const opening = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.2), new THREE.MeshBasicMaterial({ color: PALETTE.shadow }));
+    opening.position.set(ENTRANCES.habitat.x, 0.75, 1.81);
+    this.root.add(opening);
     this.addObstacle(-0.3, 0, 7.9, 1.6);
   }
 

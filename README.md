@@ -2,7 +2,7 @@
 
 Jogo de navegador para o desafio [Build a Junior Astronaut Mission Trainer](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/)
 (NASA Space Apps 2026). Crianças de 7 a 12 anos comandam uma base na cratera Jezero, em Marte, por 15 sóis,
-dividindo uma energia limitada entre sobreviver e fazer ciência. As tempestades solares do jogo são **erupções reais** do DONKI (NASA).
+dividindo uma energia limitada entre sobreviver e fazer ciência. Cada partida é uma **missão histórica real** de 15 sóis: as tempestades solares vêm do DONKI e o atraso das mensagens, do JPL Horizons (NASA).
 
 Stack: **Vite + TypeScript + Three.js**, sem framework de interface; física (Rapier) só sob demanda.
 
@@ -27,6 +27,7 @@ e clique em **Terminar o sol**. Leia as mensagens da Terra: elas avisam das temp
 | `npm run docs:adr -- "título"` | Cria um novo registro de decisão (ADR) |
 | `npm run balance` | Teste de equilíbrio: 2.000 partidas por estratégia com a simulação real |
 | `npm run fetch-data` | Atualiza as tempestades solares reais (precisa de `NASA_API_KEY` no `.env`, ver [docs/dados.md](docs/dados.md)) |
+| `npm run data:missions` | Baixa da NASA os dados das missões históricas para `public/data/missions.json` (precisa do `.env`, ver `.env.example`) |
 
 ## Documentação
 

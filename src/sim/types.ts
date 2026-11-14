@@ -1,13 +1,32 @@
 import type { FlareClass } from './config.ts';
 
-/** Erupção solar que dispara uma tempestade. `real` = veio do DONKI (com data e link). */
+/**
+ * Evento solar que dispara uma tempestade. `real` = veio do DONKI (com data e link).
+ * `source: 'cme'` = ejeção de massa coronal de uma missão histórica; sem `source`, é uma erupção.
+ */
 export interface Flare {
   cls: FlareClass;
-  /** Classe completa, ex. "X1.6" (real) ou "M" (simulado). */
+  /** Classe completa, ex. "X1.6" (erupção real), "R" (tipo da CME) ou "M" (simulado). */
   label: string;
   real: boolean;
   time?: string;
   link?: string;
+  source?: 'flare' | 'cme';
+  speedKmS?: number | null;
+}
+
+/**
+ * Missão histórica: 15 sóis reais do passado (docs/game-design.md, "Calendário da missão").
+ * Gerada de public/data/missions.json (`npm run data:missions`).
+ */
+export interface HistoricalMission {
+  id: number;
+  difficulty: 'medium' | 'hard';
+  startUtc: string;
+  endUtc: string;
+  storms: { sol: number; flare: Flare }[];
+  /** Atraso real Terra-Marte em minutos, por sol (índice 0 = sol 1). */
+  delays: number[];
 }
 
 export interface Resources {
@@ -86,6 +105,8 @@ export interface ScheduledStorm {
 
 export interface GameState {
   seed: number;
+  /** Missão histórica em jogo, ou null quando as tempestades são sorteadas (erupções ou simuladas). */
+  historical: HistoricalMission | null;
   sol: number;
   res: Resources;
   /** Blocos de energia gerados hoje (já considera a poeira). */

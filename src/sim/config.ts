@@ -27,6 +27,11 @@ export const CONFIG = {
     minGap: 2,
     /** Intensidade no jogo por classe da erupção real (C só aparece no modo simulado). */
     intensity: { C: 10, M: 25, X: 45 },
+    /**
+     * Missões históricas (CMEs do DONKI): a força calculada pelo script a partir do tipo de
+     * velocidade da CME (S/C = fraca, O = média, R/ER = forte) usa a mesma escala das erupções.
+     */
+    strengthClass: { weak: 'C', medium: 'M', strong: 'X' },
     commDelayMin: { min: 3, max: 22 },
   },
 

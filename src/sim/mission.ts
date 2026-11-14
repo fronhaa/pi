@@ -2,7 +2,7 @@ import { CONFIG, type FlareClass } from './config.ts';
 import { CARDS, CARD_IDS, applyCardOption, clamp, onCardDrawn } from './cards.ts';
 import { createRng, type Rng } from './rng.ts';
 import { PROBLEMS, scheduleProblems } from './problems.ts';
-import type { EnergyPlan, Flare, GameState, Message, Problem, ReportLine, Resources, ScheduledStorm, SolReport } from './types.ts';
+import type { EnergyPlan, Flare, GameState, HistoricalMission, Message, Problem, ReportLine, Resources, ScheduledStorm, SolReport } from './types.ts';
 
 /** Cartas substituídas pelos problemas da tripulação (GDD: "Eles substituem as cartas..."). */
 const CARD_POOL = CARD_IDS.filter((id) => id !== 'dustyPanels' && id !== 'greenhouseLeak');
@@ -22,9 +22,13 @@ export class Mission {
   /** Problemas que continuam no próximo sol (trabalho pela metade em noite de tempestade). */
   private carryOver: Problem[] = [];
 
-  constructor(seed: number, realFlares: Flare[] = []) {
+  /**
+   * @param realFlares erupções reais para sortear (usadas quando não há missão histórica)
+   * @param historical missão histórica: tempestades e atraso das mensagens vêm dela, com datas reais
+   */
+  constructor(seed: number, realFlares: Flare[] = [], historical: HistoricalMission | null = null) {
     this.rng = createRng(seed);
-    const storms = this.scheduleStorms(realFlares);
+    const storms = historical ? this.historicalStorms(historical) : this.scheduleStorms(realFlares);
     const stormSols = new Set(storms.map((s) => s.sol));
 
     let dustStormSol: number;
@@ -40,6 +44,7 @@ export class Mission {
 
     this.state = {
       seed,
+      historical,
       sol: 0,
       res: {
         battery: CONFIG.battery.start,
@@ -80,6 +85,11 @@ export class Mission {
       flare: flares[i],
       delayMin: this.rng.int(commDelayMin.min, commDelayMin.max),
     }));
+  }
+
+  /** Tempestades fixas da missão; o aviso chega um sol antes, com o atraso real daquele sol. */
+  private historicalStorms(h: HistoricalMission): ScheduledStorm[] {
+    return h.storms.map((s) => ({ sol: s.sol, flare: s.flare, delayMin: h.delays[s.sol - 2] }));
   }
 
   private simulatedFlare(): Flare {
@@ -123,11 +133,13 @@ export class Mission {
 
   private buildMessages(sol: number): Message[] {
     const s = this.state;
-    const delay = () => this.rng.int(CONFIG.solarStorms.commDelayMin.min, CONFIG.solarStorms.commDelayMin.max);
+    const h = s.historical;
+    // Missão histórica: atraso real Terra-Marte do sol (JPL Horizons). Sem ela, sorteado.
+    const delay = () => (h ? h.delays[sol - 1] : this.rng.int(CONFIG.solarStorms.commDelayMin.min, CONFIG.solarStorms.commDelayMin.max));
     const msgs: Message[] = [];
     for (const storm of s.storms) {
       if (storm.sol === sol + 1) msgs.push({ kind: 'stormAlert', flare: storm.flare, delayMin: storm.delayMin, impactSol: storm.sol });
-      if (storm.sol === sol) msgs.push({ kind: 'stormToday', flare: storm.flare, delayMin: storm.delayMin });
+      if (storm.sol === sol) msgs.push({ kind: 'stormToday', flare: storm.flare, delayMin: h ? h.delays[sol - 1] : storm.delayMin });
     }
     if (s.dustStormSol === sol + 1) msgs.push({ kind: 'dustAlert', delayMin: delay(), sol: s.dustStormSol });
     if (s.dustStormSol === sol) msgs.push({ kind: 'dustNow' });
@@ -260,7 +272,8 @@ export class Mission {
       const dose = stormDose(storm.flare.cls, r.shield);
       r.dose += dose;
       stormResult = { flare: storm.flare, dose };
-      lines.push({ key: 'report.storm', params: { label: storm.flare.label, dose, shield: Math.round(r.shield) }, tone: 'bad' });
+      const key = storm.flare.source === 'cme' ? 'report.storm.cme' : 'report.storm';
+      lines.push({ key, params: { label: storm.flare.label, dose, shield: Math.round(r.shield) }, tone: 'bad' });
     }
     r.dose += CONFIG.dose.perSol;
 
