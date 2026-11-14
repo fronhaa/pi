@@ -12,6 +12,7 @@ import (
 
 	"io"
 	"log/slog"
+	"math"
 
 	"github.com/coder/websocket"
 	"github.com/fronhaa/pi/server/internal/sim"
@@ -522,5 +523,71 @@ func TestPreviewHidesTomorrowStormWithEarthPlayer(t *testing.T) {
 	}
 	if seen == 0 {
 		t.Fatal("nenhuma prévia com tempestade amanhã para comparar")
+	}
+}
+
+// ---------- posição da tripulação (só visual) ----------
+
+func TestCrewPositionsRelayToOthersOnly(t *testing.T) {
+	r := newRoom("CREW", nil, nil, func() (uint32, uint32) { return 9, 9 })
+	var gotCmd, gotMed, gotEarth [][]byte
+	cmd := NewPlayer(func(b []byte) { gotCmd = append(gotCmd, b) })
+	med := NewPlayer(func(b []byte) { gotMed = append(gotMed, b) })
+	earth := NewPlayer(func(b []byte) { gotEarth = append(gotEarth, b) })
+	must(t, r.join(cmd))
+	must(t, r.join(med))
+	must(t, r.join(earth))
+	must(t, r.Handle(cmd.ID, Action{T: "claim", Role: Commander}))
+	must(t, r.Handle(med.ID, Action{T: "claim", Role: Medic}))
+	must(t, r.Handle(earth.ID, Action{T: "claim", Role: Earth}))
+
+	pos := func(role Role, x, z float64) Action {
+		return Action{T: "crew_pos", List: []CrewPos{{Role: role, X: x, Z: z}}}
+	}
+	if err := r.Handle(med.ID, pos(Medic, 1, 1)); !errors.Is(err, ErrWrongPhase) {
+		t.Fatalf("na sala de espera não há tripulação andando: %v", err)
+	}
+	must(t, r.Handle(cmd.ID, Action{T: "start"}))
+	gotCmd, gotMed, gotEarth = nil, nil, nil
+
+	tx, tz := 5.0, -3.0
+	must(t, r.Handle(med.ID, Action{T: "crew_pos", List: []CrewPos{{Role: Medic, X: 1, Z: 2, Tx: &tx, Tz: &tz}}}))
+	if len(gotMed) != 0 {
+		t.Fatal("a posição não volta para quem mandou")
+	}
+	if len(gotCmd) != 1 || len(gotEarth) != 1 || !strings.Contains(string(gotCmd[0]), `"t":"crew"`) || !strings.Contains(string(gotCmd[0]), `"tx":5`) {
+		t.Fatalf("os outros jogadores recebem a posição e o destino: %s", gotCmd)
+	}
+
+	if err := r.Handle(med.ID, pos(Commander, 0, 0)); !errors.Is(err, ErrNotYourRole) {
+		t.Fatalf("cada um só move o próprio astronauta: %v", err)
+	}
+	if err := r.Handle(earth.ID, pos(Engineer, 0, 0)); !errors.Is(err, ErrNotYourRole) {
+		t.Fatalf("a Terra não move astronautas (o engenheiro sem dono é do comandante): %v", err)
+	}
+	must(t, r.Handle(cmd.ID, pos(Engineer, 3, 3))) // papel sem dono ficou com o comandante
+	for _, bad := range []float64{math.NaN(), math.Inf(1), CrewBounds + 1} {
+		if err := r.Handle(med.ID, pos(Medic, bad, 0)); !errors.Is(err, ErrInvalidInput) {
+			t.Fatalf("posição inválida (%v) deveria ser recusada: %v", bad, err)
+		}
+	}
+
+	// Quem reconecta recebe a última posição no "state", sem o destino.
+	v := r.viewFor(earth.ID)
+	found := false
+	for _, p := range v.Crew {
+		if p.Role == Medic && p.X == 1 && p.Z == 2 && p.Tx == nil {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("o estado deveria trazer a última posição do médico: %+v", v.Crew)
+	}
+
+	// Partida nova: posições zeradas.
+	r.game.Phase = PhaseEnded
+	must(t, r.Handle(cmd.ID, Action{T: "start"}))
+	if len(r.viewFor(earth.ID).Crew) != 0 {
+		t.Fatal("partida nova começa sem posições antigas")
 	}
 }

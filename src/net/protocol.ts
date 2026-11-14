@@ -19,6 +19,15 @@ export const BLOCK_ROLE: Record<keyof EnergyPlan, CoopRole> = { life: 'medic', s
 export type EarthOption = 'storm' | 'dust' | 'science' | 'life' | 'none';
 export const EARTH_OPTIONS: EarthOption[] = ['storm', 'dust', 'science', 'life', 'none'];
 
+/** Posição de um astronauta no plano XZ (metros); tx/tz = destino, se estiver andando. Só visual. */
+export interface CrewPos {
+  role: CoopRole;
+  x: number;
+  z: number;
+  tx?: number;
+  tz?: number;
+}
+
 export type CoopPhase = 'lobby' | 'earth' | 'mars' | 'day' | 'ended';
 
 /** Mensagem que a Terra (um jogador) mandou ontem. */
@@ -84,12 +93,15 @@ export interface CoopState {
   autoEarth: boolean;
   mars?: MarsView;
   earth?: EarthView;
+  /** Última posição conhecida de cada astronauta (para quem acabou de entrar ou reconectou). */
+  crew?: CrewPos[];
 }
 
 export type ServerMsg =
   | { t: 'welcome'; code: string; playerId?: string; token: string }
   | CoopState
-  | { t: 'error'; code: string };
+  | { t: 'error'; code: string }
+  | { t: 'crew'; list: CrewPos[] };
 
 export type ClientAction =
   | { t: 'create' }
@@ -102,4 +114,5 @@ export type ClientAction =
   | { t: 'blocks'; key: keyof EnergyPlan; value: number }
   | { t: 'end_sol' | 'start_day' | 'pause' | 'end_day' }
   | { t: 'problem_progress'; uid: number; progress: number }
-  | { t: 'problem_resolve'; uid: number };
+  | { t: 'problem_resolve'; uid: number }
+  | { t: 'crew_pos'; list: CrewPos[] };
