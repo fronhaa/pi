@@ -12,10 +12,11 @@ services:
     restart: unless-stopped
     environment:
       # Hosts de onde o jogo pode conectar. TROQUE pelo endereço onde o jogo está publicado.
-      ALLOWED_ORIGINS: "fronhaa.github.io,localhost:*"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-fronhaa.github.io,localhost:*}"
     ports:
-      # Só na máquina local: o proxy com HTTPS (Caddy/Nginx) expõe para fora como wss://.
-      - "127.0.0.1:8080:8080"
+      # Padrão: só na máquina local; o proxy com HTTPS (Caddy/Nginx) expõe para fora como wss://.
+      # COOP_BIND/COOP_PORT mudam isso (ex.: Docker em outro container, porta 8080 ocupada).
+      - "${COOP_BIND:-127.0.0.1}:${COOP_PORT:-8080}:8080"
     read_only: true
     security_opt:
       - no-new-privileges:true
