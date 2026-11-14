@@ -29,12 +29,14 @@ export class Hud {
   private readonly resources = h('section', { class: 'resources panel', 'aria-labelledby': 'res-title' });
   private readonly messages = h('section', { class: 'messages panel', 'aria-live': 'polite', 'aria-labelledby': 'msg-title' });
   private readonly planEl = h('section', { class: 'plan panel', 'aria-labelledby': 'plan-title' });
+  private readonly crewChip = h('div', { class: 'crew-chip', 'aria-live': 'polite' });
+  private crewView: { status: 'loading' | 'ready' | 'off'; role?: string } = { status: 'loading' };
 
   constructor(
     root: HTMLElement,
     private readonly cb: HudCallbacks,
   ) {
-    root.append(this.top, this.resources, this.messages, this.planEl);
+    root.append(this.top, this.resources, this.messages, this.planEl, this.crewChip);
   }
 
   setState(state: GameState): void {
@@ -65,8 +67,40 @@ export class Hud {
     return { ...this.plan };
   }
 
+  /** Estado da movimentação da tripulação (física carregada sob demanda). */
+  setCrew(status: 'loading' | 'ready' | 'off', role?: string): void {
+    this.crewView = { status, role };
+    this.renderCrew();
+  }
+
+  /** Aviso curto que some sozinho (ex.: fato sobre a gravidade de Marte). */
+  toast(text: string, source?: string): void {
+    const el = h('div', { class: 'toast panel', role: 'status' }, text, source ? h('small', {}, source) : null);
+    document.body.append(el);
+    window.setTimeout(() => el.remove(), 7000);
+  }
+
+  private renderCrew(): void {
+    const c = this.crewView;
+    if (c.status === 'off') {
+      this.crewChip.hidden = true;
+      return;
+    }
+    this.crewChip.hidden = false;
+    this.crewChip.replaceChildren(
+      c.status === 'loading'
+        ? h('span', {}, t('scene.loadingPhysics'))
+        : h('span', {},
+            h('strong', {}, t('crew.selected', { name: t(`crew.${c.role}` as StringKey) })),
+            h('span', { class: 'keys' }, ` · ${t('crew.hint.keys')}`),
+            h('span', { class: 'touch' }, ` · ${t('crew.hint.touch')}`),
+          ),
+    );
+  }
+
   render(): void {
     this.clampPlan();
+    this.renderCrew();
     this.renderTop();
     this.renderResources();
     this.renderMessages();

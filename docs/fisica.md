@@ -1,9 +1,10 @@
 # Física (Rapier)
 
-> **Estado atual:** o jogo da Missão Jezero ainda **não carrega o Rapier**. A física volta na etapa de
-> movimentação da tripulação (setas e clique), carregada sob demanda e com a gravidade de Marte
+> **Estado atual:** a física move a **tripulação** (setas, clique, pulo) com a gravidade de Marte.
+> Ela é carregada **sob demanda** pelo módulo [`src/scene/crewMotion.ts`](../src/scene/crewMotion.ts),
+> que vira um arquivo separado (~1,65 MB gzip) baixado depois que o jogo já está jogável
 > ([ADR 0004](decisoes/0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md)).
-> As receitas abaixo continuam valendo para essa etapa.
+> Se falhar, o jogo segue só com a interface.
 
 Usamos [Rapier](https://rapier.rs/docs/user_guides/javascript/getting_started_js) via
 `@dimforge/rapier3d-compat`. Wrapper: [`src/core/Physics.ts`](../src/core/Physics.ts).
@@ -59,17 +60,26 @@ Se o mesh estiver rotacionado, aplique a mesma rotação ao collider
 6. **Prefira velocidades/impulsos** (`setLinvel`, `applyImpulse`) a `setTranslation` para mover,
    pois teleportar ignora colisões.
 
-## Tripulação (próxima etapa)
+## Tripulação
 
-Os astronautas ([`src/scene/Crew.ts`](../src/scene/Crew.ts)) vão virar cápsulas `dynamic` com rotação
-travada, como na receita acima. Os obstáculos estáticos da base já estão em `MarsBase.obstacles`.
-Controles combinados: ver [game-design.md](game-design.md).
+[`src/scene/crewMotion.ts`](../src/scene/crewMotion.ts):
+
+- Cada astronauta é uma cápsula `dynamic` com **rotação travada**. Velocidade horizontal pelo input ou
+  pelo alvo do clique; a vertical fica com a gravidade. O visual gira para a direção do movimento.
+- Os obstáculos são as caixas de `MarsBase.obstacles` (módulos, cúpula, torre, painéis, bateria, abrigo).
+  **Os postos (`POSTS`) precisam ficar fora dessas caixas**, senão o astronauta nasce preso.
+- Clique no chão: anda em linha reta até o ponto. Não há busca de caminho; se ficar preso 1,5 s, desiste.
+- Pulo só com os pés no chão (`castRay` para baixo, ignorando o próprio corpo). Espaço num botão focado aperta o botão, não pula.
+- A tripulação não passa de 30 m do centro da base.
+- Em teste automático no navegador, o jogo expõe `window.__jezero` **só em desenvolvimento**.
+  No Chrome sem tela, use `Page.bringToFront` e `Emulation.setFocusEmulationEnabled`, senão os quadros param.
 
 ## Ajustes globais
 
 [`src/core/constants.ts`](../src/core/constants.ts): `GRAVITY`, `FIXED_DT`, `MAX_FRAME_DT`.
-Hoje `GRAVITY` é −20 (valor "arcade" da cena de teste). Na etapa de movimentação ele passa a ser a
-gravidade de Marte, com fonte da NASA registrada no código.
+`GRAVITY` é a de Marte: **38% da Terra** segundo a NASA/JPL
+([Mars 2020 Quick Facts](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/quick_facts/)),
+ou seja 0,38 × 9,81 ≈ 3,73 m/s² (valor calculado a partir da fonte).
 
 ## Debug
 

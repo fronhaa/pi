@@ -12,7 +12,9 @@ main.ts      (~1,5 KB gzip)
         ├── data/flares.ts         carrega public/data/donki-flares.json (erupções reais)
         ├── sim/Mission            SIMULAÇÃO PURA: regras, números, eventos, cartas
         ├── scene/MarsBase, Crew   CENA 3D: só desenha o estado
-        └── ui/Hud, dialogs        INTERFACE: mostra o estado e repassa decisões
+        ├── ui/Hud, dialogs        INTERFACE: mostra o estado e repassa decisões
+        └── import('@/scene/crewMotion')  ← em segundo plano (~1,65 MB gzip: Rapier)
+              movimentação da tripulação: setas, clique, pulo, gravidade de Marte
 ```
 
 A regra principal (GDD, "Tecnologia e arquitetura"):
@@ -35,7 +37,7 @@ interface ──decisões──► simulação ──estado──► interface e
 | [`src/i18n/`](../src/i18n) | Textos em PT e EN (`strings.ts`). O TypeScript obriga toda chave a existir nos dois idiomas. |
 | [`src/data/`](../src/data) | Carregamento dos dados da NASA para o jogo. Coleta: [dados.md](dados.md). |
 | [`src/render/`](../src/render) | Materiais cel-shading, contorno e paleta da Art Bible. |
-| [`src/core/`](../src/core) | `Game.ts` (orquestra tudo). `Physics.ts`/`Input.ts` aguardam a etapa de movimentação. |
+| [`src/core/`](../src/core) | `Game.ts` (orquestra tudo, clique na cena), `Input.ts` (teclado), `Physics.ts` (Rapier, só via `crewMotion`), `constants.ts` (gravidade de Marte com fonte). |
 | [`public/data/`](../public/data) | Dados servidos ao jogo (erupções do DONKI). |
 | [`scripts/`](../scripts) | `balance.ts` (equilíbrio), `fetch-donki.mjs` (dados), `new-adr.mjs` (docs). |
 
@@ -56,11 +58,13 @@ Arquivo: [`src/core/Game.ts`](../src/core/Game.ts)
 1. `index.html` já contém a tela de carregamento (HTML/CSS inline).
 2. `main.ts` é mínimo e só importa `ui/LoadingScreen`.
 3. O jogo (`core/Game` e tudo que ele importa) vem por `import()` dinâmico.
-4. O Rapier **não** está no pacote principal; entra sob demanda na etapa de movimentação ([ADR 0004](decisoes/0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md)).
+4. O Rapier **não** está no pacote principal: `Game.start()` chama `import('@/scene/crewMotion')` em segundo plano
+   ([ADR 0004](decisoes/0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md)). Enquanto carrega, a faixa
+   da tripulação mostra "Carregando a física de Marte…"; se falhar, a faixa some e o jogo segue só com a interface.
 
 **Regras:**
 - Não importe nada de `core/`, `scene/`, `sim/` ou `render/` em `main.ts` ou `ui/LoadingScreen.ts`.
-- Não importe `core/Physics.ts` estaticamente em lugar nenhum; use `import()`.
+- Não importe `core/Physics.ts` nem `scene/crewMotion.ts` estaticamente em lugar nenhum (só `import type` ou `import()`).
 - Confira com `npm run build`: o `index-*.js` deve ter poucos KB e nenhum chunk deve ter o Rapier.
 
 ## Build e hospedagem

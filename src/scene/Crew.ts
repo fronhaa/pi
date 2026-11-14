@@ -83,6 +83,18 @@ export class Astronaut {
     this.bobPhase += dt * 2;
     this.model.position.y = Math.max(0, Math.sin(this.bobPhase) * 0.015);
   }
+
+  /** Chamado pela física: anda (balança e vira para a direção) ou fica parado. */
+  setMotion(speed: number, heading: number, dt: number): void {
+    if (speed < 0.2) {
+      this.idle(dt);
+      return;
+    }
+    this.bobPhase += dt * speed * 4;
+    this.model.position.y = Math.abs(Math.sin(this.bobPhase)) * 0.06;
+    const diff = Math.atan2(Math.sin(heading - this.model.rotation.y), Math.cos(heading - this.model.rotation.y));
+    this.model.rotation.y += diff * Math.min(1, dt * 10);
+  }
 }
 
 export class Crew {

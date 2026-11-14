@@ -12,6 +12,11 @@ export class Input {
     target.addEventListener('blur', () => this.down.clear());
   }
 
+  /** Esquece teclas apertadas antes (ex.: quando a física termina de carregar). */
+  reset(): void {
+    this.pressedThisFrame.clear();
+  }
+
   isDown(...codes: string[]): boolean {
     return codes.some((c) => this.down.has(c));
   }
