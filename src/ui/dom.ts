@@ -9,12 +9,59 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
     if (v === undefined || v === false) continue;
-    if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v as EventListener);
+    if (k.startsWith('on') && typeof v === 'function') on(el, k.slice(2).toLowerCase(), v as EventListener);
     else if (k === 'class') el.className = String(v);
     else el.setAttribute(k, v === true ? '' : String(v));
   }
   for (const c of children) if (c !== null && c !== undefined && c !== false) el.append(c);
   return el;
+}
+
+/**
+ * Eventos ficam num mapa no elemento, com UM ouvinte por tipo que chama a função atual do mapa.
+ * Assim `patchChildren` troca a função sem recriar o botão.
+ */
+const HANDLERS = Symbol('handlers');
+type WithHandlers = Element & { [HANDLERS]?: Record<string, EventListener> };
+
+function on(el: Element, type: string, fn: EventListener): void {
+  const e = el as WithHandlers;
+  const map = (e[HANDLERS] ??= {});
+  if (!map[type]) el.addEventListener(type, (ev) => (el as WithHandlers)[HANDLERS]?.[type]?.(ev));
+  map[type] = fn;
+}
+
+/**
+ * Redesenha `parent` com os filhos novos REAPROVEITANDO os elementos que já estão lá (mesma tag na mesma posição):
+ * só atualiza texto, atributos e eventos. Sem isso, um botão recriado entre o "apertar" e o "soltar" do dedo
+ * perde o clique (o HUD do dia redesenha 4 vezes por segundo; no modo em grupo, a cada estado do servidor).
+ */
+export function patchChildren(parent: Element, children: Child[]): void {
+  const next: Node[] = children
+    .filter((c): c is Node | string => c !== null && c !== undefined && c !== false && c !== '')
+    .map((c) => (typeof c === 'string' ? document.createTextNode(c) : c));
+  const old = Array.from(parent.childNodes);
+  next.forEach((n, i) => {
+    const o = old[i];
+    if (!o) parent.append(n);
+    else if (o.nodeType === n.nodeType && o.nodeName === n.nodeName) morph(o, n);
+    else parent.replaceChild(n, o);
+  });
+  for (let i = next.length; i < old.length; i++) old[i].remove();
+}
+
+function morph(o: Node, n: Node): void {
+  if (!(o instanceof Element) || !(n instanceof Element)) {
+    if (o.nodeValue !== n.nodeValue) o.nodeValue = n.nodeValue;
+    return;
+  }
+  for (const a of Array.from(o.attributes)) if (!n.hasAttribute(a.name)) o.removeAttribute(a.name);
+  for (const a of Array.from(n.attributes)) if (o.getAttribute(a.name) !== a.value) o.setAttribute(a.name, a.value);
+  const om = (o as WithHandlers)[HANDLERS];
+  const nm = (n as WithHandlers)[HANDLERS] ?? {};
+  if (om) for (const type of Object.keys(om)) if (!nm[type]) delete om[type];
+  for (const [type, fn] of Object.entries(nm)) on(o, type, fn);
+  patchChildren(o, Array.from(n.childNodes));
 }
 
 let openCount = 0;
