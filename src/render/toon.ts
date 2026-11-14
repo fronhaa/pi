@@ -27,6 +27,20 @@ export const PALETTE = {
   white: 0xffffff,
 } as const;
 
+/**
+ * Base lunar: troca das cores de terreno da paleta de Marte por cinzas do regolito lunar
+ * (docs/estilo-visual.md, "Base lunar"). Mesmas chaves das cores oficiais que mudam.
+ */
+export const MOON_PALETTE = {
+  soil: 0x7d7c83,
+  rock: 0xa3a2a9,
+  lit: 0xc4c3c9,
+  dust: 0xb1aea6,
+  sky: 0x0b0d16,
+  earth: 0x3f7fd6,
+  earthLand: 0x5f9a4f,
+} as const;
+
 let gradientMap: THREE.DataTexture | null = null;
 
 /** 4 tons, o mais escuro ainda claro o bastante para não virar "sombra preta". */

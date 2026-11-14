@@ -10,19 +10,19 @@ import { MarsBase } from '@/scene/MarsBase';
 import { Crew, ROLES } from '@/scene/Crew';
 import { PROBLEMS } from '@/sim/problems';
 import { Hud } from '@/ui/Hud';
-import { showCard, showEnd, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
-import { formatDate, getLang, setLang, t } from '@/i18n';
+import { showCard, showEnd, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
+import { formatDate, getLang, setLang, setPlace, t } from '@/i18n';
 import { Lobby, showEarthTurn, showModeChoice } from '@/ui/coop';
 import { CoopClient, coopServerUrl } from '@/net/CoopClient';
 import { BLOCK_ROLE, type CoopState, type CrewPos } from '@/net/protocol';
 import { Input } from './Input';
 import { CrewTasks } from './CrewTasks';
-import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
+import { MARS_G, MOON_G, NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
 import { ENTRANCES, GREENHOUSE_WORK_SPOT, HABITAT_SPOTS, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
 import { ProblemMarkers } from '@/scene/ProblemMarkers';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
-import { CONFIG } from '@/sim/config';
+import { CONFIG, type Location } from '@/sim/config';
 import type { StringKey } from '@/i18n';
 
 /** Duração mínima da noite antes do relatório (ms). */
@@ -84,9 +84,15 @@ export class Game {
   private readonly hud: Hud;
 
   private mission!: Mission;
+  /** Onde fica a base (solo). O modo em grupo é sempre em Marte, por enquanto. */
+  private location: Location = 'mars';
   private plan: EnergyPlan = { life: 3, shield: 1, science: 3 };
   private night = false;
   private stormNight = false;
+  /** Lua: a noite que está passando é a noite fria da sombra (só ela escurece a cena). */
+  private shadowNight = false;
+  /** Luz do Sol (0–1) do dia que acabou, para a cena durante a noite (o estado já é o do dia seguinte). */
+  private nightSun = 1;
   private nightRes: Resources | null = null;
   private coop: CoopSession | null = null;
 
@@ -164,6 +170,7 @@ export class Game {
         this.hud.render();
       },
       onHowTo: () => showTutorial(() => {}),
+      nightCost: () => (this.coop || !this.mission ? CONFIG.battery.nightCost : this.mission.nightCost()),
     });
 
     this.targetMarker = new THREE.Mesh(
@@ -228,11 +235,29 @@ export class Game {
     void this.loadMotion();
   }
 
+  /** Solo: escolhe Marte ou Lua, cria a missão do lugar e mostra o tutorial. */
+  private startSolo(): void {
+    showPlaceChoice((place) => {
+      this.setLocation(place);
+      this.newMission();
+      showTutorial(() => this.beginSol());
+    });
+  }
+
+  /** Troca o lugar da base: textos, cena e gravidade (as regras vêm da Mission criada depois). */
+  private setLocation(place: Location): void {
+    this.location = place;
+    setPlace(place);
+    this.base.setLocation(place);
+    this.motion?.setGravity(place === 'moon' ? MOON_G : MARS_G);
+    this.hud.render();
+  }
+
   /** Com servidor coop configurado, pergunta: sozinho ou em grupo. Sem servidor, vai direto ao solo. */
   private chooseMode(): void {
     const url = coopServerUrl();
     if (!url) {
-      showTutorial(() => this.beginSol());
+      this.startSolo();
       return;
     }
     const saved = new CoopClient(url).savedSession();
@@ -240,7 +265,7 @@ export class Game {
       this.startCoop(url, saved); // recarregou a página no meio de uma partida em grupo
       return;
     }
-    showModeChoice(() => showTutorial(() => this.beginSol()), () => this.startCoop(url));
+    showModeChoice(() => this.startSolo(), () => this.startCoop(url));
   }
 
   /** Carrega o Rapier em segundo plano. Se falhar, o jogo continua só com a interface (GDD). */
@@ -264,6 +289,7 @@ export class Game {
         canControl: (role) => this.canControl(role),
       });
       this.input.reset();
+      this.motion.setGravity(this.location === 'moon' ? MOON_G : MARS_G);
       this.motion.enabled = !this.night && !this.paused;
       // A tripulação está dentro (escondida); quem estiver numa EVA sai pela porta.
       this.tasks.attachMotion(this.motion);
@@ -587,9 +613,10 @@ export class Game {
 
   private newMission(): void {
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-    // Missão histórica real, se houver; senão, erupções reais sorteadas; senão, simuladas.
-    const historical = pickHistorical(this.missions.missions, seed, isFirstGame());
-    this.mission = new Mission(seed, this.flares.flares, historical);
+    // Marte: missão histórica real, se houver; senão, erupções reais sorteadas; senão, simuladas.
+    // Lua: erupções reais sorteadas (o atraso das missões históricas é Terra-Marte; não serve para a Lua).
+    const historical = this.location === 'mars' ? pickHistorical(this.missions.missions, seed, isFirstGame()) : null;
+    this.mission = new Mission(seed, this.flares.flares, historical, this.location);
     this.hud.setState(this.mission.state);
     this.updateScene();
   }
@@ -618,6 +645,8 @@ export class Game {
     const m = this.mission;
     if (!m.isPlanValid(plan) || m.state.pendingCard) return;
     const stormTonight = m.stormToday !== undefined;
+    this.shadowNight = m.shadowLeft() > 0;
+    this.nightSun = m.sunlightToday() / 100;
     const report = m.endSol(plan);
     this.playNight(report, stormTonight, m.state, () => {
       if (m.state.outcome.status === 'playing') this.beginSol();
@@ -672,10 +701,14 @@ export class Game {
   private finish(): void {
     markPlayed();
     this.hud.setState(this.mission.state);
-    showEnd(this.mission.state, () => {
-      this.newMission();
-      this.beginSol();
-    });
+    // Jogar de novo: escolhe o lugar outra vez (dá para experimentar Marte e Lua e comparar).
+    showEnd(this.mission.state, () =>
+      showPlaceChoice((place) => {
+        this.setLocation(place);
+        this.newMission();
+        this.beginSol();
+      }),
+    );
   }
 
   private updateScene(): void {
@@ -685,14 +718,18 @@ export class Game {
       alert: !this.night && s.messages.some((m) => m.kind === 'stormAlert' || m.kind === 'stormToday'),
       night: this.night,
       stormNight: this.stormNight,
-      earthMessage: !this.night && s.messages.some((m) => m.kind !== 'dustNow'),
+      earthMessage: !this.night && s.messages.some((m) => m.kind !== 'dustNow' && m.kind !== 'shadowNow'),
       scienceBlocks: this.plan.science,
+      // De noite, o estado já é o do dia seguinte: a sombra que vale é a da noite que está passando.
+      shadow: this.night ? this.shadowNight : s.messages.some((m) => m.kind === 'shadowNow'),
+      sunlight: this.night ? this.nightSun : this.coop ? 1 : this.mission.sunlightToday() / 100,
     });
   }
 
   // ---------- modo em grupo ----------
 
   private startCoop(url: string, saved?: { code: string; token: string }): void {
+    if (this.location !== 'mars') this.setLocation('mars'); // o servidor coop roda só Marte, por enquanto
     const client = new CoopClient(url);
     const lobby = new Lobby({
       create: () => client.create(),
@@ -938,12 +975,15 @@ export class Game {
     if (m?.lastReport && m.reportCard) cardSols.set(m.lastReport.sol, m.reportCard as CardId);
     return {
       seed: 0,
+      location: 'mars',
       historical: null,
       sol: m?.sol ?? e?.sol ?? 1,
       res: m?.res ?? e?.res ?? this.mission.state.res,
       blocks: m?.blocks ?? 0,
       storms: m?.storms ?? [],
       dustStormSol: 0,
+      shadowSol: 0,
+      sunlight: [],
       dustHold: 0,
       cardSols,
       pendingCard: m?.pendingCard ?? null,

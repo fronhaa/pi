@@ -1,4 +1,4 @@
-import { CONFIG } from './config.ts';
+import { CONFIG, type Location } from './config.ts';
 import type { Rng } from './rng.ts';
 import type { Card, CardId, ReportLine, Resources } from './types.ts';
 
@@ -19,13 +19,16 @@ export const CARDS: Record<CardId, Card> = {
 
 export const CARD_IDS = Object.keys(CARDS) as CardId[];
 
+/** Cartas que só fazem sentido em Marte (o MOXIE tira oxigênio do ar de Marte; a Lua não tem ar). */
+export const MARS_ONLY_CARDS: readonly CardId[] = ['moxie'];
+
 /** Efeito imediato ao aparecer a carta (antes da escolha). */
 export function onCardDrawn(id: CardId, res: Resources): void {
   if (id === 'dustyPanels') res.dust = Math.min(CONFIG.dust.max, res.dust + 25);
 }
 
 /** Aplica a opção escolhida; devolve as linhas de relatório. */
-export function applyCardOption(id: CardId, option: string, res: Resources, rng: Rng): ReportLine[] {
+export function applyCardOption(id: CardId, option: string, res: Resources, rng: Rng, location: Location = 'mars'): ReportLine[] {
   const b = CONFIG.battery;
   const lines: ReportLine[] = [];
   const add = (key: keyof Resources, delta: number) => {
@@ -59,7 +62,8 @@ export function applyCardOption(id: CardId, option: string, res: Resources, rng:
       add('science', 15);
       break;
     case 'brokenSensor:askEarth':
-      add('science', -10);
+      // Na Lua a resposta da Terra chega em segundos: a espera custa pouco.
+      add('science', location === 'moon' ? CONFIG.moon.askEarthScience : -10);
       break;
     case 'brokenSensor:fixAlone':
       if (rng.chance(0.5)) {
