@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /**
- * Helpers do estilo cel-shading. Direção de arte: Art Bible (externa) + docs/estilo-visual.md.
+ * Helpers do estilo cel-shading. Direção de arte: docs/art-bible.md; aplicação no código: docs/estilo-visual.md.
  * - toonMaterial: sombreamento em 4 faixas, sem sombra preta (Art Bible; GDD, alinhamento #6).
  * - addOutline: contorno escuro e fino pela técnica "inverted hull".
  */
