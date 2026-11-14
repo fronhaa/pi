@@ -13,15 +13,16 @@ import (
 
 // Action é a mensagem que o cliente manda (JSON). Só os campos da ação usada vêm preenchidos.
 type Action struct {
-	T        string  `json:"t"`
-	Code     string  `json:"code,omitempty"`
-	Token    string  `json:"token,omitempty"`
-	Role     Role    `json:"role,omitempty"`
-	Option   string  `json:"option,omitempty"`
-	Key      string  `json:"key,omitempty"`
-	Value    int     `json:"value,omitempty"`
-	UID      int     `json:"uid,omitempty"`
-	Progress float64 `json:"progress,omitempty"`
+	T        string    `json:"t"`
+	Code     string    `json:"code,omitempty"`
+	Token    string    `json:"token,omitempty"`
+	Role     Role      `json:"role,omitempty"`
+	Option   string    `json:"option,omitempty"`
+	Key      string    `json:"key,omitempty"`
+	Value    int       `json:"value,omitempty"`
+	UID      int       `json:"uid,omitempty"`
+	Progress float64   `json:"progress,omitempty"`
+	List     []CrewPos `json:"list,omitempty"` // crew_pos
 }
 
 var (

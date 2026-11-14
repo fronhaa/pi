@@ -36,6 +36,9 @@ type Room struct {
 	lastActive time.Time
 	nextNumber int
 
+	// Última posição de cada astronauta (modo em grupo; só visual). Vai no "state" para quem reconecta.
+	crew map[Role]CrewPos
+
 	// Relógio do dia: TimeScale > 1 acelera (só nos testes). dayGen evita dois relógios ao mesmo tempo.
 	TimeScale float64
 	dayGen    int
@@ -107,6 +110,9 @@ func (r *Room) Handle(playerID string, a Action) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.touch()
+	if a.T == "crew_pos" { // só visual: repassa sem mandar o estado inteiro
+		return r.crewLocked(playerID, a.List)
+	}
 	err := r.apply(playerID, a)
 	if err == nil {
 		r.broadcastLocked()
@@ -212,6 +218,7 @@ func (r *Room) start() error {
 	// Missão histórica real, se houver; senão, erupções reais sorteadas; senão, simuladas (igual ao solo).
 	hist := sim.PickHistorical(r.missions, seed, r.firstGame)
 	r.firstGame = false
+	r.crew = nil
 	r.game = NewGame(seed, coopSeed, r.flares, hist, !hasEarth)
 	return nil
 }
@@ -341,6 +348,8 @@ type StateMsg struct {
 	AutoEarth bool         `json:"autoEarth"`
 	Mars      *MarsView    `json:"mars,omitempty"`
 	Earth     *EarthView   `json:"earth,omitempty"`
+	// Última posição conhecida de cada astronauta (para quem acabou de entrar ou reconectou).
+	Crew []CrewPos `json:"crew,omitempty"`
 }
 
 func (r *Room) broadcastLocked() {
@@ -371,6 +380,11 @@ func (r *Room) viewFor(id string) StateMsg {
 	}
 	msg.Phase = g.Phase
 	msg.AutoEarth = g.AutoEarth
+	for _, role := range MarsRoles {
+		if p, ok := r.crew[role]; ok {
+			msg.Crew = append(msg.Crew, p)
+		}
+	}
 	s := g.Mission.State
 	var last *sim.SolReport
 	if n := len(s.Reports); n > 0 {
