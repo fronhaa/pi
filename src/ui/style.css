@@ -91,6 +91,16 @@
 .plan-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
 .plan-actions .btn { font-size: 18px; padding: 10px 22px; }
 
+/* ---------- dia: problemas pela base ---------- */
+.plan .clock { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+.day-hint { margin: 0 0 6px; font-size: 13px; opacity: 0.85; }
+.problem { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 2px dashed rgba(71, 60, 58, 0.2); }
+.problem .name { flex: 1; font-weight: 600; }
+.problem .name small { display: block; font-weight: 400; font-size: 12px; opacity: 0.85; }
+.problem .name .status { font-weight: 600; opacity: 1; }
+.problem .bar { margin-top: 4px; }
+.problem.done { opacity: 0.6; }
+
 /* ---------- tripulação ---------- */
 .crew-chip {
   position: fixed; left: 50%; top: 92px; transform: translateX(-50%); z-index: 3;

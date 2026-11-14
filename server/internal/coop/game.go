@@ -34,7 +34,8 @@ type Phase string
 const (
 	PhaseLobby Phase = "lobby"
 	PhaseEarth Phase = "earth" // vez da Terra
-	PhaseMars  Phase = "mars"  // vez de Marte
+	PhaseMars  Phase = "mars"  // vez de Marte: carta e plano de energia
+	PhaseDay   Phase = "day"   // dia em tempo real: problemas pela base (relógio no servidor)
 	PhaseEnded Phase = "ended"
 )
 
@@ -62,13 +63,17 @@ type Game struct {
 	Outbox    *EarthMessage
 	Inbox     []EarthMessage
 	coopRng   *sim.Rng
+
+	// Dia em tempo real.
+	DayElapsed float64
+	Paused     bool
 }
 
 // NewGame começa uma partida. coopSeed alimenta só os sorteios do modo coop (atraso das
 // mensagens da Terra), para não mexer nos sorteios da missão (que seguem o jogo solo).
-func NewGame(seed, coopSeed uint32, flares []sim.Flare, autoEarth bool) *Game {
+func NewGame(seed, coopSeed uint32, flares []sim.Flare, historical *sim.HistoricalMission, autoEarth bool) *Game {
 	g := &Game{
-		Mission:   sim.NewMission(seed, flares),
+		Mission:   sim.NewMission(seed, flares, historical),
 		Plan:      sim.EnergyPlan{Life: 3, Shield: 1, Science: 3},
 		AutoEarth: autoEarth,
 		coopRng:   sim.NewRng(coopSeed),
@@ -163,7 +168,106 @@ func (g *Game) SetBlocks(key string, value int) error {
 	return nil
 }
 
-// EndSol: o comandante encerra o sol. Devolve o relatório.
+// StartDay: o comandante trava o plano ("Começar o dia"). Sem problemas hoje, vai direto
+// para a noite, como no jogo solo.
+func (g *Game) StartDay() error {
+	if g.Phase != PhaseMars {
+		return ErrWrongPhase
+	}
+	if g.Mission.State.PendingCard != nil {
+		return ErrCardPending
+	}
+	if !g.Mission.IsPlanValid(g.Plan) {
+		return ErrInvalidInput
+	}
+	if len(g.Mission.State.Problems) == 0 {
+		_, err := g.EndSol()
+		return err
+	}
+	g.Phase, g.DayElapsed, g.Paused = PhaseDay, 0, false
+	return nil
+}
+
+// Tick avança o relógio do dia (chamado pela sala). Abre os problemas na hora e termina o
+// dia aos ProblemsDaySeconds ou quando tudo foi consertado. Devolve se algo mudou.
+func (g *Game) Tick(dt float64) bool {
+	if g.Phase != PhaseDay || g.Paused {
+		return false
+	}
+	before := int(g.DayElapsed)
+	g.DayElapsed += dt
+	changed := int(g.DayElapsed) != before // o relógio na tela muda a cada segundo
+	allDone := true
+	for _, p := range g.Mission.State.Problems {
+		if p.Status == "pending" && g.DayElapsed >= float64(p.SpawnAt) {
+			_ = g.Mission.OpenProblem(p.UID)
+			changed = true
+		}
+		if p.Status != "done" {
+			allDone = false
+		}
+	}
+	if g.DayElapsed >= sim.Config.ProblemsDaySeconds || allDone {
+		_ = g.endDay()
+		return true
+	}
+	return changed
+}
+
+func (g *Game) TogglePause() error {
+	if g.Phase != PhaseDay {
+		return ErrWrongPhase
+	}
+	g.Paused = !g.Paused
+	return nil
+}
+
+// EndDay: o comandante encerra o dia antes do relógio.
+func (g *Game) EndDay() error {
+	if g.Phase != PhaseDay {
+		return ErrWrongPhase
+	}
+	return g.endDay()
+}
+
+func (g *Game) endDay() error {
+	if g.Mission.State.Outcome.Status != "playing" {
+		g.Phase = PhaseEnded
+		return nil
+	}
+	g.Phase = PhaseMars // EndSol exige a fase de Marte
+	_, err := g.EndSol()
+	return err
+}
+
+// ProblemProgress e ResolveProblem: o que o astronauta de um jogador fez na cena.
+func (g *Game) ProblemProgress(uid int, progress float64) error {
+	if g.Phase != PhaseDay {
+		return ErrWrongPhase
+	}
+	if err := g.Mission.SetProblemProgress(uid, progress); err != nil {
+		return ErrInvalidInput
+	}
+	return nil
+}
+
+func (g *Game) ResolveProblem(uid int) error {
+	if g.Phase != PhaseDay {
+		return ErrWrongPhase
+	}
+	if !slices.ContainsFunc(g.Mission.State.Problems, func(p sim.Problem) bool { return p.UID == uid && p.Status == "open" }) {
+		return nil // já consertado por outro jogador, ou ainda não apareceu: ignora
+	}
+	if err := g.Mission.ResolveProblem(uid); err != nil {
+		return ErrInvalidInput
+	}
+	if g.Mission.State.Outcome.Status != "playing" {
+		g.Phase = PhaseEnded
+	}
+	return nil
+}
+
+// EndSol executa a noite com o plano. Devolve o relatório.
 func (g *Game) EndSol() (sim.SolReport, error) {
 	if g.Phase != PhaseMars {
 		return sim.SolReport{}, ErrWrongPhase
@@ -179,12 +283,12 @@ func (g *Game) EndSol() (sim.SolReport, error) {
 		g.Phase = PhaseEnded
 		return report, nil
 	}
-	// A mensagem da Terra de ontem chega hoje.
+	// A mensagem da Terra de ontem chega hoje, a não ser que a antena esteja desalinhada.
 	g.Inbox = nil
-	if g.Outbox != nil {
+	if g.Outbox != nil && !g.Mission.State.CommsDown {
 		g.Inbox = append(g.Inbox, *g.Outbox)
-		g.Outbox = nil
 	}
+	g.Outbox = nil
 	g.beginSol()
 	return report, nil
 }
@@ -240,13 +344,13 @@ type MarsMessage struct {
 func (g *Game) MarsMessages() []MarsMessage {
 	out := []MarsMessage{}
 	for _, m := range g.Mission.State.Messages {
-		if g.AutoEarth || m.Kind == "stormToday" || m.Kind == "dustNow" {
+		if g.AutoEarth || m.Kind == "stormToday" || m.Kind == "dustNow" || m.Kind == "noSignal" {
 			out = append(out, MarsMessage{Message: m})
 		}
 	}
 	if !g.AutoEarth {
 		for _, e := range g.Inbox {
-			out = append(out, MarsMessage{Message: sim.Message{Kind: "earth", DelayMin: e.DelayMin, Flare: e.Flare}, Option: e.Option})
+			out = append(out, MarsMessage{Message: sim.Message{Kind: "earth", DelayMin: float64(e.DelayMin), Flare: e.Flare}, Option: e.Option})
 		}
 	}
 	return out

@@ -12,11 +12,17 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { CONFIG, type FlareClass } from '../src/sim/config.ts';
 import { Mission } from '../src/sim/mission.ts';
 import { createRng } from '../src/sim/rng.ts';
-import type { EnergyPlan, Flare } from '../src/sim/types.ts';
+import { parseMissions } from '../src/sim/historical.ts';
+import type { EnergyPlan, Flare, HistoricalMission } from '../src/sim/types.ts';
 
 const SEEDS = 60;
 
-type Action = { card: string } | { plan: [number, number, number] };
+type Action =
+  | { card: string }
+  | { plan: [number, number, number] }
+  | { open: number }
+  | { progress: [number, number] }
+  | { resolve: number };
 
 /** Mesma filtragem do cliente (src/data/flares.ts): só M e X. */
 function loadFlares(): Flare[] {
@@ -24,6 +30,14 @@ function loadFlares(): Flare[] {
   return data.flares
     .filter((f: { cls: string }) => /^[MX]/.test(f.cls))
     .map((f: { cls: string; time: string; link: string }) => ({ cls: f.cls[0] as FlareClass, label: f.cls, real: true, time: f.time, link: f.link }));
+}
+
+function loadHistorical(): HistoricalMission[] {
+  try {
+    return parseMissions(JSON.parse(readFileSync(new URL('../public/data/missions.json', import.meta.url), 'utf8')));
+  } catch {
+    return [];
+  }
 }
 
 /** JSON com chaves ordenadas; `undefined` some (igual ao JSON.stringify e ao omitempty do Go). */
@@ -48,6 +62,9 @@ function snapshot(m: Mission) {
     cardSols: Object.fromEntries([...s.cardSols].map(([k, v]) => [String(k), v])),
     pendingCard: s.pendingCard,
     messages: s.messages,
+    problems: s.problems,
+    commsDown: s.commsDown,
+    historical: s.historical ? s.historical.id : null,
     reports: s.reports,
     outcome: s.outcome,
   };
@@ -85,33 +102,62 @@ function random(m: Mission, seed: number): { plan: () => EnergyPlan; card: () =>
 }
 
 const flares = loadFlares();
+const historical = loadHistorical();
 const games: unknown[] = [];
 
-for (const real of [true, false]) {
-  for (const strategy of ['attentive', 'random'] as const) {
-    for (let seed = 1; seed <= SEEDS; seed++) {
-      const m = new Mission(seed, real ? flares : []);
-      const s = strategy === 'attentive' ? attentive(m) : random(m, seed);
-      const actions: Action[] = [];
-      const hashes = [hash(m)];
-      while (m.state.outcome.status === 'playing') {
-        if (m.state.pendingCard) {
-          const card = s.card();
-          m.answerCard(card);
-          actions.push({ card });
-          hashes.push(hash(m));
-          if (m.state.outcome.status !== 'playing') break;
-        }
-        const p = s.plan();
-        m.endSol(p);
-        actions.push({ plan: [p.life, p.shield, p.science] });
-        hashes.push(hash(m));
-      }
-      games.push({ seed, real, strategy, actions, hashes });
+/** Joga uma partida e grava ações + hash de cada passo. `h` = índice da missão histórica ou null. */
+function play(seed: number, real: boolean, h: number | null, strategy: 'attentive' | 'random') {
+  const m = new Mission(seed, real ? flares : [], h === null ? null : historical[h]);
+  const s = strategy === 'attentive' ? attentive(m) : random(m, seed);
+  // Problemas: abre todos; conserta alguns, deixa outros pela metade (testa "continua amanhã") ou sem atender.
+  const fixer = createRng(seed ^ 0x5bd1e995);
+  const actions: Action[] = [];
+  const hashes = [hash(m)];
+  const step = (a: Action) => {
+    actions.push(a);
+    hashes.push(hash(m));
+  };
+  while (m.state.outcome.status === 'playing') {
+    if (m.state.pendingCard) {
+      const card = s.card();
+      m.answerCard(card);
+      step({ card });
+      if (m.state.outcome.status !== 'playing') break;
     }
+    for (const p of [...m.state.problems]) {
+      if (m.state.outcome.status !== 'playing') break;
+      if (p.status === 'pending') {
+        m.openProblem(p.uid);
+        step({ open: p.uid });
+      }
+      const r = fixer.next();
+      if (r < 0.55) {
+        m.resolveProblem(p.uid);
+        step({ resolve: p.uid });
+      } else if (r < 0.85) {
+        const progress = Math.round(fixer.next() * 100) / 100;
+        m.setProblemProgress(p.uid, progress);
+        step({ progress: [p.uid, progress] });
+      }
+    }
+    if (m.state.outcome.status !== 'playing') break;
+    const p = s.plan();
+    m.endSol(p);
+    step({ plan: [p.life, p.shield, p.science] });
+  }
+  games.push({ seed, real, historical: h, strategy, actions, hashes });
+}
+
+for (const strategy of ['attentive', 'random'] as const) {
+  for (let seed = 1; seed <= SEEDS; seed++) {
+    play(seed, true, null, strategy);
+    play(seed, false, null, strategy);
+  }
+  for (let h = 0; h < historical.length; h++) {
+    for (let seed = 1; seed <= 10; seed++) play(seed * 7 + h, false, h, strategy);
   }
 }
 
 const out = new URL('../server/internal/sim/testdata/golden.json', import.meta.url);
-writeFileSync(out, JSON.stringify({ note: 'Gerado por npm run sim:golden. Não edite à mão.', flares, games }) + '\n');
+writeFileSync(out, JSON.stringify({ note: 'Gerado por npm run sim:golden. Não edite à mão.', flares, historical, games }) + '\n');
 console.log(`${games.length} partidas gravadas em server/internal/sim/testdata/golden.json`);

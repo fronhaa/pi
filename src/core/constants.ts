@@ -17,3 +17,10 @@ export const MARS_GRAVITY_RATIO = 0.38;
 export const MARS_G = MARS_GRAVITY_RATIO * EARTH_G;
 
 export const GRAVITY = { x: 0, y: -MARS_G, z: 0 };
+
+/**
+ * Volta para casa à noite (m/s): andando para dormir no habitat, correndo para o abrigo na tempestade.
+ * Valores de jogo, escolhidos para todos entrarem em poucos segundos (o andar normal é 2,4 m/s).
+ */
+export const NIGHT_WALK_SPEED = 4;
+export const STORM_RUN_SPEED = 6;

@@ -1,4 +1,4 @@
-import type { Card, EnergyPlan, Flare, Message, Outcome, Resources, ScheduledStorm, SolReport } from '@/sim/types';
+import type { Card, EnergyPlan, Flare, Message, Outcome, Problem, Resources, ScheduledStorm, SolReport } from '@/sim/types';
 
 /**
  * Protocolo do servidor coop (server/internal/coop). Guia: docs/servidor-coop.md.
@@ -15,7 +15,7 @@ export const BLOCK_ROLE: Record<keyof EnergyPlan, CoopRole> = { life: 'medic', s
 export type EarthOption = 'storm' | 'dust' | 'science' | 'life' | 'none';
 export const EARTH_OPTIONS: EarthOption[] = ['storm', 'dust', 'science', 'life', 'none'];
 
-export type CoopPhase = 'lobby' | 'earth' | 'mars' | 'ended';
+export type CoopPhase = 'lobby' | 'earth' | 'mars' | 'day' | 'ended';
 
 /** Mensagem que a Terra (um jogador) mandou ontem. */
 export interface EarthCoopMessage {
@@ -46,6 +46,12 @@ export interface MarsView {
   lastReport: SolReport | null;
   reportCard?: string;
   storms?: ScheduledStorm[];
+  /** Problemas do dia ("pending" = ainda não apareceram). */
+  problems: Problem[];
+  /** Só na fase "day": o relógio vem do servidor. */
+  day?: { remaining: number; paused: boolean };
+  commsDown: boolean;
+  historical?: { id: number; difficulty: string; startUtc: string };
 }
 
 export interface ForecastItem {
@@ -88,4 +94,6 @@ export type ClientAction =
   | { t: 'earth'; option: EarthOption }
   | { t: 'card'; option: string }
   | { t: 'blocks'; key: keyof EnergyPlan; value: number }
-  | { t: 'end_sol' };
+  | { t: 'end_sol' | 'start_day' | 'pause' | 'end_day' }
+  | { t: 'problem_progress'; uid: number; progress: number }
+  | { t: 'problem_resolve'; uid: number };

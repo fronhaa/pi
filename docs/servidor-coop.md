@@ -46,7 +46,11 @@ flowchart LR
 | Com jogador na Terra | Cada sol começa na **vez da Terra**: ela vê a previsão (hoje + **2 sóis**) e manda 1 mensagem da lista (`storm`, `dust`, `science`, `life`, `none`). A mensagem chega a Marte **no sol seguinte**, com atraso sorteado de 3 a 22 min. |
 | Avisos em Marte com jogador na Terra | O aviso **antecipado** só vem da Terra. No dia da tempestade ou da poeira, o **alarme da base** dispara sozinho (`stormToday`, `dustNow`). *Decisão nossa: mantém a Terra essencial sem deixar a criança de Marte sem nenhum aviso. Ajustável em `MarsMessages()`.* |
 | Energia | Cada papel só muda a sua parte. O total nunca passa dos blocos do sol. Se uma carta reduz os blocos, o plano é cortado (ciência, depois blindagem, depois vida). |
-| Cartas e fim do sol | Só o comandante. |
+| Cartas, "Começar o dia", pausar e "Terminar o dia" | Só o comandante. |
+| Dia em tempo real | O **relógio é do servidor**: ele abre cada problema no segundo sorteado e encerra o dia aos 75 s ou quando tudo foi consertado. Sem problemas no sol (sóis 1 e 2), "Começar o dia" vai direto para a noite, como no solo. |
+| Consertar problemas | Qualquer jogador de Marte manda um astronauta na própria tela; o progresso e o "consertado" vão para o servidor, que aplica as regras (dose fora da base, consequência à noite). Dois jogadores consertando o mesmo problema: conta uma vez. |
+| Missões históricas | Iguais ao solo: a primeira partida da sala usa uma missão de força média; as seguintes, qualquer uma. Sem `missions.json`, erupções sorteadas. |
+| Antena desalinhada | Se ninguém consertou a antena, no sol seguinte Marte vê "sem sinal" e a mensagem da Terra **se perde**. |
 | O que cada um vê | A Terra vê previsão, recursos e o relatório, **não** o plano. Marte vê o plano e as mensagens, **não** a previsão nem a agenda das tempestades (revelada no fim). |
 | Dados pessoais | Nenhum: sem nome, sem conta, sem banco. Na tela, "Jogador 1..5". Tudo em memória; a sala some 15 min depois que todos saem. |
 
@@ -66,14 +70,17 @@ Endereço: `wss://<host>/ws`. Cada mensagem é um objeto com `t` (tipo).
 | `earth` | `option` | Terra, na vez da Terra |
 | `card` | `option` | Comandante |
 | `blocks` | `key` (`life`, `shield`, `science`), `value` | Dono do papel da parte |
-| `end_sol` | — | Comandante |
+| `start_day` | — | Comandante ("Começar o dia"; sem problemas, vai direto para a noite). `end_sol` é sinônimo |
+| `pause` / `end_day` | — | Comandante, na fase `day` |
+| `problem_progress` | `uid`, `progress` (0–1) | Jogador de Marte, na fase `day` (o cliente manda no máximo ~4 por segundo) |
+| `problem_resolve` | `uid` | Jogador de Marte, na fase `day` |
 
 **Servidor → cliente**
 
 | `t` | Conteúdo |
 | --- | --- |
 | `welcome` | `code`, `playerId`, `token` (guarde para reconectar) |
-| `state` | A cada mudança: `phase` (`lobby`, `earth`, `mars`, `ended`), `you`, `players`, `autoEarth`, e `mars` e/ou `earth` conforme os papéis. O relatório do último sol vem em `mars.lastReport` / `earth.lastReport`. |
+| `state` | A cada mudança (no dia, também a cada segundo do relógio): `phase` (`lobby`, `earth`, `mars`, `day`, `ended`), `you`, `players`, `autoEarth`, e `mars` e/ou `earth` conforme os papéis. O relatório do último sol vem em `mars.lastReport` / `earth.lastReport`. |
 | `error` | `code`: `room_not_found`, `room_full`, `role_taken`, `need_commander`, `not_your_role`, `wrong_phase`, `card_pending`, `invalid`, `bad_token`, `server_full`, `too_fast` |
 
 Limites: 5 jogadores por sala, 1.000 salas, mensagens de até 4 KB, 20 ações por segundo por conexão.
@@ -85,14 +92,16 @@ Requisitos: Go 1.27+.
 ```bash
 cd server
 go test -race ./...                                  # regras, paridade com o TS, coop, WebSocket
-FLARES_PATH=../public/data/donki-flares.json go run ./cmd/jezero-server
-curl localhost:8080/healthz                          # {"ok":true,"rooms":0,"realFlares":305}
+FLARES_PATH=../public/data/donki-flares.json MISSIONS_PATH=../public/data/missions.json go run ./cmd/jezero-server
+curl localhost:8080/healthz                          # {"ok":true,"rooms":0,"realFlares":305,"historicalMissions":6}
 ```
 
 | Variável | Padrão | O quê |
 | --- | --- | --- |
 | `PORT` | `8080` | Porta HTTP |
 | `FLARES_PATH` | `data/donki-flares.json` | Erupções reais do DONKI (sem o arquivo, usa simuladas) |
+| `MISSIONS_PATH` | `data/missions.json` | Missões históricas (sem o arquivo, erupções sorteadas) |
+| `WEB_DIR` | `web` | Pasta com o jogo compilado; se existir, é servido em `/` (a imagem Docker já traz) |
 | `ALLOWED_ORIGINS` | `localhost:*,127.0.0.1:*` | Hosts de onde o jogo pode conectar, separados por vírgula. Em produção, o host onde o jogo está publicado (ex.: `fronhaa.github.io`) |
 
 ## Link temporário (Cloudflare Quick Tunnel)
@@ -153,7 +162,7 @@ Com Nginx, lembre dos cabeçalhos de WebSocket (`Upgrade` e `Connection "upgrade
 As regras existem em dois lugares (`src/sim/` e `server/internal/sim/`). O **teste de paridade** garante que são idênticas:
 
 1. Mudou algo em `src/sim/`? Faça a mesma mudança em `server/internal/sim/`.
-2. Rode `npm run sim:golden` na raiz: ele joga 240 partidas com o TS e grava um hash do estado a cada passo.
+2. Rode `npm run sim:golden` na raiz: ele joga 360 partidas com o TS (erupções reais, simuladas e as missões históricas, abrindo, consertando e deixando problemas pela metade) e grava um hash do estado a cada passo.
 3. Rode `go test ./...` em `server/`: o Go repete as partidas e precisa dar o mesmo hash em todos os passos.
 4. O CI faz os dois e falha se divergir.
 

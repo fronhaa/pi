@@ -12,8 +12,24 @@ import (
 type Mission struct {
 	State     GameState
 	rng       *Rng
-	cardLines []ReportLine
+	cardLines []ReportLine // carta e problemas resolvidos: entram no relatório do sol
+	uid       int
+	// Antena desalinhada na noite anterior: sem mensagens no próximo sol.
+	nextCommsDown bool
+	// Problemas que continuam no próximo sol (trabalho pela metade em noite de tempestade).
+	carryOver []Problem
 }
+
+// cardPool: as cartas "Painéis empoeirados" e "Vazamento na estufa" viraram problemas (GDD).
+var cardPool = func() []CardID {
+	var out []CardID
+	for _, id := range CardIDs {
+		if id != "dustyPanels" && id != "greenhouseLeak" {
+			out = append(out, id)
+		}
+	}
+	return out
+}()
 
 var (
 	ErrNoPendingCard = errors.New("nenhuma carta pendente")
@@ -21,11 +37,18 @@ var (
 	ErrMissionOver   = errors.New("missão já terminou")
 	ErrCardPending   = errors.New("responda a carta antes de terminar o sol")
 	ErrInvalidPlan   = errors.New("plano de energia inválido")
+	ErrNoProblem     = errors.New("problema inexistente")
 )
 
-func NewMission(seed uint32, realFlares []Flare) *Mission {
+// NewMission: historical != nil usa as tempestades e os atrasos reais da missão histórica.
+func NewMission(seed uint32, realFlares []Flare, historical *HistoricalMission) *Mission {
 	m := &Mission{rng: NewRng(seed)}
-	storms := m.scheduleStorms(realFlares)
+	var storms []ScheduledStorm
+	if historical != nil {
+		storms = historicalStorms(historical)
+	} else {
+		storms = m.scheduleStorms(realFlares)
+	}
 	stormSols := map[int]bool{}
 	for _, s := range storms {
 		stormSols[s.Sol] = true
@@ -43,14 +66,15 @@ func NewMission(seed uint32, realFlares []Flare) *Mission {
 		}
 	}
 	sols := Shuffle(m.rng, candidates)[:Config.CardsPerGame]
-	ids := Shuffle(m.rng, CardIDs)[:Config.CardsPerGame]
+	ids := Shuffle(m.rng, cardPool)[:Config.CardsPerGame]
 	cardSols := map[int]CardID{}
 	for i, s := range sols {
 		cardSols[s] = ids[i]
 	}
 
 	m.State = GameState{
-		Seed: seed,
+		Seed:       seed,
+		Historical: historical,
 		Res: Resources{
 			Battery: Config.BatteryStart,
 			Life:    Config.LifeStart,
@@ -95,7 +119,16 @@ func (m *Mission) scheduleStorms(realFlares []Flare) []ScheduledStorm {
 	}
 	out := make([]ScheduledStorm, len(sols))
 	for i, sol := range sols {
-		out[i] = ScheduledStorm{Sol: sol, Flare: flares[i], DelayMin: m.rng.Int(Config.CommDelayMin, Config.CommDelayMax)}
+		out[i] = ScheduledStorm{Sol: sol, Flare: flares[i], DelayMin: float64(m.rng.Int(Config.CommDelayMin, Config.CommDelayMax))}
+	}
+	return out
+}
+
+// historicalStorms: tempestades fixas; o aviso chega um sol antes, com o atraso real daquele sol.
+func historicalStorms(h *HistoricalMission) []ScheduledStorm {
+	out := make([]ScheduledStorm, len(h.Storms))
+	for i, s := range h.Storms {
+		out[i] = ScheduledStorm{Sol: s.Sol, Flare: s.Flare, DelayMin: h.Delays[s.Sol-2]}
 	}
 	return out
 }
@@ -132,7 +165,16 @@ func (m *Mission) startSol(sol int) {
 		s.DustHold = Config.DustStormHoldSols
 	}
 
-	s.Messages = m.buildMessages(sol)
+	s.CommsDown = m.nextCommsDown
+	m.nextCommsDown = false
+	// Antena desalinhada: os avisos da Terra deste sol se perdem (a tempestade vem do mesmo jeito).
+	if s.CommsDown {
+		s.Messages = []Message{{Kind: "noSignal"}}
+	} else {
+		s.Messages = m.buildMessages(sol)
+	}
+	s.Problems = append(append([]Problem(nil), m.carryOver...), scheduleProblems(sol, m.rng, func() int { m.uid++; return m.uid })...)
+	m.carryOver = nil
 
 	if id, ok := s.CardSols[sol]; ok {
 		onCardDrawn(id, &s.Res)
@@ -147,7 +189,14 @@ func (m *Mission) startSol(sol int) {
 
 func (m *Mission) buildMessages(sol int) []Message {
 	s := &m.State
-	delay := func() int { return m.rng.Int(Config.CommDelayMin, Config.CommDelayMax) }
+	h := s.Historical
+	// Missão histórica: atraso real Terra-Marte do sol (JPL Horizons). Sem ela, sorteado.
+	delay := func() float64 {
+		if h != nil {
+			return h.Delays[sol-1]
+		}
+		return float64(m.rng.Int(Config.CommDelayMin, Config.CommDelayMax))
+	}
 	var msgs []Message
 	for _, storm := range s.Storms {
 		f := storm.Flare
@@ -155,7 +204,11 @@ func (m *Mission) buildMessages(sol int) []Message {
 			msgs = append(msgs, Message{Kind: "stormAlert", Flare: &f, DelayMin: storm.DelayMin, ImpactSol: storm.Sol})
 		}
 		if storm.Sol == sol {
-			msgs = append(msgs, Message{Kind: "stormToday", Flare: &f, DelayMin: storm.DelayMin})
+			d := storm.DelayMin
+			if h != nil {
+				d = h.Delays[sol-1]
+			}
+			msgs = append(msgs, Message{Kind: "stormToday", Flare: &f, DelayMin: d})
 		}
 	}
 	if s.DustStormSol == sol+1 {
@@ -189,6 +242,65 @@ func (m *Mission) AnswerCard(optionID string) ([]ReportLine, error) {
 	m.updateBlocks()
 	m.checkLoss()
 	return lines, nil
+}
+
+// ---------- problemas pela base (tempo da tripulação) ----------
+
+func (m *Mission) problem(uid int) *Problem {
+	for i := range m.State.Problems {
+		if m.State.Problems[i].UID == uid {
+			return &m.State.Problems[i]
+		}
+	}
+	return nil
+}
+
+// OpenProblem: o relógio do dia chegou ao SpawnAt; o problema aparece na base.
+func (m *Mission) OpenProblem(uid int) error {
+	p := m.problem(uid)
+	if p == nil {
+		return ErrNoProblem
+	}
+	if p.Status == "pending" {
+		p.Status = "open"
+	}
+	return nil
+}
+
+// SetProblemProgress: progresso do trabalho (0–1), informado enquanto um astronauta trabalha.
+func (m *Mission) SetProblemProgress(uid int, progress float64) error {
+	p := m.problem(uid)
+	if p == nil {
+		return ErrNoProblem
+	}
+	if p.Status != "done" {
+		p.Progress = clamp(progress, 0, 1)
+	}
+	return nil
+}
+
+// ResolveProblem: um astronauta terminou o trabalho. Fora da base, soma dose (GDD).
+func (m *Mission) ResolveProblem(uid int) error {
+	p := m.problem(uid)
+	if p == nil {
+		return ErrNoProblem
+	}
+	if p.Status == "done" {
+		return nil
+	}
+	p.Status = "done"
+	p.Progress = 1
+	outside := Problems[p.Kind].Outside
+	if outside {
+		m.State.Res.Dose = round1(m.State.Res.Dose + Config.ProblemsOutsideDose)
+	}
+	key := "report.problem.fixed"
+	if outside {
+		key = "report.problem.fixedOutside"
+	}
+	m.cardLines = append(m.cardLines, ReportLine{Key: key, Params: map[string]any{"problem": "problem." + string(p.Kind), "dose": Config.ProblemsOutsideDose}, Tone: "good"})
+	m.checkLoss()
+	return nil
 }
 
 func (m *Mission) IsPlanValid(p EnergyPlan) bool {
@@ -237,14 +349,34 @@ func (m *Mission) EndSol(plan EnergyPlan) (SolReport, error) {
 	}
 	lines = append(lines, ReportLine{Key: "report.shield", Params: map[string]any{"blocks": plan.Shield, "value": jsRound(r.Shield)}, Tone: tone})
 
-	// Ciência: metade no sol de tempestade.
+	// Problemas sem atendimento. Em noite de tempestade, trabalho pela metade continua amanhã (GDD);
+	// o resto cobra a conta hoje.
+	var carried, failed []Problem
+	for _, p := range s.Problems {
+		if p.Status == "done" {
+			continue
+		}
+		if storm != nil && p.Progress > 0 {
+			carried = append(carried, p)
+		} else {
+			failed = append(failed, p)
+		}
+	}
+	roverStuck := slices.ContainsFunc(failed, func(p Problem) bool { return p.Kind == "roverStuck" })
+
+	// Ciência: metade no sol de tempestade; zero com o rover atolado.
 	factor := 1.0
 	if storm != nil {
 		factor = Config.ScienceStormFactor
 	}
-	sciGain := mul(mul(float64(plan.Science), Config.SciencePerBlock), factor)
+	sciGain := 0.0
+	if !roverStuck {
+		sciGain = mul(mul(float64(plan.Science), Config.SciencePerBlock), factor)
+	}
 	r.Science += sciGain
-	if plan.Science > 0 {
+	if roverStuck && plan.Science > 0 {
+		lines = append(lines, ReportLine{Key: "report.problem.roverStuck", Params: map[string]any{"blocks": plan.Science}, Tone: "bad"})
+	} else if plan.Science > 0 {
 		k := "report.science"
 		if storm != nil {
 			k = "report.science.storm"
@@ -274,7 +406,11 @@ func (m *Mission) EndSol(plan EnergyPlan) (SolReport, error) {
 		dose := StormDose(storm.Flare.Cls, r.Shield)
 		r.Dose += dose
 		stormResult = &StormResult{Flare: storm.Flare, Dose: dose}
-		lines = append(lines, ReportLine{Key: "report.storm", Params: map[string]any{"label": storm.Flare.Label, "dose": dose, "shield": jsRound(r.Shield)}, Tone: "bad"})
+		key := "report.storm"
+		if storm.Flare.Source == "cme" {
+			key = "report.storm.cme"
+		}
+		lines = append(lines, ReportLine{Key: key, Params: map[string]any{"label": storm.Flare.Label, "dose": dose, "shield": jsRound(r.Shield)}, Tone: "bad"})
 	}
 	r.Dose += Config.DosePerSol
 
@@ -287,6 +423,32 @@ func (m *Mission) EndSol(plan EnergyPlan) (SolReport, error) {
 	} else if r.Dust > 0 {
 		r.Dust = math.Max(0, r.Dust-Config.DustWindCleanPerSol)
 		lines = append(lines, ReportLine{Key: "report.dust.wind", Params: map[string]any{"dust": jsRound(r.Dust)}})
+	}
+
+	// Problemas sem atendimento: a consequência chega à noite (GDD, "Problemas pela base").
+	fx := map[string]any{"dust": Config.ProblemEffectDust, "lifeLeak": Config.ProblemEffectLifeLeak, "shieldBag": Config.ProblemEffectShieldBag}
+	for _, p := range failed {
+		switch p.Kind {
+		case "dustyPanels":
+			r.Dust = math.Min(Config.DustMax, r.Dust+Config.ProblemEffectDust)
+		case "greenhouseLeak":
+			r.Life = clamp(r.Life-Config.ProblemEffectLifeLeak, 0, Config.LifeMax)
+		case "tornBag":
+			r.Shield = clamp(r.Shield-Config.ProblemEffectShieldBag, 0, Config.ShieldMax)
+		case "antenna":
+			m.nextCommsDown = true
+		}
+		if p.Kind != "roverStuck" {
+			lines = append(lines, ReportLine{Key: "report.problem.failed." + string(p.Kind), Params: fx, Tone: "bad"})
+		}
+	}
+	for _, p := range carried {
+		lines = append(lines, ReportLine{Key: "report.problem.carried", Params: map[string]any{"problem": "problem." + string(p.Kind)}})
+	}
+	m.carryOver = nil
+	for _, p := range carried {
+		p.Status, p.SpawnAt = "open", 0
+		m.carryOver = append(m.carryOver, p)
 	}
 
 	r.Life = round1(r.Life)

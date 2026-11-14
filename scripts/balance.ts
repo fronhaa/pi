@@ -9,12 +9,15 @@
 import { readFileSync } from 'node:fs';
 import { CONFIG } from '../src/sim/config.ts';
 import { Mission } from '../src/sim/mission.ts';
-import type { EnergyPlan, Flare } from '../src/sim/types.ts';
+import { parseMissions } from '../src/sim/historical.ts';
+import type { EnergyPlan, Flare, HistoricalMission, Problem } from '../src/sim/types.ts';
 
 type Strategy = {
   name: string;
   plan(m: Mission): EnergyPlan;
   card(m: Mission): string;
+  /** Problemas pela base: a tripulação vai resolver este? */
+  fix(m: Mission, p: Problem): boolean;
 };
 
 const N = Number(process.env.BALANCE_N || 2000);
@@ -25,6 +28,14 @@ function loadRealFlares(): Flare[] {
     return data.flares.map((f: { cls: string; time: string; link: string }) => ({
       cls: f.cls[0], label: f.cls, real: true, time: f.time, link: f.link,
     }));
+  } catch {
+    return [];
+  }
+}
+
+function loadHistorical(): HistoricalMission[] {
+  try {
+    return parseMissions(JSON.parse(readFileSync(new URL('../public/data/missions.json', import.meta.url), 'utf8')));
   } catch {
     return [];
   }
@@ -44,6 +55,7 @@ const strategies: Strategy[] = [
     name: 'Só ciência, sem guardar bateria',
     plan: (m) => ({ life: 0, shield: 0, science: m.state.blocks }),
     card: (m) => (m.state.pendingCard!.id === 'cargoShip' ? 'experiment' : firstOption(m)),
+    fix: () => false,
   },
   {
     name: 'Só segurança, sem ciência',
@@ -57,11 +69,13 @@ const strategies: Strategy[] = [
       const id = m.state.pendingCard!.id;
       return ({ dustyPanels: 'wait', mysteryRock: 'skip', greenhouseLeak: 'fixNow', cargoShip: 'shieldKit', brokenSensor: 'askEarth', subsurfaceIce: 'drill' } as const)[id];
     },
+    fix: () => true,
   },
   {
     name: 'Ignora a blindagem',
     plan: (m) => fill(m.state.blocks, 3, 0, 2),
     card: (m) => (m.state.pendingCard!.id === 'cargoShip' ? 'batteries' : firstOption(m)),
+    fix: (_m, p) => p.kind !== 'tornBag',
   },
   {
     name: 'Reage aos alertas e guarda reserva',
@@ -87,18 +101,25 @@ const strategies: Strategy[] = [
       if (id === 'brokenSensor') return 'askEarth';
       return s.res.life < 60 && s.res.battery >= 40 ? 'drill' : 'notNow';
     },
+    // Resolve todos os problemas (medido: triagem simples perde mais por falta de energia).
+    fix: () => true,
   },
 ];
 
-function run(strategy: Strategy, flares: Flare[]) {
+function run(strategy: Strategy, flares: Flare[], historical: HistoricalMission | null = null) {
   const tally = { lostLife: 0, lostDose: 0, stars: [0, 0, 0, 0] };
   for (let seed = 1; seed <= N; seed++) {
-    const m = new Mission(seed, flares);
+    const m = new Mission(seed, flares, historical);
     while (m.state.outcome.status === 'playing') {
       if (m.state.pendingCard) {
         m.answerCard(strategy.card(m));
         if (m.state.outcome.status !== 'playing') break;
       }
+      for (const p of m.state.problems) {
+        m.openProblem(p.uid);
+        if (strategy.fix(m, p)) m.resolveProblem(p.uid);
+      }
+      if (m.state.outcome.status !== 'playing') break;
       m.endSol(strategy.plan(m));
     }
     const o = m.state.outcome;
@@ -119,6 +140,19 @@ for (const [label, flares] of [['erupções reais do DONKI', loadRealFlares()], 
   console.log('Estratégia'.padEnd(38), 'vida 0', 'dose', ' 1★ ', ' 2★ ', ' 3★');
   for (const s of strategies) {
     const t = run(s, flares as Flare[]);
+    console.log(s.name.padEnd(38), pct(t.lostLife).padStart(6), pct(t.lostDose), pct(t.stars[1]), pct(t.stars[2]), pct(t.stars[3]));
+  }
+}
+
+// Missões históricas: tempestades fixas por missão, então cada uma é testada separadamente.
+const historical = loadHistorical();
+if (historical.length === 0) console.log('\n(sem public/data/missions.json; pulando missões históricas)');
+for (const h of historical) {
+  const storms = h.storms.map((x) => `sol ${x.sol} ${x.flare.label}`).join(', ');
+  console.log(`\n${N} partidas por estratégia, missão histórica ${h.id} (${h.difficulty}; ${storms})\n`);
+  console.log('Estratégia'.padEnd(38), 'vida 0', 'dose', ' 1★ ', ' 2★ ', ' 3★');
+  for (const s of strategies) {
+    const t = run(s, [], h);
     console.log(s.name.padEnd(38), pct(t.lostLife).padStart(6), pct(t.lostDose), pct(t.stars[1]), pct(t.stars[2]), pct(t.stars[3]));
   }
 }

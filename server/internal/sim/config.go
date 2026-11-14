@@ -36,6 +36,17 @@ var Config = struct {
 
 	CardsPerGame, CardsFirstSol, CardsLastSol int
 
+	// Problemas pela base (tempo da tripulação).
+	ProblemsFirstSol, ProblemsMinPerDay, ProblemsMaxPerDay int
+	ProblemsSpawnMin, ProblemsSpawnMax                     int
+	ProblemsDaySeconds, ProblemsAirlockSeconds             float64
+	ProblemsOutsideDose                                    float64
+	ProblemEffectDust, ProblemEffectLifeLeak               float64
+	ProblemEffectShieldBag                                 float64
+
+	// Missões históricas: força da CME → classe na mesma escala das erupções.
+	StrengthClass map[string]FlareClass
+
 	StarsDoseFor3 float64
 }{
 	Sols: 15,
@@ -62,6 +73,14 @@ var Config = struct {
 	DustStormFirstSol: 3, DustStormLastSol: 12,
 
 	CardsPerGame: 4, CardsFirstSol: 2, CardsLastSol: 14,
+
+	ProblemsFirstSol: 3, ProblemsMinPerDay: 1, ProblemsMaxPerDay: 2,
+	ProblemsSpawnMin: 3, ProblemsSpawnMax: 35,
+	ProblemsDaySeconds: 75, ProblemsAirlockSeconds: 3,
+	ProblemsOutsideDose: 1,
+	ProblemEffectDust:   20, ProblemEffectLifeLeak: 10, ProblemEffectShieldBag: 8,
+
+	StrengthClass: map[string]FlareClass{"weak": "C", "medium": "M", "strong": "X"},
 
 	StarsDoseFor3: 50,
 }

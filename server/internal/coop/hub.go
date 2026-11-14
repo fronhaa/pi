@@ -13,13 +13,15 @@ import (
 
 // Action é a mensagem que o cliente manda (JSON). Só os campos da ação usada vêm preenchidos.
 type Action struct {
-	T      string `json:"t"`
-	Code   string `json:"code,omitempty"`
-	Token  string `json:"token,omitempty"`
-	Role   Role   `json:"role,omitempty"`
-	Option string `json:"option,omitempty"`
-	Key    string `json:"key,omitempty"`
-	Value  int    `json:"value,omitempty"`
+	T        string  `json:"t"`
+	Code     string  `json:"code,omitempty"`
+	Token    string  `json:"token,omitempty"`
+	Role     Role    `json:"role,omitempty"`
+	Option   string  `json:"option,omitempty"`
+	Key      string  `json:"key,omitempty"`
+	Value    int     `json:"value,omitempty"`
+	UID      int     `json:"uid,omitempty"`
+	Progress float64 `json:"progress,omitempty"`
 }
 
 var (
@@ -37,15 +39,17 @@ const codeLen = 4
 
 // Hub guarda as salas abertas. Tudo em memória: se o servidor reiniciar, as salas somem.
 type Hub struct {
-	mu       sync.Mutex
-	rooms    map[string]*Room
-	flares   []sim.Flare
-	MaxRooms int
-	IdleTTL  time.Duration
+	mu        sync.Mutex
+	rooms     map[string]*Room
+	flares    []sim.Flare
+	missions  []sim.HistoricalMission
+	MaxRooms  int
+	IdleTTL   time.Duration
+	TimeScale float64 // relógio do dia das salas novas (1 = tempo real; maior só em teste)
 }
 
-func NewHub(flares []sim.Flare) *Hub {
-	return &Hub{rooms: map[string]*Room{}, flares: flares, MaxRooms: 1000, IdleTTL: 15 * time.Minute}
+func NewHub(flares []sim.Flare, missions []sim.HistoricalMission) *Hub {
+	return &Hub{rooms: map[string]*Room{}, flares: flares, missions: missions, MaxRooms: 1000, IdleTTL: 15 * time.Minute, TimeScale: 1}
 }
 
 func (h *Hub) Create() (*Room, error) {
@@ -57,7 +61,8 @@ func (h *Hub) Create() (*Room, error) {
 	for {
 		code := randomCode()
 		if _, taken := h.rooms[code]; !taken {
-			r := newRoom(code, h.flares, func() (uint32, uint32) { return randomU32(), randomU32() })
+			r := newRoom(code, h.flares, h.missions, func() (uint32, uint32) { return randomU32(), randomU32() })
+			r.TimeScale = h.TimeScale
 			h.rooms[code] = r
 			return r, nil
 		}

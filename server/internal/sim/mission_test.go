@@ -14,14 +14,19 @@ import (
 // Os traços vêm de `npm run sim:golden`: mesmas sementes, mesmas ações, mesmo hash por passo.
 
 type goldenFile struct {
-	Flares []Flare `json:"flares"`
-	Games  []struct {
-		Seed     uint32 `json:"seed"`
-		Real     bool   `json:"real"`
-		Strategy string `json:"strategy"`
-		Actions  []struct {
-			Card *string `json:"card"`
-			Plan *[3]int `json:"plan"`
+	Flares     []Flare             `json:"flares"`
+	Historical []HistoricalMission `json:"historical"`
+	Games      []struct {
+		Seed       uint32 `json:"seed"`
+		Real       bool   `json:"real"`
+		Historical *int   `json:"historical"`
+		Strategy   string `json:"strategy"`
+		Actions    []struct {
+			Card     *string     `json:"card"`
+			Plan     *[3]int     `json:"plan"`
+			Open     *int        `json:"open"`
+			Progress *[2]float64 `json:"progress"`
+			Resolve  *int        `json:"resolve"`
 		} `json:"actions"`
 		Hashes []string `json:"hashes"`
 	} `json:"games"`
@@ -45,7 +50,11 @@ func TestParityWithTypeScript(t *testing.T) {
 		if game.Real {
 			flares = g.Flares
 		}
-		m := NewMission(game.Seed, flares)
+		var hist *HistoricalMission
+		if game.Historical != nil {
+			hist = &g.Historical[*game.Historical]
+		}
+		m := NewMission(game.Seed, flares, hist)
 		step := func(i int) {
 			t.Helper()
 			if got := stateHash(t, m); got != game.Hashes[i] {
@@ -55,7 +64,14 @@ func TestParityWithTypeScript(t *testing.T) {
 		}
 		step(0)
 		for i, a := range game.Actions {
+			var err error
 			switch {
+			case a.Open != nil:
+				err = m.OpenProblem(*a.Open)
+			case a.Progress != nil:
+				err = m.SetProblemProgress(int(a.Progress[0]), a.Progress[1])
+			case a.Resolve != nil:
+				err = m.ResolveProblem(*a.Resolve)
 			case a.Card != nil:
 				if _, err := m.AnswerCard(*a.Card); err != nil {
 					t.Fatalf("seed %d passo %d: %v", game.Seed, i+1, err)
@@ -65,6 +81,9 @@ func TestParityWithTypeScript(t *testing.T) {
 				if _, err := m.EndSol(p); err != nil {
 					t.Fatalf("seed %d passo %d: %v", game.Seed, i+1, err)
 				}
+			}
+			if err != nil {
+				t.Fatalf("seed %d passo %d: %v", game.Seed, i+1, err)
 			}
 			step(i + 1)
 		}
@@ -95,10 +114,19 @@ func snapshotOf(m *Mission) any {
 	if reports == nil {
 		reports = []SolReport{}
 	}
+	problems := s.Problems
+	if problems == nil {
+		problems = []Problem{}
+	}
+	var historical any
+	if s.Historical != nil {
+		historical = s.Historical.ID
+	}
 	return map[string]any{
 		"sol": s.Sol, "res": s.Res, "blocks": s.Blocks, "storms": s.Storms,
 		"dustStormSol": s.DustStormSol, "dustHold": s.DustHold, "cardSols": cardSols,
 		"pendingCard": s.PendingCard, "messages": s.Messages, "reports": reports, "outcome": s.Outcome,
+		"problems": problems, "commsDown": s.CommsDown, "historical": historical,
 	}
 }
 

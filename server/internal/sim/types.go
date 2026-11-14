@@ -1,17 +1,56 @@
 package sim
 
+import (
+	"encoding/json"
+	"strconv"
+)
+
 // Tipos espelham src/sim/types.ts. As tags JSON usam os mesmos nomes do TS,
 // para o cliente reaproveitar a interface sem conversão.
 
 type FlareClass string
 
-// Flare é a erupção que dispara uma tempestade. Real = veio do DONKI.
+// Flare é o evento solar que dispara uma tempestade. Real = veio do DONKI.
+// Source "cme" = ejeção de massa coronal de missão histórica; vazio = erupção.
 type Flare struct {
-	Cls   FlareClass `json:"cls"`
-	Label string     `json:"label"`
-	Real  bool       `json:"real"`
-	Time  string     `json:"time,omitempty"`
-	Link  string     `json:"link,omitempty"`
+	Cls      FlareClass     `json:"cls"`
+	Label    string         `json:"label"`
+	Real     bool           `json:"real"`
+	Time     string         `json:"time,omitempty"`
+	Link     string         `json:"link,omitempty"`
+	Source   string         `json:"source,omitempty"`
+	SpeedKmS NullableNumber `json:"speedKmS,omitzero"`
+}
+
+// NullableNumber reproduz um campo TS `number | null` que pode também estar ausente:
+// ausente (Set=false) some do JSON; Set e !Valid vira null; Set e Valid vira o número.
+type NullableNumber struct {
+	Set   bool
+	Valid bool
+	V     float64
+}
+
+func (n NullableNumber) IsZero() bool { return !n.Set }
+
+func (n NullableNumber) MarshalJSON() ([]byte, error) {
+	if !n.Valid {
+		return []byte("null"), nil
+	}
+	return json.Marshal(n.V)
+}
+
+func (n *NullableNumber) UnmarshalJSON(b []byte) error {
+	n.Set = true
+	if string(b) == "null" {
+		n.Valid = false
+		return nil
+	}
+	v, err := strconv.ParseFloat(string(b), 64)
+	if err != nil {
+		return err
+	}
+	n.Valid, n.V = true, v
+	return nil
 }
 
 type Resources struct {
@@ -41,12 +80,13 @@ type Card struct {
 }
 
 // Message é a união de src/sim/types.ts (Message). Campos ausentes ficam de fora do JSON.
+// DelayMin é float: nas missões históricas é o atraso real (ex.: 9,4 min).
 type Message struct {
-	Kind      string `json:"kind"`
-	Flare     *Flare `json:"flare,omitempty"`
-	DelayMin  int    `json:"delayMin,omitempty"`
-	ImpactSol int    `json:"impactSol,omitempty"`
-	Sol       int    `json:"sol,omitempty"`
+	Kind      string  `json:"kind"`
+	Flare     *Flare  `json:"flare,omitempty"`
+	DelayMin  float64 `json:"delayMin,omitempty"`
+	ImpactSol int     `json:"impactSol,omitempty"`
+	Sol       int     `json:"sol,omitempty"`
 }
 
 type ReportLine struct {
@@ -77,13 +117,38 @@ type Outcome struct {
 }
 
 type ScheduledStorm struct {
-	Sol      int   `json:"sol"`
-	Flare    Flare `json:"flare"`
-	DelayMin int   `json:"delayMin"`
+	Sol      int     `json:"sol"`
+	Flare    Flare   `json:"flare"`
+	DelayMin float64 `json:"delayMin"`
+}
+
+type ProblemKind string
+
+// Problem espelha Problem de src/sim/types.ts (tempo da tripulação).
+type Problem struct {
+	UID      int         `json:"uid"`
+	Kind     ProblemKind `json:"kind"`
+	SpawnAt  int         `json:"spawnAt"`
+	Status   string      `json:"status"` // pending | open | done
+	Progress float64     `json:"progress"`
+}
+
+// HistoricalMission espelha HistoricalMission (15 sóis reais do passado).
+type HistoricalMission struct {
+	ID         int    `json:"id"`
+	Difficulty string `json:"difficulty"`
+	StartUtc   string `json:"startUtc"`
+	EndUtc     string `json:"endUtc"`
+	Storms     []struct {
+		Sol   int   `json:"sol"`
+		Flare Flare `json:"flare"`
+	} `json:"storms"`
+	Delays []float64 `json:"delays"`
 }
 
 type GameState struct {
 	Seed         uint32
+	Historical   *HistoricalMission
 	Sol          int
 	Res          Resources
 	Blocks       int
@@ -93,6 +158,8 @@ type GameState struct {
 	CardSols     map[int]CardID
 	PendingCard  *Card
 	Messages     []Message
+	Problems     []Problem
+	CommsDown    bool
 	Reports      []SolReport
 	Outcome      Outcome
 }

@@ -6,6 +6,7 @@
 //	PORT             porta HTTP (padrão 8080)
 //	FLARES_PATH      erupções reais do DONKI (padrão data/donki-flares.json; sem arquivo = simuladas)
 //	ALLOWED_ORIGINS  hosts que podem conectar, separados por vírgula (padrão "localhost:*,127.0.0.1:*")
+//	MISSIONS_PATH    missões históricas (padrão data/missions.json; sem arquivo = erupções sorteadas)
 //	WEB_DIR          pasta com o jogo já compilado (dist/); se existir, é servido em "/" (padrão web)
 package main
 
@@ -35,8 +36,9 @@ func main() {
 	}
 	origins := strings.Split(env("ALLOWED_ORIGINS", "localhost:*,127.0.0.1:*"), ",")
 	flares := loadFlares(env("FLARES_PATH", "data/donki-flares.json"), log)
+	missions := loadMissions(env("MISSIONS_PATH", "data/missions.json"), log)
 
-	hub := coop.NewHub(flares)
+	hub := coop.NewHub(flares, missions)
 	mux := http.NewServeMux()
 	mux.Handle("/ws", &coop.WSHandler{Hub: hub, OriginPatterns: origins, Log: log})
 	// O próprio servidor pode servir o jogo: um endereço só para o jogo e o coop (mesma origem).
@@ -46,7 +48,7 @@ func main() {
 	}
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "rooms": hub.Count(), "realFlares": len(flares)})
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "rooms": hub.Count(), "realFlares": len(flares), "historicalMissions": len(missions)})
 	})
 
 	srv := &http.Server{Addr: ":" + port, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
@@ -105,6 +107,18 @@ func env(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// loadMissions lê as missões históricas com a MESMA regra do cliente (src/sim/historical.ts).
+func loadMissions(path string, log *slog.Logger) []sim.HistoricalMission {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		log.Warn("sem missões históricas; usando erupções sorteadas", "path", path, "err", err)
+		return nil
+	}
+	m := sim.ParseMissions(raw)
+	log.Info("missões históricas", "n", len(m))
+	return m
 }
 
 // loadFlares lê o snapshot do DONKI com a MESMA regra do cliente (src/data/flares.ts): só M e X.

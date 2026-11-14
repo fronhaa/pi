@@ -3,7 +3,8 @@ import { Physics, RAPIER } from '@/core/Physics';
 import { FIXED_DT, MAX_FRAME_DT } from '@/core/constants';
 import type { Input } from '@/core/Input';
 import { ROLES, type Crew } from './Crew';
-import type { Role } from './MarsBase';
+import { POSTS, type Role } from './MarsBase';
+import { findPath } from './crewPath';
 
 /**
  * Movimentação da tripulação com física (Rapier) e gravidade de Marte.
@@ -39,6 +40,13 @@ export class CrewMotion {
   private readonly bodies = {} as Record<Role, RAPIER.RigidBody>;
   private readonly targets: Partial<Record<Role, THREE.Vector3>> = {};
   private readonly stuckTime: Partial<Record<Role, number>> = {};
+  /** Próximos pontos do caminho, depois do alvo atual. */
+  private readonly routes: Partial<Record<Role, THREE.Vector3[]>> = {};
+  /** Astronautas andando sozinhos (piloto automático: ir dormir, voltar ao posto). */
+  private readonly auto = new Map<Role, { speed: number; onArrive?: () => void }>();
+  private readonly insideRoles = new Set<Role>();
+  /** Destino final de uma ordem do jogador/tarefa (identidade usada por CrewTasks para saber se a ordem mudou). */
+  private readonly dests: Partial<Record<Role, THREE.Vector3>> = {};
   private readonly ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
   private accumulator = 0;
   private jumped = false;
@@ -70,13 +78,123 @@ export class CrewMotion {
     this.opts.onSelect?.(role);
   }
 
-  /** Clique/toque no chão: o astronauta selecionado anda até lá sozinho. */
+  /** Clique/toque no chão: o astronauta selecionado anda até lá, contornando os prédios. */
   moveTo(point: THREE.Vector3): void {
+    this.moveRole(this.selected, point);
+  }
+
+  /**
+   * Manda um astronauta andar até um ponto, desviando das construções (crewPath).
+   * Retorna o destino: CrewTasks compara com `targetOf` para saber se o jogador deu outra ordem.
+   */
+  moveRole(role: Role, point: THREE.Vector3): THREE.Vector3 {
     const p = point.clone();
     p.y = 0;
     if (p.length() > BOUNDS) p.setLength(BOUNDS);
-    this.targets[this.selected] = p;
-    this.stuckTime[this.selected] = 0;
+    this.cancelAuto(role);
+    const t = this.bodies[role].translation();
+    const path = findPath({ x: t.x, z: t.z }, { x: p.x, z: p.z }, this.opts.obstacles, RADIUS).map((q) => new THREE.Vector3(q.x, 0, q.z));
+    this.targets[role] = path.shift();
+    this.routes[role] = path;
+    this.stuckTime[role] = 0;
+    this.dests[role] = p;
+    return p;
+  }
+
+  /** Destino da ordem atual (undefined = parado, teclado ou piloto automático). */
+  targetOf(role: Role): THREE.Vector3 | undefined {
+    return this.targets[role] ? this.dests[role] : undefined;
+  }
+
+  /** Para no lugar (ex.: começou a trabalhar). */
+  stop(role: Role): void {
+    this.cancelAuto(role);
+    delete this.targets[role];
+    delete this.dests[role];
+  }
+
+  /** Quantos astronautas estão dentro (habitat ou abrigo). */
+  get insideCount(): number {
+    return this.insideRoles.size;
+  }
+
+  /**
+   * Noite: cada astronauta anda (ou corre) até a porta, desviando das construções, e entra.
+   * `onAllInside` é chamado quando o último entra.
+   */
+  goInside(door: THREE.Vector3, speed: number, onAllInside: () => void): void {
+    for (const role of ROLES) {
+      if (this.insideRoles.has(role)) continue;
+      this.walkPath(role, door, speed, () => {
+        this.hide(role);
+        if (this.insideRoles.size === ROLES.length) onAllInside();
+      });
+    }
+    if (this.insideRoles.size === ROLES.length) onAllInside();
+  }
+
+  /** Quem não chegou a tempo entra direto (a noite não espera para sempre). */
+  forceInside(): void {
+    for (const role of ROLES) if (!this.insideRoles.has(role)) this.hide(role);
+  }
+
+  /** Manhã: todos saem pela porta e voltam andando aos seus postos. O jogador pode assumir a qualquer momento. */
+  comeOut(door: THREE.Vector3): void {
+    ROLES.forEach((role, i) => {
+      if (!this.insideRoles.has(role)) return;
+      this.insideRoles.delete(role);
+      const body = this.bodies[role];
+      // Saem um ao lado do outro, para não nascerem dentro um do outro.
+      const x = door.x + (i - 1.5) * 0.8;
+      body.setTranslation({ x, y: CENTER_Y + 0.02, z: door.z + 0.3 }, true);
+      body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      body.setEnabled(true);
+      this.opts.crew.members[role].root.visible = true;
+      this.walkPath(role, POSTS[role], WALK_SPEED);
+    });
+  }
+
+  private walkPath(role: Role, dest: THREE.Vector3, speed: number, onArrive?: () => void): void {
+    const t = this.bodies[role].translation();
+    const path = findPath({ x: t.x, z: t.z }, { x: dest.x, z: dest.z }, this.opts.obstacles, RADIUS).map(
+      (p) => new THREE.Vector3(p.x, 0, p.z),
+    );
+    this.targets[role] = path.shift();
+    this.routes[role] = path;
+    this.stuckTime[role] = 0;
+    this.auto.set(role, { speed, onArrive });
+  }
+
+  private cancelAuto(role: Role): void {
+    this.auto.delete(role);
+    delete this.routes[role];
+    delete this.dests[role];
+  }
+
+  /** Entra: some da cena e o corpo deixa de colidir, para não bloquear a porta. */
+  private hide(role: Role): void {
+    this.cancelAuto(role);
+    delete this.targets[role];
+    this.insideRoles.add(role);
+    const body = this.bodies[role];
+    body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    body.setEnabled(false);
+    this.opts.crew.members[role].root.visible = false;
+  }
+
+  /** Chegou ao fim do caminho (ou desistiu por estar preso). */
+  private arrive(role: Role): void {
+    const next = this.routes[role]?.shift();
+    if (next) {
+      this.targets[role] = next;
+      this.stuckTime[role] = 0;
+      return;
+    }
+    delete this.targets[role];
+    delete this.dests[role];
+    const auto = this.auto.get(role);
+    this.cancelAuto(role);
+    auto?.onArrive?.();
   }
 
   update(dt: number): void {
@@ -98,6 +216,7 @@ export class CrewMotion {
     }
 
     for (const role of ROLES) {
+      if (this.insideRoles.has(role)) continue;
       const body = this.bodies[role];
       const vel = body.linvel();
       let vx = 0;
@@ -111,6 +230,7 @@ export class CrewMotion {
           vx = dir.x * WALK_SPEED;
           vz = dir.z * WALK_SPEED;
           delete this.targets[role];
+          this.cancelAuto(role);
         }
         if (input.wasPressed('Space') && !focusOnControl() && this.isGrounded(body)) {
           body.setLinvel({ x: vel.x, y: JUMP_SPEED, z: vel.z }, true);
@@ -122,20 +242,32 @@ export class CrewMotion {
       }
 
       const target = this.targets[role];
-      if (this.enabled && target && vx === 0 && vz === 0) {
+      const auto = this.auto.get(role);
+      if (target && (this.enabled || auto) && vx === 0 && vz === 0) {
+        const speed = auto?.speed ?? WALK_SPEED;
         const t = body.translation();
         const dx = target.x - t.x;
         const dz = target.z - t.z;
         const dist = Math.hypot(dx, dz);
         if (dist < ARRIVE) {
-          delete this.targets[role];
+          this.arrive(role);
         } else {
-          vx = (dx / dist) * WALK_SPEED;
-          vz = (dz / dist) * WALK_SPEED;
-          // Sem caminho inteligente: se ficar preso num obstáculo, desiste depois de 1,5 s.
+          vx = (dx / dist) * speed;
+          vz = (dz / dist) * speed;
+          // Ordem do jogador segue o caminho calculado; se mesmo assim ficar preso 1,5 s, desiste.
+          // No piloto automático, preso conta como "chegou" (ex.: entra mesmo assim).
           const moving = Math.hypot(vel.x, vel.z) > 0.3;
           this.stuckTime[role] = moving ? 0 : (this.stuckTime[role] ?? 0) + FIXED_DT;
-          if ((this.stuckTime[role] ?? 0) > 1.5) delete this.targets[role];
+          if ((this.stuckTime[role] ?? 0) > 1.5) {
+            if (auto) {
+              delete this.routes[role];
+              this.arrive(role);
+            } else {
+              delete this.targets[role];
+              delete this.routes[role];
+              delete this.dests[role];
+            }
+          }
         }
       }
 
@@ -167,6 +299,7 @@ export class CrewMotion {
   /** Copia a física para a cena e anima o andar. */
   private sync(dt: number): void {
     for (const role of ROLES) {
+      if (this.insideRoles.has(role)) continue;
       const a = this.opts.crew.members[role];
       const t = this.bodies[role].translation();
       const v = this.bodies[role].linvel();

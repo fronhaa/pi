@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit",
     "docs:adr": "node scripts/new-adr.mjs",
     "fetch-data": "node --env-file-if-exists=.env scripts/fetch-donki.mjs",
-    "balance": "node scripts/balance.ts",
-    "sim:golden": "node scripts/sim-golden.ts",
+    "balance": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/balance.ts",
+    "sim:golden": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/sim-golden.ts",
     "data:missions": "node scripts/fetch-missions.mjs"
   },
   "dependencies": {

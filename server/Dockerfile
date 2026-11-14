@@ -25,9 +25,10 @@ FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=build /out/jezero-server /app/jezero-server
 COPY --from=web /web/dist /app/web
-COPY public/data/donki-flares.json /app/data/donki-flares.json
+COPY public/data/donki-flares.json public/data/missions.json /app/data/
 ENV PORT=8080 \
     FLARES_PATH=/app/data/donki-flares.json \
+    MISSIONS_PATH=/app/data/missions.json \
     WEB_DIR=/app/web
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD ["/app/jezero-server", "healthcheck"]

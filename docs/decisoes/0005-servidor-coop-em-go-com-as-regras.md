@@ -21,7 +21,7 @@ O servidor vai rodar num container no VPS do time. Linguagem escolhida pelo time
 **Opção 2**, com uma trava contra a duplicação: **teste de paridade**.
 
 - `server/internal/sim` é uma porta linha a linha de `src/sim`, incluindo o mesmo gerador aleatório (mulberry32).
-- `npm run sim:golden` joga 240 partidas com a simulação TS e grava um hash do estado a cada passo (`server/internal/sim/testdata/golden.json`). O `go test` repete as mesmas ações e exige o mesmo hash em todos os passos.
+- `npm run sim:golden` joga 360 partidas com a simulação TS e grava um hash do estado a cada passo (`server/internal/sim/testdata/golden.json`). O `go test` repete as mesmas ações e exige o mesmo hash em todos os passos.
 - O CI regenera os traços e falha se eles mudarem sem a porta Go acompanhar.
 - Toda multiplicação de float em Go passa por `mul()`, que força o arredondamento. Sem isso, o compilador funde a*b+c (FMA, no arm64) e o resultado difere do JavaScript. Esse bug apareceu de verdade e o teste pegou.
 

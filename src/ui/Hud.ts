@@ -1,11 +1,24 @@
 import { CONFIG } from '@/sim/config';
-import type { EnergyPlan, Flare, GameState, Resources } from '@/sim/types';
+import type { EnergyPlan, Flare, GameState, ProblemKind, Resources } from '@/sim/types';
+import { PROBLEMS } from '@/sim/problems';
 import { formatDate, getLang, t, type StringKey } from '@/i18n';
 import type { MarsMessage } from '@/net/protocol';
 import { h, openDialog } from './dom';
 
+export interface DayView {
+  remaining: number;
+  paused: boolean;
+  selected: string;
+  problems: { uid: number; kind: ProblemKind; status: 'open' | 'done' | 'pending'; progress: number; worker?: string; working: boolean }[];
+}
+
 export interface HudCallbacks {
+  /** "Terminar o sol" ou "Começar o dia" (quando há problemas hoje). */
   onEndSol(plan: EnergyPlan): void;
+  onSendProblem(uid: number): void;
+  onPause(): void;
+  onEndDay(): void;
+  onSelect(role: 'commander' | 'engineer' | 'medic' | 'scientist'): void;
   onPlanChange(plan: EnergyPlan): void;
   onNasaData(): void;
   onToggleLang(): void;
@@ -19,7 +32,7 @@ const PLAN_KEYS: PlanKey[] = ['life', 'shield', 'science'];
 export interface CoopHud {
   /** Partes do plano que o papel do jogador controla. */
   editable: PlanKey[];
-  /** Só o comandante termina o sol. */
+  /** Só o comandante começa o dia, termina o sol e pausa. */
   canEnd: boolean;
   /** Aviso curto no topo do plano (ex.: "A Terra está mandando a mensagem…"). */
   note?: string;
@@ -43,6 +56,7 @@ export class Hud {
   private readonly crewChip = h('div', { class: 'crew-chip', 'aria-live': 'polite' });
   private crewView: { status: 'loading' | 'ready' | 'off'; role?: string } = { status: 'loading' };
   private coop: CoopHud | null = null;
+  private dayView: DayView | null = null;
 
   constructor(
     root: HTMLElement,
@@ -88,6 +102,12 @@ export class Hud {
   /** Modo em grupo: o plano vem do servidor (todos veem o mesmo). */
   setPlan(plan: EnergyPlan): void {
     this.plan = { ...plan };
+    this.renderPlan();
+  }
+
+  /** Dia em tempo real: troca o plano de energia pela lista de problemas. null = volta ao plano. */
+  setDay(view: DayView | null): void {
+    this.dayView = view;
     this.renderPlan();
   }
 
@@ -167,9 +187,54 @@ export class Hud {
     this.messages.replaceChildren(h('h2', { id: 'msg-title' }, t('msg.title')), ...msgs.map(messageEl));
   }
 
+  private renderDay(v: DayView): void {
+    const name = (role?: string) => (role ? t(`crew.${role}` as StringKey) : '');
+    const focusedLabel = (document.activeElement as HTMLElement | null)?.getAttribute?.('aria-label');
+    const items = v.problems.map((p) => {
+      const def = PROBLEMS[p.kind];
+      const status =
+        p.status === 'done' ? t('day.done')
+        : p.working ? t('day.working', { name: name(p.worker), pct: Math.round(p.progress * 100) })
+        : p.worker ? t('day.walking', { name: name(p.worker) })
+        : t('day.waiting');
+      const sendLabel = t('day.send', { name: name(v.selected), problem: t(`problem.${p.kind}` as StringKey) });
+      return h('div', { class: `problem ${p.status === 'done' ? 'done' : ''}` },
+        h('div', { class: 'name' },
+          `${p.status === 'done' ? '✅' : '⚠️'} ${t(`problem.${p.kind}` as StringKey)}`,
+          h('small', {}, `${t(`problem.${p.kind}.where` as StringKey)} · ${def.outside ? t('problem.outside') : t('problem.inside')}`),
+          h('small', { class: 'status' }, status),
+          p.progress > 0 && p.status !== 'done' ? h('div', { class: 'bar good' }, h('i', { style: `width:${Math.round(p.progress * 100)}%` })) : null,
+        ),
+        p.status === 'open' && p.worker !== v.selected
+          ? h('button', { class: 'btn', type: 'button', 'aria-label': sendLabel, disabled: v.paused, onclick: () => this.cb.onSendProblem(p.uid) }, t('day.sendShort', { name: name(v.selected) }))
+          : null,
+      );
+    });
+    this.planEl.replaceChildren(
+      h('div', { class: 'plan-top' },
+        h('strong', { id: 'plan-title' }, v.paused ? t('day.paused') : t('day.title')),
+        h('span', { class: 'clock', 'aria-label': t('day.remaining', { s: v.remaining }) }, `☀️ ${t('day.remaining', { s: v.remaining })}`),
+      ),
+      h('p', { class: 'day-hint' }, t('day.hint')),
+      ...(items.length ? items : [h('p', { class: 'day-hint' }, t('day.none'))]),
+      this.coop?.note ? h('p', { class: 'coop-note', role: 'status' }, this.coop.note) : '',
+      !this.coop || this.coop.canEnd
+        ? h('div', { class: 'plan-actions' },
+            h('button', { class: 'btn', type: 'button', 'aria-label': v.paused ? t('day.resume') : t('day.pause'), onclick: () => this.cb.onPause() }, v.paused ? t('day.resume') : t('day.pause')),
+            h('button', { class: 'btn primary', type: 'button', 'aria-label': t('day.end'), onclick: () => this.cb.onEndDay() }, t('day.end')),
+          )
+        :'',
+    );
+    if (focusedLabel) this.planEl.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focusedLabel)}"]`)?.focus();
+  }
+
   private renderPlan(): void {
     const s = this.state;
     if (!s) return;
+    if (this.dayView) {
+      this.renderDay(this.dayView);
+      return;
+    }
     const used = this.plan.life + this.plan.shield + this.plan.science;
     const leftover = s.blocks - used;
     const blocked = this.busy || s.pendingCard !== null || s.outcome.status !== 'playing';
@@ -212,7 +277,9 @@ export class Hud {
         h('button', {
           class: 'btn primary', type: 'button', disabled: blocked || (coop !== null && !coop.canEnd),
           onclick: () => this.cb.onEndSol(this.getPlan()),
-        }, s.pendingCard ? t('plan.answerCardFirst') : coop && !coop.canEnd ? t('coop.notYours') : t('plan.endSol')),
+        }, s.pendingCard ? t('plan.answerCardFirst')
+          : coop && !coop.canEnd ? t('coop.notYours')
+          : s.problems.length > 0 ? t('plan.startDay') : t('plan.endSol')),
       ),
     );
     // Mantém o foco do teclado no mesmo botão depois de redesenhar.
@@ -266,9 +333,19 @@ function resource(nameKey: StringKey, helpKey: StringKey, value: number, max: nu
 export function flareBadge(f: Flare): HTMLElement {
   if (!f.real) return h('span', {}, h('span', { class: 'badge sim' }, t('flare.simulated')));
   return h('span', {},
-    h('span', { class: 'badge real' }, t('flare.real', { date: formatDate(f.time!) })),
+    h('span', { class: 'badge real' }, t(f.source === 'cme' ? 'flare.real.cme' : 'flare.real', { date: formatDate(f.time!) })),
     f.link ? h('a', { href: f.link, target: '_blank', rel: 'noopener noreferrer' }, t('flare.link')) : null,
   );
+}
+
+/** Texto do aviso: erupção (classe) ou nuvem de plasma de missão histórica (força e velocidade). */
+function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
+  if (f.source !== 'cme') {
+    return when === 'alert' ? t('msg.stormAlert', { label: f.label, sol: sol ?? 0 }) : t('msg.stormToday', { label: f.label });
+  }
+  const strength = t(`storm.strength.${f.cls}` as StringKey);
+  const speed = f.speedKmS ? f.speedKmS.toLocaleString(getLang() === 'pt' ? 'pt-BR' : 'en') : '?';
+  return when === 'alert' ? t('msg.stormAlert.cme', { strength, speed, sol: sol ?? 0 }) : t('msg.stormToday.cme', { strength });
 }
 
 function messageEl(m: MarsMessage): HTMLElement {
@@ -279,14 +356,16 @@ function messageEl(m: MarsMessage): HTMLElement {
         t('msg.earth', { text: t(`coop.earth.opt.${m.option}` as StringKey) }),
         m.flare ? h('span', { class: 'meta' }, flareBadge(m.flare)) : null, delay);
     case 'stormAlert':
-      return h('div', { class: 'msg storm' }, t('msg.stormAlert', { label: m.flare.label, sol: m.impactSol }), h('span', { class: 'meta' }, flareBadge(m.flare)), delay);
+      return h('div', { class: 'msg storm' }, stormText(m.flare, 'alert', m.impactSol), h('span', { class: 'meta' }, flareBadge(m.flare)), delay);
     case 'stormToday':
-      return h('div', { class: 'msg storm' }, t('msg.stormToday', { label: m.flare.label }), h('span', { class: 'meta' }, flareBadge(m.flare)), delay);
+      return h('div', { class: 'msg storm' }, stormText(m.flare, 'today'), h('span', { class: 'meta' }, flareBadge(m.flare)), delay);
     case 'dustAlert':
       return h('div', { class: 'msg dust' }, t('msg.dustAlert'), delay);
     case 'dustNow':
       return h('div', { class: 'msg dust' }, t('msg.dustNow'));
     case 'allClear':
       return h('div', { class: 'msg' }, t('msg.allClear'), delay);
+    case 'noSignal':
+      return h('div', { class: 'msg storm' }, t('msg.noSignal'));
   }
 }

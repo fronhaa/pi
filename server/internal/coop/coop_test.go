@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ import (
 // ---------- regras (sem rede) ----------
 
 func TestEarthMessageArrivesNextSol(t *testing.T) {
-	g := NewGame(1, 2, nil, false)
+	g := NewGame(1, 2, nil, nil, false)
 	if g.Phase != PhaseEarth {
 		t.Fatalf("com jogador na Terra, o sol começa na vez da Terra; fase = %s", g.Phase)
 	}
@@ -53,8 +54,8 @@ func TestEarthMessageArrivesNextSol(t *testing.T) {
 }
 
 func TestMarsOnlyGetsAutomaticAlertsWithoutEarthPlayer(t *testing.T) {
-	auto := NewGame(7, 7, nil, true)
-	withEarth := NewGame(7, 7, nil, false)
+	auto := NewGame(7, 7, nil, nil, true)
+	withEarth := NewGame(7, 7, nil, nil, false)
 	for auto.Mission.State.Outcome.Status == "playing" && withEarth.Mission.State.Outcome.Status == "playing" {
 		for _, m := range withEarth.MarsMessages() {
 			if m.Kind == "stormAlert" || m.Kind == "dustAlert" || m.Kind == "allClear" {
@@ -79,7 +80,7 @@ func TestMarsOnlyGetsAutomaticAlertsWithoutEarthPlayer(t *testing.T) {
 }
 
 func TestEarthForecastSeesStormsBeforeMars(t *testing.T) {
-	g := NewGame(3, 3, nil, false)
+	g := NewGame(3, 3, nil, nil, false)
 	seen := false
 	for g.Mission.State.Outcome.Status == "playing" {
 		for _, f := range g.Forecast() {
@@ -102,7 +103,7 @@ func TestEarthForecastSeesStormsBeforeMars(t *testing.T) {
 // Regressão: carta que reduz os blocos (painéis empoeirados) não pode travar o "Terminar o sol".
 func TestCardThatCutsBlocksKeepsPlanValid(t *testing.T) {
 	for seed := uint32(1); seed <= 300; seed++ {
-		g := NewGame(seed, seed, nil, true)
+		g := NewGame(seed, seed, nil, nil, true)
 		for g.Mission.State.Outcome.Status == "playing" {
 			answerAnyCard(t, g)
 			if g.Phase == PhaseEnded {
@@ -119,7 +120,7 @@ func TestCardThatCutsBlocksKeepsPlanValid(t *testing.T) {
 }
 
 func TestPlanNeverExceedsBlocks(t *testing.T) {
-	g := NewGame(11, 11, nil, true)
+	g := NewGame(11, 11, nil, nil, true)
 	answerAnyCard(t, g)
 	b := g.Mission.State.Blocks
 	if err := g.SetBlocks("science", b+1); !errors.Is(err, ErrInvalidInput) {
@@ -133,7 +134,7 @@ func TestPlanNeverExceedsBlocks(t *testing.T) {
 // ---------- sala e papéis ----------
 
 func TestRolesAndPermissions(t *testing.T) {
-	r := newRoom("TEST", nil, func() (uint32, uint32) { return 5, 5 })
+	r := newRoom("TEST", nil, nil, func() (uint32, uint32) { return 5, 5 })
 	host, kid := NewPlayer(nil), NewPlayer(nil)
 	must(t, r.join(host))
 	must(t, r.join(kid))
@@ -173,7 +174,7 @@ func TestRolesAndPermissions(t *testing.T) {
 }
 
 func TestRoomFull(t *testing.T) {
-	r := newRoom("FULL", nil, func() (uint32, uint32) { return 1, 1 })
+	r := newRoom("FULL", nil, nil, func() (uint32, uint32) { return 1, 1 })
 	for i := 0; i < MaxPlayers; i++ {
 		must(t, r.join(NewPlayer(nil)))
 	}
@@ -193,7 +194,8 @@ func TestRoomCodeHasNoVowels(t *testing.T) {
 // ---------- ponta a ponta, por WebSocket ----------
 
 func TestFullGameOverWebSocket(t *testing.T) {
-	hub := NewHub(nil)
+	hub := NewHub(nil, nil)
+	hub.TimeScale = 200
 	srv := httptest.NewServer(&WSHandler{Hub: hub, OriginPatterns: []string{"*"}, Log: slog.New(slog.NewTextHandler(io.Discard, nil)), MaxPerSec: 10000})
 	defer srv.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -243,7 +245,8 @@ func TestFullGameOverWebSocket(t *testing.T) {
 }
 
 func TestRejoinWithToken(t *testing.T) {
-	hub := NewHub(nil)
+	hub := NewHub(nil, nil)
+	hub.TimeScale = 200
 	srv := httptest.NewServer(&WSHandler{Hub: hub, OriginPatterns: []string{"*"}, Log: slog.New(slog.NewTextHandler(io.Discard, nil)), MaxPerSec: 10000})
 	defer srv.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -348,6 +351,141 @@ func (c *client) waitState(t *testing.T, ctx context.Context, ok func(StateMsg) 
 		_ = json.Unmarshal(data, &s)
 		if ok(s) {
 			return s
+		}
+	}
+}
+
+// ---------- dia em tempo real (problemas pela base) ----------
+
+// dayGame devolve uma partida já no primeiro sol que tem problemas, com a carta respondida.
+func dayGame(t *testing.T, seed uint32) *Game {
+	t.Helper()
+	g := NewGame(seed, seed, nil, nil, true)
+	for g.Mission.State.Outcome.Status == "playing" {
+		answerAnyCard(t, g)
+		if len(g.Mission.State.Problems) > 0 {
+			return g
+		}
+		safePlan(g)
+		if err := g.StartDay(); err != nil { // sem problemas: vai direto para a noite
+			t.Fatal(err)
+		}
+	}
+	t.Fatal("nenhum sol com problemas")
+	return nil
+}
+
+func TestDayClockOpensProblemsAndEnds(t *testing.T) {
+	g := dayGame(t, 21)
+	sol := g.Mission.State.Sol
+	must(t, g.StartDay())
+	if g.Phase != PhaseDay {
+		t.Fatalf("com problemas, o dia começa; fase = %s", g.Phase)
+	}
+	if err := g.SetBlocks("life", 0); !errors.Is(err, ErrWrongPhase) {
+		t.Fatal("durante o dia o plano está travado")
+	}
+	first := g.Mission.State.Problems[0]
+	g.Tick(float64(first.SpawnAt) - 0.5)
+	if g.Mission.State.Problems[0].Status != "pending" {
+		t.Fatal("o problema não pode aparecer antes da hora")
+	}
+	g.Tick(1)
+	if g.Mission.State.Problems[0].Status != "open" {
+		t.Fatal("o problema aparece na hora marcada")
+	}
+	must(t, g.TogglePause())
+	if g.Tick(100) || g.Phase != PhaseDay {
+		t.Fatal("pausado, o relógio não anda")
+	}
+	must(t, g.TogglePause())
+	g.Tick(80)
+	if g.Phase == PhaseDay || g.Mission.State.Sol == sol && g.Phase != PhaseEnded {
+		t.Fatalf("aos 75 s o dia acaba e vem a noite; fase = %s, sol = %d", g.Phase, g.Mission.State.Sol)
+	}
+}
+
+func TestResolveAllEndsDayEarly(t *testing.T) {
+	g := dayGame(t, 33)
+	must(t, g.StartDay())
+	g.Tick(36) // todos os problemas já apareceram (janela 3–35 s)
+	for _, p := range g.Mission.State.Problems {
+		must(t, g.ResolveProblem(p.UID))
+		must(t, g.ResolveProblem(p.UID)) // dois jogadores consertando o mesmo: sem erro, sem dose em dobro
+	}
+	if g.Phase != PhaseDay {
+		return // um conserto fora da base pode ter estourado a dose; ok
+	}
+	g.Tick(0.25)
+	if g.Phase == PhaseDay {
+		t.Fatal("tudo consertado: o dia termina na hora")
+	}
+}
+
+func TestOnlyMarsFixesAndOnlyCommanderControlsDay(t *testing.T) {
+	r := newRoom("DAYS", nil, nil, func() (uint32, uint32) { return 21, 21 })
+	cmd, earth, med := NewPlayer(nil), NewPlayer(nil), NewPlayer(nil)
+	must(t, r.join(cmd))
+	must(t, r.join(earth))
+	must(t, r.join(med))
+	must(t, r.Handle(cmd.ID, Action{T: "claim", Role: Commander}))
+	must(t, r.Handle(earth.ID, Action{T: "claim", Role: Earth}))
+	must(t, r.Handle(med.ID, Action{T: "claim", Role: Medic}))
+	must(t, r.Handle(cmd.ID, Action{T: "start"}))
+	if err := r.Handle(med.ID, Action{T: "start_day"}); !errors.Is(err, ErrNotYourRole) && !errors.Is(err, ErrWrongPhase) {
+		t.Fatalf("só o comandante começa o dia: %v", err)
+	}
+	if err := r.Handle(earth.ID, Action{T: "problem_resolve", UID: 1}); !errors.Is(err, ErrNotYourRole) {
+		t.Fatalf("a Terra não conserta problemas em Marte: %v", err)
+	}
+}
+
+func TestAntennaDownLosesEarthMessage(t *testing.T) {
+	for seed := uint32(1); seed < 400; seed++ {
+		g := NewGame(seed, seed, nil, nil, false)
+		for g.Mission.State.Outcome.Status == "playing" {
+			if g.Phase == PhaseEarth {
+				must(t, g.SendEarth("science"))
+			}
+			answerAnyCard(t, g)
+			if g.Phase != PhaseMars {
+				break
+			}
+			safePlan(g)
+			must(t, g.StartDay())
+			if g.Phase == PhaseDay {
+				g.Tick(80) // ninguém conserta nada: a antena desalinhada derruba a mensagem de amanhã
+			}
+			if g.Mission.State.CommsDown && g.Phase != PhaseEnded {
+				for _, m := range g.MarsMessages() {
+					if m.Kind == "earth" {
+						t.Fatalf("seed %d: com a antena desalinhada, a mensagem da Terra não chega", seed)
+					}
+				}
+				return
+			}
+		}
+	}
+	t.Fatal("nenhuma partida com antena desalinhada")
+}
+
+func TestFirstRoomGameUsesMediumHistoricalMission(t *testing.T) {
+	raw, err := os.ReadFile("../../../public/data/missions.json")
+	if err != nil {
+		t.Skip("sem public/data/missions.json")
+	}
+	missions := sim.ParseMissions(raw)
+	if len(missions) == 0 {
+		t.Fatal("missões históricas não carregaram")
+	}
+	for seed := uint32(1); seed < 50; seed++ {
+		r := newRoom("HIST", nil, missions, func() (uint32, uint32) { return seed, seed })
+		p := NewPlayer(nil)
+		must(t, r.join(p))
+		must(t, r.Handle(p.ID, Action{T: "claim", Role: Commander}))
+		must(t, r.Handle(p.ID, Action{T: "start"}))
+		if h := r.game.Mission.State.Historical; h == nil || h.Difficulty != "medium" {
+			t.Fatalf("seed %d: primeira partida deveria ser missão histórica média", seed)
 		}
 	}
 }
