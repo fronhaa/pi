@@ -431,6 +431,86 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 
 **Próxima entrega (ainda não feita):** dose por tempo fora em vez de +1 por tarefa, e um relógio de oxigênio do traje. Depois, rover pressurizado para o problema distante (mais rápido e sem dose, mas gasta bateria).
 
+### Para onde o astronauta olha
+
+**Decisão (14/11/2026):** os astronautas não ficam encarando a câmera. Eles vivem a base e só se viram para quem controla quando são **tocados**.
+
+**Hoje (a corrigir):** `Game.showCrewInside` chama `Astronaut.faceCamera` em todo quadro para quem está dentro da base (`src/core/Game.ts`), então os quatro ficam sempre olhando para a tela.
+
+| Situação | Para onde olha |
+| --- | --- |
+| Parado dentro, sem ordem | Para a **estação do seu módulo** (bancada, janela, painel). De vez em quando (a cada 4 a 8 s, sorteado) vira devagar para outro ponto do módulo ou para um colega próximo |
+| Parado lá fora, sem ordem | Mantém a direção em que chegou; de vez em quando olha em volta, como dentro |
+| Andando | Para onde anda (já é assim, `setMotion`) |
+| Consertando ou em tarefa (`interact`) | Para o problema ou a estação. **Nunca** se vira para a câmera |
+| Na câmara, em EVA voltando, dormindo ou no abrigo | Não se vira |
+| **Tocado/selecionado e sem tarefa** | Vira **suavemente** para a câmera de quem controla (~0,4 s), fica ~2 s e volta a ficar livre |
+
+**Regras:**
+
+1. **Giro natural:** sempre interpolado (como o `setMotion` já faz), no máximo ~180°/s. Nada de pular de direção.
+2. Só o **corpo inteiro** gira (o modelo chibi não tem cabeça separada); se um dia tiver, a cabeça gira primeiro.
+3. Selecionar de novo o mesmo astronauta repete o olhar. Dar uma ordem durante o olhar cancela e ele vai cumprir.
+4. **Modo em grupo:** a seleção é de cada tela. O astronauta só se vira na tela de **quem o tocou** e só se for dono dele (ou comandar a EVA). Nas outras telas, continua livre. Nada vai para a rede.
+5. É só cena: não muda regra, `src/sim`, servidor nem protocolo.
+
+**Como implementar:**
+
+| # | Arquivo | O que fazer |
+| --- | --- | --- |
+| 1 | `src/scene/Crew.ts` | Trocar `faceCamera` (instantâneo) por um alvo de direção com giro suave: `lookAt(point, seconds)` e `lookFree(dt)` (sorteia pontos de olhar) |
+| 2 | `src/scene/MarsBase.ts` | Um ponto de olhar por módulo (`HABITAT_LOOK`), ao lado de `HABITAT_SPOTS` |
+| 3 | `src/core/Game.ts` | `showCrewInside` deixa de chamar `faceCamera` todo quadro; `select(role)` pede `lookAt(câmera, 2)` se o astronauta não tem tarefa e é controlado por esta tela |
+
+**Pronto quando:** com ninguém tocado, nenhum astronauta fica encarando a câmera; ao tocar num astronauta parado, ele vira devagar para a tela e volta ao que fazia; ao tocar em quem está consertando, ele continua de frente para o conserto.
+
+### Movimentação realista: dentro e fora da base
+
+**Decisão (14/11/2026):** andar tem que parecer Marte (e a Lua, na base lunar). Hoje todos andam a 2,4 m/s, param e viram na hora, e dentro da base **teleportam** entre o módulo e a estufa (`showCrewInside` copia a posição a cada quadro).
+
+**Base científica:** com pouca gravidade, o corpo pesa menos: força nos pés, frequência dos passos e tempo com o pé no chão diminuem, e a pessoa passa a correr mais cedo ([F12](ciencia-marte.md#f12-andar-com-pouca-gravidade-é-diferente)). De traje, as pernas dobram pouco; na Lua, a Apollo pulava ([F13](ciencia-marte.md#f13-na-lua-os-astronautas-pulavam-como-coelhos)). A gravidade já é real ([fisica.md](fisica.md#ajustes-globais)).
+
+| | Dentro da base (sem traje) | Fora (de traje) |
+| --- | --- | --- |
+| Andar | Mais devagar (~1,2 m/s): é um espaço pequeno | Devagar (~1,4 m/s), passos largos e lentos |
+| Distância longa (≥ 15 m, ex.: rover atolado) | — | **Trote saltado** (~2,4 m/s): cada passada tem um pequeno voo |
+| Passos | Cadência mais lenta que na Terra, balanço leve para cima | Cadência ainda mais lenta; corpo um pouco inclinado para a frente |
+| Começar e parar | Rápido, mas não instantâneo | **Embala e freia devagar**: com menos peso, o pé tem menos aderência |
+| Virar | Suave | Mais lento (o traje é pesado) |
+| Chão | — | **Nuvenzinha de poeira** a cada passo e no pouso do pulo ([F8](ciencia-marte.md#f8-a-poeira-tem-que-ficar-lá-fora)) |
+| Entre lugares | **Anda** pelo corredor até a estufa ou a câmara, sem teleporte | Já anda (física) |
+
+**Números:** velocidades, cadência e aceleração são **valores de jogo** (não ganham fonte, regra de [fisica.md](fisica.md#pulo)) e ficam em `src/core/constants.ts`. A aceleração máxima segue a física: com aderência μ (valor de jogo, ~0,6), o pé empurra no máximo μ·g ≈ **2,2 m/s² em Marte** (5,9 na Terra, 1,0 na Lua). Para não frustrar a criança, o tempo para parar fica **abaixo de 1 s** em Marte.
+
+**Na [base lunar](#base-lunar) (modo solo):** a gravidade já troca para a da Lua (`MOON_G`); fora, o trote vira **pulinhos de coelho**, com o cartão de F13.
+
+**Para a criança ver e aprender:**
+
+1. Na primeira caminhada do sol 1, o cartão "Você sabia?" de F12: "Em Marte você pesa menos. Os passos ficam mais lentos e mais leves."
+2. Na primeira caminhada longa de traje (trote saltado), o cartão de F13.
+3. Cada cartão aparece **uma vez por partida**.
+
+**Regras:**
+
+- Só cena e física: não muda regra, `src/sim`, servidor nem protocolo. O tempo dos problemas não muda; a caminhada mais lenta já entra no "tempo da tripulação".
+- Conferir o balanceamento do dia: com 1,4 m/s, o rover atolado leva mais tempo; o trote saltado compensa. O dia ainda precisa dar para resolver tudo em 75 s com boa divisão da tripulação.
+- **Modo em grupo:** as velocidades são as mesmas em todas as telas, então a sincronização (`crew_pos` com destino) continua igual.
+- Sem Rapier: o modo de reserva (`FALLBACK_SPEED` em `CrewTasks`) usa as mesmas velocidades.
+- **Sem pressa obrigatória:** andar mais devagar não pode deixar o jogo cansativo; se em teste com crianças parecer lento, sobe a velocidade, não tira a cadência.
+
+**Como implementar:**
+
+| # | Arquivo | O que fazer |
+| --- | --- | --- |
+| 1 | `src/core/constants.ts` | `WALK_INSIDE`, `WALK_SUIT`, `LOPE_SPEED`, `LOPE_MIN_DIST`, `TRACTION` (μ), `TURN_RATE_SUIT` |
+| 2 | `src/scene/crewMotion.ts` | Velocidade-alvo com aceleração limitada (μ·g) em vez de `setLinvel` instantâneo; trote saltado com impulso vertical pequeno a cada passada quando a distância é longa |
+| 3 | `src/scene/Crew.ts` | `timeScale` do clipe `walk` pela cadência; inclinação de traje; giro com limite por segundo; poeira nos passos (`toon.ts`, cor de `PALETTE`) |
+| 4 | `src/core/Game.ts` | Dentro da base, caminho a pé entre módulo, corredor, estufa e câmara (pontos fixos) em vez de copiar a posição |
+| 5 | `src/i18n/strings.ts` | Textos dos cartões F12 e F13 (PT/EN) |
+| 6 | `docs/fisica.md` | Nova seção da tripulação com as constantes e a conta μ·g |
+
+**Pronto quando:** fora, o astronauta embala, anda de passos largos e freia em menos de 1 s, e trota com pequenos voos até o rover; dentro, anda até a estufa sem teleporte; no modo em grupo, as duas telas mostram a mesma posição; o dia continua dando para resolver tudo.
+
 ### Ordem de construção no hackathon
 
 | Ordem | Parte | Esforço estimado | Por que nessa ordem |
