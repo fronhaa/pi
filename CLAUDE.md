@@ -12,6 +12,7 @@ Jogo 3D cartoon no navegador: Vite + TypeScript + Three.js + Rapier. Docs do tim
 - A física é dona da posição: mova corpos Rapier, nunca `mesh.position` de objetos linkados.
 - Gameplay físico em `fixedUpdate()`; só visual em `update()`.
 - Objetos visuais do jogo usam os helpers de `src/render/toon.ts` e cores de `PALETTE`.
+- `main.ts` e `src/ui/LoadingScreen.ts` não podem importar estaticamente `core/`, `entities/`, `world/` ou `render/` (o jogo é carregado via `import()` dinâmico).
 
 ## Documentação (obrigatório)
 

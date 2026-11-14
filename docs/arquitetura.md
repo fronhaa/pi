@@ -3,7 +3,10 @@
 ## Visão geral
 
 ```
-main.ts ──► Game.create()
+index.html  (tela de carregamento em HTML/CSS: aparece na hora, sem JS)
+main.ts     (~1,5 KB gzip)
+  └── import('@/core/Game')  ← carregado sob demanda (~1,8 MB: Three + Rapier)
+        └── Game.create()
               ├── Physics.create()   (carrega o WASM do Rapier)
               ├── Renderer / Scene / Camera / Luzes (Three.js)
               ├── Input
@@ -22,10 +25,24 @@ recebem o que precisam pelo construtor (ex.: `Player` recebe `Physics` e `Input`
 | [`src/render/`](../src/render) | Visual: materiais toon, contornos, paleta. Nada de física aqui. |
 | [`src/entities/`](../src/entities) | Coisas com comportamento: jogador, inimigos, itens. |
 | [`src/world/`](../src/world) | Fases/cenários: chão, plataformas, objetos do mapa. |
+| [`src/ui/`](../src/ui) | Interface em HTML por cima do canvas (tela de carregamento, futuramente menus/HUD). Sem framework. |
 | [`public/assets/`](../public/assets) | Modelos (`.glb`), texturas, áudio. Servidos como estão. |
 | [`docs/`](.) | Esta documentação. |
 
 Import com alias: `import { Physics } from '@/core/Physics'` (`@` = `src/`).
+
+## Inicialização e tamanho
+
+O Rapier é pesado ([ADR 0003](decisoes/0003-manter-rapier-apesar-do-tamanho-do-bundle.md)), por isso:
+
+1. `index.html` já contém a tela de carregamento (HTML/CSS inline), que aparece instantaneamente.
+2. `main.ts` é mínimo e só importa `ui/LoadingScreen`.
+3. O jogo inteiro (`core/Game` e tudo que ele importa) vem por `import()` dinâmico, num chunk separado.
+4. Se o carregamento falhar, a tela mostra erro e um botão "Tentar de novo".
+
+**Regra:** não importe nada de `core/`, `entities/`, `world/` ou `render/` em `main.ts` ou `ui/LoadingScreen.ts`.
+Um import estático ali puxa o Three/Rapier para o arquivo inicial e anula a tela de carregamento.
+Confira com `npm run build`: o `index-*.js` deve ter poucos KB.
 
 ## O loop do jogo
 
