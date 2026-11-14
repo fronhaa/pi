@@ -19,13 +19,17 @@ import { Input } from './Input';
 import { CrewTasks } from './CrewTasks';
 import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
-import { ENTRANCES, GREENHOUSE_WORK_SPOT, HABITAT_SPOTS, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
+import { BUNK_SPOTS, ENTRANCES, GREENHOUSE_WORK_SPOT, GYM_STATIONS, HABITAT_SPOTS, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
 import { ProblemMarkers } from '@/scene/ProblemMarkers';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CONFIG } from '@/sim/config';
 import type { StringKey } from '@/i18n';
 
 /** Duração mínima da noite antes do relatório (ms). */
+/** Rotina visual dentro da base (GDD, "Atividades dentro da base", B): segundos sem ordem até ir à academia, de exercício e de descanso. */
+const ROUTINE_IDLE_SECONDS = 8;
+const ROUTINE_GYM_SECONDS = 20;
+const ROUTINE_REST_SECONDS = 12;
 const NIGHT_MS = 2200;
 /** A noite espera a tripulação entrar, mas no máximo isto (ms); quem não chegou entra direto. */
 const NIGHT_MAX_MS = 6000;
@@ -85,6 +89,11 @@ export class Game {
   private plan: EnergyPlan = { life: 3, shield: 1, science: 3 };
   private night = false;
   private stormNight = false;
+  /** Rotina visual de quem está dentro sem ordem: posto → academia → beliche → posto. */
+  private readonly routine = Object.fromEntries(
+    ROLES.map((r) => [r, { at: 'post' as 'post' | 'gym' | 'bed', idle: 0, left: 0, station: 0 }]),
+  ) as Record<Role, { at: 'post' | 'gym' | 'bed'; idle: number; left: number; station: number }>;
+  private exerciseFactShown = false;
   private nightRes: Resources | null = null;
   private coop: CoopSession | null = null;
 
@@ -996,20 +1005,72 @@ export class Game {
   }
 
   /**
-   * Quem está dentro aparece pelo casco translúcido: no seu módulo do habitat, ou na estufa se está
-   * consertando o vazamento. À noite (dormindo ou no abrigo) e na câmara de descompressão, some.
-   * A física não cuida de quem está dentro, então a posição e a animação são daqui.
+   * Quem está dentro aparece pelo casco translúcido. A física não cuida de quem está dentro, então a
+   * posição, a pose e a animação são daqui. Só cena: nenhuma regra muda (GDD, "Atividades dentro da base", B).
+   * - Com tarefa de dentro: na estufa, consertando.
+   * - Sem ordem há um tempo: academia (esteira ou bicicleta), depois descansa no beliche e volta ao posto.
+   * - Noite normal: dorme na sua cama do beliche. Noite de tempestade (abrigo) e câmara de descompressão: some.
    */
   private showCrewInside(dt: number): void {
     const awake = this.phase === 'morning' || this.phase === 'day';
+    const sleeping = this.phase === 'night' && !this.stormNight;
+    const state = this.coop?.view ?? this.mission.state;
+    const alert = state.messages.some((m) => m.kind === 'stormAlert' || m.kind === 'stormToday');
     for (const r of ROLES) {
-      if (!this.motion!.isInside(r)) continue;
       const a = this.crew.members[r];
-      a.root.visible = awake && this.tasks.placeOf(r) === 'inside';
-      if (!a.root.visible) continue;
-      a.root.position.copy(this.tasks.onInsideTask(r) ? GREENHOUSE_WORK_SPOT : HABITAT_SPOTS[r]);
-      a.faceCamera(this.camera.position);
-      a.idle(dt);
+      const rt = this.routine[r];
+      if (!this.motion!.isInside(r)) {
+        rt.at = 'post';
+        rt.idle = 0;
+        a.setLying(false);
+        continue;
+      }
+      const inHabitat = this.tasks.placeOf(r) === 'inside' && (awake || sleeping);
+      a.root.visible = inHabitat;
+      if (!inHabitat) continue;
+
+      if (sleeping || this.tasks.onInsideTask(r) || alert) {
+        rt.at = 'post';
+        rt.idle = 0;
+      } else if (rt.at === 'post') {
+        rt.idle += dt;
+        const used = ROLES.filter((o) => o !== r && this.routine[o].at === 'gym').map((o) => this.routine[o].station);
+        const free = GYM_STATIONS.findIndex((_, i) => !used.includes(i));
+        if (rt.idle >= ROUTINE_IDLE_SECONDS && free >= 0) {
+          rt.at = 'gym';
+          rt.station = free;
+          rt.left = ROUTINE_GYM_SECONDS;
+          // Primeira vez na partida: o fato real da NASA sobre exercício (F9).
+          if (!this.exerciseFactShown) this.hud.toast(t('fact.exercise'), t('fact.exercise.source'));
+          this.exerciseFactShown = true;
+        }
+      } else {
+        rt.left -= dt;
+        if (rt.left <= 0 && rt.at === 'gym') {
+          rt.at = 'bed';
+          rt.left = ROUTINE_REST_SECONDS;
+        } else if (rt.left <= 0) {
+          rt.at = 'post';
+          rt.idle = 0;
+        }
+      }
+
+      if (sleeping || rt.at === 'bed') {
+        a.root.position.copy(BUNK_SPOTS[r]);
+        a.setLying(true);
+        a.idle(dt);
+      } else if (rt.at === 'gym') {
+        const st = GYM_STATIONS[rt.station];
+        a.setLying(false);
+        a.root.position.copy(st.pos);
+        a.face(st.heading);
+        a.exercise(st.speed, dt);
+      } else {
+        a.setLying(false);
+        a.root.position.copy(this.tasks.onInsideTask(r) ? GREENHOUSE_WORK_SPOT : HABITAT_SPOTS[r]);
+        a.faceCamera(this.camera.position);
+        a.idle(dt);
+      }
     }
   }
 
