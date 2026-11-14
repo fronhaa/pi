@@ -5,8 +5,10 @@ import (
 	"strconv"
 )
 
-// Tipos espelham src/sim/types.ts. As tags JSON usam os mesmos nomes do TS,
-// para o cliente reaproveitar a interface sem conversão.
+// Tipos espelham src/sim/types.ts: o estado chega do sim.js como JSON e vira estes structs.
+// As tags JSON usam os mesmos nomes do TS (o cliente recebe o mesmo formato).
+// Campo novo em src/sim/types.ts que o servidor precisa ler ou repassar? Acrescente aqui;
+// o teste TestStateRoundTrip avisa se algum campo se perder.
 
 type FlareClass string
 
@@ -147,19 +149,19 @@ type HistoricalMission struct {
 }
 
 type GameState struct {
-	Seed         uint32
-	Historical   *HistoricalMission
-	Sol          int
-	Res          Resources
-	Blocks       int
-	Storms       []ScheduledStorm
-	DustStormSol int
-	DustHold     int
-	CardSols     map[int]CardID
-	PendingCard  *Card
-	Messages     []Message
-	Problems     []Problem
-	CommsDown    bool
-	Reports      []SolReport
-	Outcome      Outcome
+	Seed         uint32             `json:"seed"`
+	Historical   *HistoricalMission `json:"historical"`
+	Sol          int                `json:"sol"`
+	Res          Resources          `json:"res"`
+	Blocks       int                `json:"blocks"`
+	Storms       []ScheduledStorm   `json:"storms"`
+	DustStormSol int                `json:"dustStormSol"`
+	DustHold     int                `json:"dustHold"`
+	CardSols     map[int]CardID     `json:"cardSols"`
+	PendingCard  *Card              `json:"pendingCard"`
+	Messages     []Message          `json:"messages"`
+	Problems     []Problem          `json:"problems"`
+	CommsDown    bool               `json:"commsDown"`
+	Reports      []SolReport        `json:"reports"`
+	Outcome      Outcome            `json:"outcome"`
 }

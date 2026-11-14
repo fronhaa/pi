@@ -7,7 +7,7 @@ FROM node:22-alpine AS web
 WORKDIR /web
 COPY package.json package-lock.json ./
 RUN npm ci
-COPY index.html vite.config.ts tsconfig.json ./
+COPY index.html vite.config.ts vite.sim.config.ts tsconfig.json ./
 COPY src ./src
 COPY public ./public
 RUN VITE_COOP_URL=same-origin npm run build

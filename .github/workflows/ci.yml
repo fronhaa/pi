@@ -17,12 +17,11 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
-      # As regras do servidor Go precisam ser as mesmas de src/sim (docs/servidor-coop.md).
-      - name: Traços de paridade atualizados
+      # O servidor coop roda src/sim empacotado (ADR 0006). O npm run build regera o pacote.
+      - name: Pacote das regras (sim.js) atualizado
         run: |
-          npm run sim:golden
-          git diff --exit-code server/internal/sim/testdata/golden.json || {
-            echo "::error::src/sim mudou e os traços não foram regravados. Rode 'npm run sim:golden' e ajuste server/internal/sim."
+          git diff --exit-code server/internal/sim/simjs/sim.js || {
+            echo "::error::src/sim mudou e o server/internal/sim/simjs/sim.js não. Rode 'npm run build' e commite o sim.js."
             exit 1
           }
 
@@ -39,7 +38,9 @@ jobs:
           cache-dependency-path: server/go.sum
       - run: test -z "$(gofmt -l .)" || { gofmt -l .; echo "::error::rode gofmt -w ."; exit 1; }
       - run: go vet ./...
-      - run: go test -race ./...
+      - run: go test ./...
+      # -race só no coop (salas e WebSocket): na ponte JS ele é lento e não acha nada novo.
+      - run: go test -race ./internal/coop/
       - name: Imagem Docker monta
         working-directory: .
         run: docker build -f server/Dockerfile -t jezero-coop:ci .

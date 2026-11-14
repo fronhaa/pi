@@ -1,0 +1,833 @@
+var JezeroSim = (function(exports) {
+	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+	// src/sim/config.ts
+	/**
+	* Todos os números de jogo num lugar só (docs/game-design.md, "Sistemas e regras").
+	* São SIMPLIFICADOS para o jogo (classificação INTERPRETADO). O que é real é a erupção, não a escala.
+	* Mudou um número? Rode `npm run balance` e confira que a forma do equilíbrio se mantém.
+	*/
+	var CONFIG = {
+		sols: 15,
+		energy: {
+			panelBlocks: 10,
+			minBlocks: 2
+		},
+		battery: {
+			start: 50,
+			perLeftoverBlock: 10,
+			nightCost: 20,
+			max: 100,
+			lifePerMissingPoint: .6
+		},
+		life: {
+			start: 70,
+			stableBlocks: 3,
+			perBlock: 6,
+			max: 100
+		},
+		shield: {
+			start: 40,
+			decay: 4,
+			perBlock: 8,
+			max: 100
+		},
+		dose: {
+			start: 0,
+			perSol: 1,
+			max: 100,
+			shieldFactor: .85
+		},
+		science: {
+			perBlock: 3,
+			stormFactor: .5,
+			goal: 100
+		},
+		dust: {
+			windCleanPerSol: 6,
+			max: 80,
+			stormAdd: 40,
+			stormHoldSols: 3
+		},
+		solarStorms: {
+			count: 3,
+			firstSol: 4,
+			lastSol: 14,
+			minGap: 2,
+			/** Intensidade no jogo por classe da erupção real (C só aparece no modo simulado). */
+			intensity: {
+				C: 10,
+				M: 25,
+				X: 45
+			},
+			/**
+			* Missões históricas (CMEs do DONKI): a força calculada pelo script a partir do tipo de
+			* velocidade da CME (S/C = fraca, O = média, R/ER = forte) usa a mesma escala das erupções.
+			*/
+			strengthClass: {
+				weak: "C",
+				medium: "M",
+				strong: "X"
+			},
+			commDelayMin: {
+				min: 3,
+				max: 22
+			}
+		},
+		dustStorm: {
+			firstSol: 3,
+			lastSol: 12
+		},
+		cards: {
+			perGame: 4,
+			firstSol: 2,
+			lastSol: 14
+		},
+		/** Problemas pela base (GDD, "Tempo da tripulação"). Dia em tempo real com duração fixa. */
+		problems: {
+			firstSol: 3,
+			minPerDay: 1,
+			maxPerDay: 2,
+			/** Segundos do dia em que o problema pode aparecer. */
+			spawnWindow: {
+				min: 3,
+				max: 35
+			},
+			daySeconds: 75,
+			airlockSeconds: 3,
+			/** Dose ao terminar uma tarefa fora da base (escala do jogo, INTERPRETADO). */
+			outsideDose: 1,
+			effects: {
+				dust: 20,
+				lifeLeak: 10,
+				shieldBag: 8
+			}
+		},
+		stars: { doseFor3: 50 }
+	};
+	// src/sim/cards.ts
+	/**
+	* Cartas de decisão (docs/game-design.md, "Cartas de decisão").
+	* Regra: TODA opção tem custo, direto ou de oportunidade.
+	*/
+	var CARDS = {
+		dustyPanels: {
+			id: "dustyPanels",
+			options: [{ id: "clean" }, { id: "wait" }]
+		},
+		mysteryRock: {
+			id: "mysteryRock",
+			options: [{ id: "sendRover" }, { id: "skip" }]
+		},
+		greenhouseLeak: {
+			id: "greenhouseLeak",
+			options: [{ id: "fixNow" }, { id: "fixLater" }]
+		},
+		cargoShip: {
+			id: "cargoShip",
+			options: [
+				{ id: "batteries" },
+				{ id: "shieldKit" },
+				{ id: "experiment" }
+			]
+		},
+		brokenSensor: {
+			id: "brokenSensor",
+			options: [{ id: "askEarth" }, { id: "fixAlone" }]
+		},
+		subsurfaceIce: {
+			id: "subsurfaceIce",
+			options: [{ id: "drill" }, { id: "notNow" }]
+		}
+	};
+	var CARD_IDS = Object.keys(CARDS);
+	/** Efeito imediato ao aparecer a carta (antes da escolha). */
+	function onCardDrawn(id, res) {
+		if (id === "dustyPanels") res.dust = Math.min(CONFIG.dust.max, res.dust + 25);
+	}
+	/** Aplica a opção escolhida; devolve as linhas de relatório. */
+	function applyCardOption(id, option, res, rng) {
+		const b = CONFIG.battery;
+		const lines = [];
+		const add = (key, delta) => {
+			const max = key === "battery" ? b.max : key === "shield" ? CONFIG.shield.max : key === "life" ? CONFIG.life.max : key === "dust" ? CONFIG.dust.max : Infinity;
+			res[key] = clamp(res[key] + delta, 0, max);
+		};
+		switch (`${id}:${option}`) {
+			case "dustyPanels:clean":
+				add("dust", -30);
+				add("dose", 4);
+				break;
+			case "mysteryRock:sendRover":
+				add("science", 15);
+				add("battery", -20);
+				break;
+			case "greenhouseLeak:fixNow":
+				add("battery", -15);
+				add("science", -5);
+				break;
+			case "greenhouseLeak:fixLater":
+				add("life", -15);
+				break;
+			case "cargoShip:batteries":
+				add("battery", 30);
+				break;
+			case "cargoShip:shieldKit":
+				add("shield", 30);
+				break;
+			case "cargoShip:experiment":
+				add("science", 15);
+				break;
+			case "brokenSensor:askEarth":
+				add("science", -10);
+				break;
+			case "brokenSensor:fixAlone":
+				if (rng.chance(.5)) {
+					add("battery", -20);
+					lines.push({
+						key: "card.brokenSensor.failed",
+						tone: "bad"
+					});
+				} else lines.push({
+					key: "card.brokenSensor.worked",
+					tone: "good"
+				});
+				break;
+			case "subsurfaceIce:drill":
+				add("battery", -20);
+				add("life", 20);
+		}
+		lines.unshift({ key: `card.${id}.${option}.result` });
+		return lines;
+	}
+	function clamp(v, min, max) {
+		return Math.max(min, Math.min(max, v));
+	}
+	// src/sim/rng.ts
+	function createRng(seed) {
+		let a = seed >>> 0;
+		const next = () => {
+			a = a + 1831565813 >>> 0;
+			let t = a;
+			t = Math.imul(t ^ t >>> 15, t | 1);
+			t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+			return ((t ^ t >>> 14) >>> 0) / 4294967296;
+		};
+		const int = (min, max) => min + Math.floor(next() * (max - min + 1));
+		return {
+			next,
+			int,
+			pick: (items) => items[Math.floor(next() * items.length)],
+			shuffle: (items) => {
+				const out = [...items];
+				for (let i = out.length - 1; i > 0; i--) {
+					const j = Math.floor(next() * (i + 1));
+					[out[i], out[j]] = [out[j], out[i]];
+				}
+				return out;
+			},
+			chance: (p) => next() < p
+		};
+	}
+	// src/sim/problems.ts
+	var PROBLEMS = {
+		dustyPanels: {
+			kind: "dustyPanels",
+			taskSeconds: 15,
+			outside: true
+		},
+		greenhouseLeak: {
+			kind: "greenhouseLeak",
+			taskSeconds: 10,
+			outside: false
+		},
+		antenna: {
+			kind: "antenna",
+			taskSeconds: 15,
+			outside: true
+		},
+		roverStuck: {
+			kind: "roverStuck",
+			taskSeconds: 20,
+			outside: true
+		},
+		tornBag: {
+			kind: "tornBag",
+			taskSeconds: 10,
+			outside: true
+		}
+	};
+	var PROBLEM_KINDS = Object.keys(PROBLEMS);
+	/** Sorteia os problemas do dia: só a partir do sol 3, 1 ou 2 por dia, tipos diferentes. */
+	function scheduleProblems(sol, rng, nextUid) {
+		const c = CONFIG.problems;
+		if (sol < c.firstSol) return [];
+		const count = rng.int(c.minPerDay, c.maxPerDay);
+		return rng.shuffle(PROBLEM_KINDS).slice(0, count).map((kind) => ({
+			uid: nextUid(),
+			kind,
+			spawnAt: rng.int(c.spawnWindow.min, c.spawnWindow.max),
+			status: "pending",
+			progress: 0
+		})).sort((a, b) => a.spawnAt - b.spawnAt);
+	}
+	// \0@oxc-project+runtime@0.156.0/helpers/esm/typeof.js
+	function _typeof(o) {
+		"@babel/helpers - typeof";
+		return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o) {
+			return typeof o;
+		} : function(o) {
+			return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
+		}, _typeof(o);
+	}
+	// \0@oxc-project+runtime@0.156.0/helpers/esm/toPrimitive.js
+	function toPrimitive(t, r) {
+		if ("object" != _typeof(t) || !t) return t;
+		var e = t[Symbol.toPrimitive];
+		if (void 0 !== e) {
+			var i = e.call(t, r || "default");
+			if ("object" != _typeof(i)) return i;
+			throw new TypeError("@@toPrimitive must return a primitive value.");
+		}
+		return ("string" === r ? String : Number)(t);
+	}
+	// \0@oxc-project+runtime@0.156.0/helpers/esm/toPropertyKey.js
+	function toPropertyKey(t) {
+		var i = toPrimitive(t, "string");
+		return "symbol" == _typeof(i) ? i : i + "";
+	}
+	// \0@oxc-project+runtime@0.156.0/helpers/esm/defineProperty.js
+	function _defineProperty(e, r, t) {
+		return (r = toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+			value: t,
+			enumerable: !0,
+			configurable: !0,
+			writable: !0
+		}) : e[r] = t, e;
+	}
+	// \0@oxc-project+runtime@0.156.0/helpers/esm/objectSpread2.js
+	function ownKeys(e, r) {
+		var t = Object.keys(e);
+		if (Object.getOwnPropertySymbols) {
+			var o = Object.getOwnPropertySymbols(e);
+			r && (o = o.filter(function(r) {
+				return Object.getOwnPropertyDescriptor(e, r).enumerable;
+			})), t.push.apply(t, o);
+		}
+		return t;
+	}
+	function _objectSpread2(e) {
+		for (var r = 1; r < arguments.length; r++) {
+			var t = null != arguments[r] ? arguments[r] : {};
+			r % 2 ? ownKeys(Object(t), !0).forEach(function(r) {
+				_defineProperty(e, r, t[r]);
+			}) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function(r) {
+				Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
+			});
+		}
+		return e;
+	}
+	// src/sim/mission.ts
+	/** Cartas substituídas pelos problemas da tripulação (GDD: "Eles substituem as cartas..."). */
+	var CARD_POOL = CARD_IDS.filter((id) => id !== "dustyPanels" && id !== "greenhouseLeak");
+	/**
+	* Simulação pura da missão (docs/game-design.md). Sem DOM, sem Three.js:
+	* roda igual no navegador e no Node (`npm run balance`).
+	*/
+	var Mission = class {
+		/**
+		* @param realFlares erupções reais para sortear (usadas quando não há missão histórica)
+		* @param historical missão histórica: tempestades e atraso das mensagens vêm dela, com datas reais
+		*/
+		constructor(seed, realFlares = [], historical = null) {
+			_defineProperty(this, "state", void 0);
+			_defineProperty(this, "rng", void 0);
+			_defineProperty(
+				this,
+				/** Linhas geradas durante o sol (carta, problemas resolvidos), entram no relatório do mesmo sol. */
+				"cardLines",
+				[]
+			);
+			_defineProperty(this, "uid", 0);
+			_defineProperty(
+				this,
+				/** Antena desalinhada na noite anterior: sem mensagens no próximo sol. */
+				"nextCommsDown",
+				false
+			);
+			_defineProperty(
+				this,
+				/** Problemas que continuam no próximo sol (trabalho pela metade em noite de tempestade). */
+				"carryOver",
+				[]
+			);
+			this.rng = createRng(seed);
+			const storms = historical ? this.historicalStorms(historical) : this.scheduleStorms(realFlares);
+			const stormSols = new Set(storms.map((s) => s.sol));
+			let dustStormSol;
+			do
+				dustStormSol = this.rng.int(CONFIG.dustStorm.firstSol, CONFIG.dustStorm.lastSol);
+			while (stormSols.has(dustStormSol));
+			const cardSols = /* @__PURE__ */ new Map();
+			const sols = this.rng.shuffle(range(CONFIG.cards.firstSol, CONFIG.cards.lastSol).filter((s) => s !== dustStormSol)).slice(0, CONFIG.cards.perGame);
+			const ids = this.rng.shuffle(CARD_POOL).slice(0, CONFIG.cards.perGame);
+			sols.forEach((s, i) => cardSols.set(s, ids[i]));
+			this.state = {
+				seed,
+				historical,
+				sol: 0,
+				res: {
+					battery: CONFIG.battery.start,
+					life: CONFIG.life.start,
+					shield: CONFIG.shield.start,
+					dose: CONFIG.dose.start,
+					science: 0,
+					dust: 0
+				},
+				blocks: CONFIG.energy.panelBlocks,
+				storms,
+				dustStormSol,
+				dustHold: 0,
+				cardSols,
+				pendingCard: null,
+				messages: [],
+				problems: [],
+				commsDown: false,
+				reports: [],
+				outcome: { status: "playing" }
+			};
+			this.startSol(1);
+		}
+		scheduleStorms(realFlares) {
+			const { count, firstSol, lastSol, minGap, commDelayMin } = CONFIG.solarStorms;
+			let sols = [];
+			for (let tries = 0; tries < 1e3; tries++) {
+				sols = this.rng.shuffle(range(firstSol, lastSol)).slice(0, count).sort((a, b) => a - b);
+				if (sols.every((s, i) => i === 0 || s - sols[i - 1] >= minGap)) break;
+			}
+			const flares = realFlares.length >= count ? this.rng.shuffle(realFlares).slice(0, count) : sols.map(() => this.simulatedFlare());
+			return sols.map((sol, i) => ({
+				sol,
+				flare: flares[i],
+				delayMin: this.rng.int(commDelayMin.min, commDelayMin.max)
+			}));
+		}
+		/** Tempestades fixas da missão; o aviso chega um sol antes, com o atraso real daquele sol. */
+		historicalStorms(h) {
+			return h.storms.map((s) => ({
+				sol: s.sol,
+				flare: s.flare,
+				delayMin: h.delays[s.sol - 2]
+			}));
+		}
+		simulatedFlare() {
+			const r = this.rng.next();
+			const cls = r < .3 ? "C" : r < .7 ? "M" : "X";
+			return {
+				cls,
+				label: cls,
+				real: false
+			};
+		}
+		get stormToday() {
+			return this.state.storms.find((s) => s.sol === this.state.sol);
+		}
+		startSol(sol) {
+			const s = this.state;
+			s.sol = sol;
+			if (sol === s.dustStormSol) {
+				s.res.dust = Math.min(CONFIG.dust.max, s.res.dust + CONFIG.dust.stormAdd);
+				s.dustHold = CONFIG.dust.stormHoldSols;
+			}
+			s.commsDown = this.nextCommsDown;
+			this.nextCommsDown = false;
+			s.messages = s.commsDown ? [{ kind: "noSignal" }] : this.buildMessages(sol);
+			s.problems = [...this.carryOver, ...scheduleProblems(sol, this.rng, () => ++this.uid)];
+			this.carryOver = [];
+			const cardId = s.cardSols.get(sol);
+			if (cardId) {
+				onCardDrawn(cardId, s.res);
+				s.pendingCard = CARDS[cardId];
+			} else s.pendingCard = null;
+			this.cardLines = [];
+			this.updateBlocks();
+		}
+		buildMessages(sol) {
+			const s = this.state;
+			const h = s.historical;
+			const delay = () => h ? h.delays[sol - 1] : this.rng.int(CONFIG.solarStorms.commDelayMin.min, CONFIG.solarStorms.commDelayMin.max);
+			const msgs = [];
+			for (const storm of s.storms) {
+				if (storm.sol === sol + 1) msgs.push({
+					kind: "stormAlert",
+					flare: storm.flare,
+					delayMin: storm.delayMin,
+					impactSol: storm.sol
+				});
+				if (storm.sol === sol) msgs.push({
+					kind: "stormToday",
+					flare: storm.flare,
+					delayMin: h ? h.delays[sol - 1] : storm.delayMin
+				});
+			}
+			if (s.dustStormSol === sol + 1) msgs.push({
+				kind: "dustAlert",
+				delayMin: delay(),
+				sol: s.dustStormSol
+			});
+			if (s.dustStormSol === sol) msgs.push({ kind: "dustNow" });
+			if (msgs.length === 0) msgs.push({
+				kind: "allClear",
+				delayMin: delay()
+			});
+			return msgs;
+		}
+		/** Blocos do dia: 10, reduzidos na proporção da poeira, mínimo 2. */
+		updateBlocks() {
+			const { panelBlocks, minBlocks } = CONFIG.energy;
+			this.state.blocks = Math.max(minBlocks, Math.round(panelBlocks * (1 - this.state.res.dust / 100)));
+		}
+		answerCard(optionId) {
+			const card = this.state.pendingCard;
+			if (!card) throw new Error("Nenhuma carta pendente");
+			if (!card.options.some((o) => o.id === optionId)) throw new Error(`Opção inválida: ${optionId}`);
+			const lines = applyCardOption(card.id, optionId, this.state.res, this.rng);
+			this.cardLines.push(...lines);
+			this.state.pendingCard = null;
+			this.updateBlocks();
+			this.checkLoss();
+			return lines;
+		}
+		problem(uid) {
+			const p = this.state.problems.find((x) => x.uid === uid);
+			if (!p) throw new Error(`Problema inexistente: ${uid}`);
+			return p;
+		}
+		/** O relógio do dia chegou ao `spawnAt`: o problema aparece na base. */
+		openProblem(uid) {
+			const p = this.problem(uid);
+			if (p.status === "pending") p.status = "open";
+		}
+		/** Progresso do trabalho (0–1), informado pela cena enquanto um astronauta trabalha. */
+		setProblemProgress(uid, progress) {
+			const p = this.problem(uid);
+			if (p.status !== "done") p.progress = clamp(progress, 0, 1);
+		}
+		/** Um astronauta terminou o trabalho. Fora da base, soma dose (GDD). */
+		resolveProblem(uid) {
+			const p = this.problem(uid);
+			if (p.status === "done") return;
+			p.status = "done";
+			p.progress = 1;
+			const outside = PROBLEMS[p.kind].outside;
+			if (outside) this.state.res.dose = round1(this.state.res.dose + CONFIG.problems.outsideDose);
+			this.cardLines.push({
+				key: outside ? "report.problem.fixedOutside" : "report.problem.fixed",
+				params: {
+					problem: `problem.${p.kind}`,
+					dose: CONFIG.problems.outsideDose
+				},
+				tone: "good"
+			});
+			this.checkLoss();
+		}
+		isPlanValid(plan) {
+			const total = plan.life + plan.shield + plan.science;
+			return [
+				plan.life,
+				plan.shield,
+				plan.science
+			].every((n) => Number.isInteger(n) && n >= 0) && total <= this.state.blocks;
+		}
+		/** Executa o dia e a noite com o plano de energia; avança para o próximo sol. */
+		endSol(plan) {
+			const s = this.state;
+			if (s.outcome.status !== "playing") throw new Error("Missão já terminou");
+			if (s.pendingCard) throw new Error("Responda a carta antes de terminar o sol");
+			if (!this.isPlanValid(plan)) throw new Error("Plano de energia inválido");
+			const r = s.res;
+			const before = _objectSpread2({}, r);
+			const lines = [...this.cardLines];
+			const storm = this.stormToday;
+			const leftover = s.blocks - plan.life - plan.shield - plan.science;
+			const lifeDelta = (plan.life - CONFIG.life.stableBlocks) * CONFIG.life.perBlock;
+			r.life = clamp(r.life + lifeDelta, 0, CONFIG.life.max);
+			lines.push({
+				key: lifeDelta === 0 ? "report.life.stable" : lifeDelta > 0 ? "report.life.up" : "report.life.down",
+				params: {
+					blocks: plan.life,
+					delta: Math.abs(lifeDelta)
+				},
+				tone: lifeDelta < 0 ? "bad" : lifeDelta > 0 ? "good" : "neutral"
+			});
+			const shieldDelta = plan.shield * CONFIG.shield.perBlock - CONFIG.shield.decay;
+			r.shield = clamp(r.shield + shieldDelta, 0, CONFIG.shield.max);
+			lines.push({
+				key: "report.shield",
+				params: {
+					blocks: plan.shield,
+					value: Math.round(r.shield)
+				},
+				tone: shieldDelta < 0 ? "bad" : "good"
+			});
+			const unresolved = s.problems.filter((p) => p.status !== "done");
+			const carried = storm ? unresolved.filter((p) => p.progress > 0) : [];
+			const failed = unresolved.filter((p) => !carried.includes(p));
+			const roverStuck = failed.some((p) => p.kind === "roverStuck");
+			const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (storm ? CONFIG.science.stormFactor : 1);
+			r.science += sciGain;
+			if (roverStuck && plan.science > 0) lines.push({
+				key: "report.problem.roverStuck",
+				params: { blocks: plan.science },
+				tone: "bad"
+			});
+			else if (plan.science > 0) lines.push({
+				key: storm ? "report.science.storm" : "report.science",
+				params: {
+					blocks: plan.science,
+					gain: sciGain
+				},
+				tone: "good"
+			});
+			r.battery = Math.min(CONFIG.battery.max, r.battery + leftover * CONFIG.battery.perLeftoverBlock);
+			if (leftover > 0) lines.push({
+				key: "report.battery.saved",
+				params: {
+					blocks: leftover,
+					gain: leftover * CONFIG.battery.perLeftoverBlock
+				}
+			});
+			r.battery -= CONFIG.battery.nightCost;
+			if (r.battery < 0) {
+				const missing = -r.battery;
+				const lifeLost = round1(missing * CONFIG.battery.lifePerMissingPoint);
+				r.life = clamp(r.life - lifeLost, 0, CONFIG.life.max);
+				r.battery = 0;
+				lines.push({
+					key: "report.night.short",
+					params: {
+						missing,
+						lifeLost
+					},
+					tone: "bad"
+				});
+			} else lines.push({
+				key: "report.night.ok",
+				params: { cost: CONFIG.battery.nightCost }
+			});
+			let stormResult = null;
+			if (storm) {
+				const dose = stormDose(storm.flare.cls, r.shield);
+				r.dose += dose;
+				stormResult = {
+					flare: storm.flare,
+					dose
+				};
+				const key = storm.flare.source === "cme" ? "report.storm.cme" : "report.storm";
+				lines.push({
+					key,
+					params: {
+						label: storm.flare.label,
+						dose,
+						shield: Math.round(r.shield)
+					},
+					tone: "bad"
+				});
+			}
+			r.dose += CONFIG.dose.perSol;
+			if (s.dustHold > 0) {
+				s.dustHold--;
+				if (r.dust > 0) lines.push({
+					key: "report.dust.hold",
+					params: { dust: Math.round(r.dust) },
+					tone: "bad"
+				});
+			} else if (r.dust > 0) {
+				r.dust = Math.max(0, r.dust - CONFIG.dust.windCleanPerSol);
+				lines.push({
+					key: "report.dust.wind",
+					params: { dust: Math.round(r.dust) }
+				});
+			}
+			const fx = CONFIG.problems.effects;
+			for (const p of failed) {
+				if (p.kind === "dustyPanels") r.dust = Math.min(CONFIG.dust.max, r.dust + fx.dust);
+				if (p.kind === "greenhouseLeak") r.life = clamp(r.life - fx.lifeLeak, 0, CONFIG.life.max);
+				if (p.kind === "tornBag") r.shield = clamp(r.shield - fx.shieldBag, 0, CONFIG.shield.max);
+				if (p.kind === "antenna") this.nextCommsDown = true;
+				if (p.kind !== "roverStuck") lines.push({
+					key: `report.problem.failed.${p.kind}`,
+					params: fx,
+					tone: "bad"
+				});
+			}
+			for (const p of carried) lines.push({
+				key: "report.problem.carried",
+				params: { problem: `problem.${p.kind}` }
+			});
+			this.carryOver = carried.map((p) => _objectSpread2(_objectSpread2({}, p), {}, {
+				status: "open",
+				spawnAt: 0
+			}));
+			r.life = round1(r.life);
+			r.dose = round1(r.dose);
+			const report = {
+				sol: s.sol,
+				plan: _objectSpread2({}, plan),
+				before,
+				after: _objectSpread2({}, r),
+				storm: stormResult,
+				lines
+			};
+			s.reports.push(report);
+			this.checkLoss();
+			if (s.outcome.status === "playing") {
+				if (s.sol >= CONFIG.sols) s.outcome = {
+					status: "won",
+					stars: this.stars()
+				};
+				else this.startSol(s.sol + 1);
+			}
+			return report;
+		}
+		checkLoss() {
+			const s = this.state;
+			if (s.outcome.status !== "playing") return;
+			if (s.res.life <= 0) s.outcome = {
+				status: "lost",
+				reason: "life",
+				sol: s.sol
+			};
+			else if (s.res.dose >= CONFIG.dose.max) s.outcome = {
+				status: "lost",
+				reason: "dose",
+				sol: s.sol
+			};
+		}
+		stars() {
+			const r = this.state.res;
+			if (r.science < CONFIG.science.goal) return 1;
+			if (r.dose >= CONFIG.stars.doseFor3) return 2;
+			return 3;
+		}
+	};
+	/** dose = max(1, round(intensidade × (1 − blindagem/100 × 0,85))). Escala do jogo (INTERPRETADO). */
+	function stormDose(cls, shield) {
+		const intensity = CONFIG.solarStorms.intensity[cls];
+		return Math.max(1, Math.round(intensity * (1 - shield / 100 * CONFIG.dose.shieldFactor)));
+	}
+	function range(a, b) {
+		return Array.from({ length: b - a + 1 }, (_, i) => a + i);
+	}
+	function round1(n) {
+		return Math.round(n * 10) / 10;
+	}
+	// src/sim/historical.ts
+	/** Converte o arquivo; descarta missão incompleta em vez de quebrar o jogo. */
+	function parseMissions(data) {
+		if ((data === null || data === void 0 ? void 0 : data.schemaVersion) !== 1 || !Array.isArray(data.missions)) return [];
+		const out = [];
+		for (const m of data.missions) {
+			var _m$sols, _m$storms;
+			const delays = ((_m$sols = m.sols) !== null && _m$sols !== void 0 ? _m$sols : []).slice().sort((a, b) => a.sol - b.sol).map((s) => s.earthDelayMinutes);
+			const storms = ((_m$storms = m.storms) !== null && _m$storms !== void 0 ? _m$storms : []).flatMap((s) => {
+				var _s$link;
+				const cls = CONFIG.solarStorms.strengthClass[s.strength];
+				if (!cls || !Number.isInteger(s.sol)) return [];
+				return [{
+					sol: s.sol,
+					flare: {
+						cls,
+						label: s.cmeType,
+						real: true,
+						time: s.startTime,
+						link: (_s$link = s.link) !== null && _s$link !== void 0 ? _s$link : void 0,
+						source: "cme",
+						speedKmS: s.speedKmS
+					}
+				}];
+			});
+			if ((m.difficulty === "medium" || m.difficulty === "hard") && delays.length === CONFIG.sols && delays.every((d) => Number.isFinite(d) && d > 0) && storms.length === CONFIG.solarStorms.count) out.push({
+				id: m.id,
+				difficulty: m.difficulty,
+				startUtc: m.startUtc,
+				endUtc: m.endUtc,
+				storms,
+				delays
+			});
+		}
+		return out;
+	}
+	/** Primeira partida: só missões de força média; depois, qualquer uma (GDD, "Regras"). */
+	function pickHistorical(missions, seed, firstGame) {
+		const pool = firstGame ? missions.filter((m) => m.difficulty === "medium") : missions;
+		const list = pool.length > 0 ? pool : missions;
+		return list.length > 0 ? createRng(seed ^ 2654435769).pick(list) : null;
+	}
+	// src/sim/bridge.ts
+	/**
+	* Ponte da simulação para o servidor coop em Go (ADR 0006, docs/servidor-coop.md).
+	*
+	* `npm run sim:bundle` empacota este arquivo (e tudo de src/sim) em
+	* server/internal/sim/simjs/sim.js; o Go roda esse JS com goja. Assim as REGRAS existem
+	* num lugar só: mudou src/sim, o servidor acompanha no próximo build.
+	*
+	* Tudo entra e sai como JSON (texto): evita converter objetos entre JS e Go.
+	* Cada runtime do Go tem UMA missão (uma sala).
+	*/
+	var mission = null;
+	function current() {
+		if (!mission) throw new Error("missão não criada");
+		return mission;
+	}
+	/** Estado completo, no mesmo formato do GameState (cardSols vira objeto). */
+	function state() {
+		const s = current().state;
+		return JSON.stringify(_objectSpread2(_objectSpread2({}, s), {}, { cardSols: Object.fromEntries(s.cardSols) }));
+	}
+	function newMission(seed, flaresJson, historicalJson) {
+		const flares = JSON.parse(flaresJson);
+		const historical = JSON.parse(historicalJson);
+		mission = new Mission(seed >>> 0, flares, historical);
+	}
+	function answerCard(option) {
+		current().answerCard(option);
+	}
+	function isPlanValid(planJson) {
+		return current().isPlanValid(JSON.parse(planJson));
+	}
+	function endSol(planJson) {
+		return JSON.stringify(current().endSol(JSON.parse(planJson)));
+	}
+	function openProblem(uid) {
+		current().openProblem(uid);
+	}
+	function setProblemProgress(uid, progress) {
+		current().setProblemProgress(uid, progress);
+	}
+	function resolveProblem(uid) {
+		current().resolveProblem(uid);
+	}
+	/** Missões históricas: a mesma leitura e o mesmo sorteio do jogo solo. */
+	function parseMissionsJson(raw) {
+		return JSON.stringify(parseMissions(JSON.parse(raw)));
+	}
+	function pickHistoricalJson(missionsJson, seed, firstGame) {
+		return JSON.stringify(pickHistorical(JSON.parse(missionsJson), seed >>> 0, firstGame));
+	}
+	/** Números de jogo que o servidor também usa (relógio do dia, atraso das mensagens da Terra). */
+	function config() {
+		return JSON.stringify(CONFIG);
+	}
+	exports.answerCard = answerCard;
+	exports.config = config;
+	exports.endSol = endSol;
+	exports.isPlanValid = isPlanValid;
+	exports.newMission = newMission;
+	exports.openProblem = openProblem;
+	exports.parseMissionsJson = parseMissionsJson;
+	exports.pickHistoricalJson = pickHistoricalJson;
+	exports.resolveProblem = resolveProblem;
+	exports.setProblemProgress = setProblemProgress;
+	exports.state = state;
+	return exports;
+})({});

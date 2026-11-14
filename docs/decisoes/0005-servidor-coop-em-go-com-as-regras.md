@@ -1,6 +1,6 @@
 # 0005. Servidor coop em Go com as regras
 
-- **Status:** Proposto
+- **Status:** Substituído em parte por [0006](0006-servidor-roda-as-regras-do-typescript-goja.md) (as regras deixaram de ser portadas à mão: o Go roda o próprio `src/sim`)
 - **Data:** 2026-11-14
 - **Autores:** time Missão Jezero
 

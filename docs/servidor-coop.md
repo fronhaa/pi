@@ -3,7 +3,7 @@
 **Para jogar em grupo agora:** abra o link do servidor (seção [Onde está rodando](#onde-está-rodando)). Uma pessoa toca em **Jogar em grupo → Criar sala** e passa o código de 4 letras; as outras tocam em **Jogar em grupo**, digitam o código e escolhem um papel; quem criou a sala toca em **Começar a missão**.
 
 O servidor em [`server/`](../server) manda nas partidas cooperativas online: guarda as salas, aplica as **mesmas regras do jogo solo** e manda para cada jogador só o que o papel dele pode ver.
-Decisão e alternativas: [ADR 0005](decisoes/0005-servidor-coop-em-go-com-as-regras.md). Regras do coop: [game-design.md](game-design.md#modo-cooperativo).
+Decisões: [ADR 0005](decisoes/0005-servidor-coop-em-go-com-as-regras.md) (servidor em Go, dono da partida) e [ADR 0006](decisoes/0006-servidor-roda-as-regras-do-typescript-goja.md) (as regras são o próprio `src/sim`, rodando dentro do Go). Regras do coop: [game-design.md](game-design.md#modo-cooperativo).
 
 ```mermaid
 flowchart LR
@@ -11,7 +11,7 @@ flowchart LR
     M1["Aparelho de Marte<br/>comandante"] <-- "wss://" --> S
     M2["Aparelho de Marte<br/>engenheiro, médico, cientista"] <-- "wss://" --> S
     subgraph VPS["VPS · container"]
-        P["Proxy com HTTPS<br/>(Caddy ou Nginx)"] --> S["jezero-server (Go)<br/>salas em memória<br/>regras = src/sim"]
+        P["Proxy com HTTPS<br/>(Caddy ou Nginx)"] --> S["jezero-server (Go)<br/>salas em memória<br/>regras = src/sim (JS embutido, goja)"]
     end
 ```
 
@@ -19,7 +19,7 @@ flowchart LR
 
 | Pasta | O quê |
 | --- | --- |
-| `server/internal/sim/` | Porta das regras de `src/sim/` (mesmos números, mesmo sorteio). **Precisa ficar idêntica ao TS.** |
+| `server/internal/sim/` | Roda as regras de `src/sim/` (TypeScript empacotado em `simjs/sim.js`, executado com goja) e converte o estado para structs Go. **Não tem regra escrita em Go.** |
 | `server/internal/coop/` | Modo coop: `game.go` (regras puras: papéis, vez da Terra, mensagens com atraso), `room.go` (sala, permissões, o que cada um vê), `hub.go` (salas abertas), `ws.go` (WebSocket). |
 | `server/cmd/jezero-server/` | O programa: lê variáveis de ambiente, sobe o HTTP. |
 | `server/Dockerfile`, `server/compose.yaml` | Container para o VPS. A imagem também compila e **serve o jogo**: um endereço só para jogo e coop. |
@@ -91,7 +91,7 @@ Requisitos: Go 1.27+.
 
 ```bash
 cd server
-go test -race ./...                                  # regras, paridade com o TS, coop, WebSocket
+go test -race ./...                                  # ponte JS↔Go, coop, WebSocket
 FLARES_PATH=../public/data/donki-flares.json MISSIONS_PATH=../public/data/missions.json go run ./cmd/jezero-server
 curl localhost:8080/healthz                          # {"ok":true,"rooms":0,"realFlares":305,"historicalMissions":6}
 ```
@@ -157,17 +157,23 @@ Com Nginx, lembre dos cabeçalhos de WebSocket (`Upgrade` e `Connection "upgrade
 
 **Atualizar:** `git pull && docker compose up -d --build`. As salas abertas se perdem ao reiniciar (estão em memória), então atualize fora do horário de jogo.
 
-## Regra de ouro: as regras são as mesmas do TypeScript
+## Regras: um lugar só (`src/sim`)
 
-As regras existem em dois lugares (`src/sim/` e `server/internal/sim/`). O **teste de paridade** garante que são idênticas:
+O servidor **não tem regra escrita em Go**. Ele executa a própria simulação do jogo ([ADR 0006](decisoes/0006-servidor-roda-as-regras-do-typescript-goja.md)):
 
-1. Mudou algo em `src/sim/`? Faça a mesma mudança em `server/internal/sim/`.
-2. Rode `npm run sim:golden` na raiz: ele joga 360 partidas com o TS (erupções reais, simuladas e as missões históricas, abrindo, consertando e deixando problemas pela metade) e grava um hash do estado a cada passo.
-3. Rode `go test ./...` em `server/`: o Go repete as partidas e precisa dar o mesmo hash em todos os passos.
-4. O CI faz os dois e falha se divergir.
+```mermaid
+flowchart LR
+    TS["src/sim/*.ts<br/>(regras)"] -- "npm run build<br/>(sim:bundle)" --> JS["server/internal/sim/simjs/sim.js"]
+    JS -- "go:embed + goja" --> GO["jezero-server<br/>sim.NewMission, EndSol…"]
+```
 
-Cuidados que o teste já pegou:
+**Mudou uma regra em `src/sim`?**
 
-- **`Math.round` ≠ `math.Round`:** o JS arredonda .5 para cima (−2,5 → −2); use `jsRound()`.
-- **Fusão de float (FMA):** o Go pode calcular a*b+c sem arredondar no meio; o JS sempre arredonda. Toda multiplicação de float em `server/internal/sim` passa por `mul()`.
-- **Ordem dos sorteios:** mudar a ordem das chamadas ao gerador muda todas as partidas.
+1. Rode `npm run build` (ou só `npm run sim:bundle`).
+2. Commite o `server/internal/sim/simjs/sim.js` junto. O CI falha se ele estiver desatualizado.
+3. Pronto: não precisa mexer em Go.
+
+**Só precisa mexer em Go** se surgir campo novo em `src/sim/types.ts` que o servidor precise ler ou repassar aos jogadores.
+Acrescente o campo em `server/internal/sim/types.go`; o teste `TestStateRoundTrip` (150 partidas aleatórias) aponta qualquer campo que se perder entre o JS e o Go.
+
+Custo medido por sala: ~170 KB de memória, 0,4 ms para criar, 0,2 ms por ação. Cada sala tem o próprio motor JS.
