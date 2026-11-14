@@ -15,5 +15,5 @@
     "allowImportingTsExtensions": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src", "scripts/**/*.ts", "vite.config.ts"]
+  "include": ["src", "scripts/**/*.ts", "vite.config.ts", "vite.sim.config.ts"]
 }

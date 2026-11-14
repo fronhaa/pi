@@ -21,6 +21,7 @@ Jogo 3D cartoon no navegador para o desafio NASA Space Apps 2026 "Junior Astrona
 ## Documentação (obrigatório)
 
 - Mudou uma regra do jogo, então atualize `docs/game-design.md`. Todo número real usado no jogo precisa de fonte registrada.
+- Mudou `src/sim/`? Rode `npm run build` (ou `npm run sim:bundle`) e commite `server/internal/sim/simjs/sim.js` junto: o servidor coop (Go) roda essas mesmas regras. Só mexa em Go se surgir campo novo em `src/sim/types.ts` que o servidor use (ver `docs/servidor-coop.md`, ADR 0006).
 
 - Mudou como um sistema funciona, então atualize o guia correspondente em `docs/` na mesma mudança.
 - Decisão técnica importante (lib, técnica, padrão): crie um ADR com `npm run docs:adr -- "título"` e preencha.

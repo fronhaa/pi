@@ -1,0 +1,41 @@
+# Subir no VPS (de dentro da pasta server/):
+#   docker compose up -d --build
+# Ver logs:  docker compose logs -f
+# Detalhes, HTTPS e atualização: docs/servidor-coop.md
+services:
+  jezero-coop:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: jezero-coop:latest
+    container_name: jezero-coop
+    restart: unless-stopped
+    environment:
+      # Hosts de onde o jogo pode conectar. TROQUE pelo endereço onde o jogo está publicado.
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-fronhaa.github.io,localhost:*}"
+    ports:
+      # Padrão: só na máquina local; o proxy com HTTPS (Caddy/Nginx) expõe para fora como wss://.
+      # COOP_BIND/COOP_PORT mudam isso (ex.: Docker em outro container, porta 8080 ocupada).
+      - "${COOP_BIND:-127.0.0.1}:${COOP_PORT:-8080}:8080"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m # cada sala roda as regras num motor JS próprio (~170 KB por sala)
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Link TEMPORÁRIO com HTTPS (Cloudflare Quick Tunnel), sem conta nem DNS.
+  # Subir:  docker compose --profile tunnel up -d
+  # Link:   docker compose logs tunnel | grep trycloudflare.com
+  # O link MUDA sempre que este container reinicia. Bom para teste e demonstração.
+  tunnel:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    container_name: jezero-coop-tunnel
+    command: ["tunnel", "--no-autoupdate", "--url", "http://jezero-coop:8080"]
+    depends_on:
+      - jezero-coop
+    restart: unless-stopped
