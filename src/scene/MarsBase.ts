@@ -90,6 +90,11 @@ export class MarsBase {
   /** Desvio lateral da elipse (m): + para fora, − para dentro. O rover recalcula e desvia de astronautas. */
   private roverOffset = 0;
   private roverOffsetTarget = 0;
+  /** Rodas (giram conforme a distância percorrida) e direção do nariz (segue o movimento real). */
+  private readonly roverWheels: THREE.Object3D[] = [];
+  private roverHeading: number | null = null;
+  /** Pedras que o rover precisa evitar (posição e raio no chão). */
+  private readonly roverRocks: { x: number; z: number; r: number }[] = [];
   private roverWarning!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
 
   constructor(private readonly scene: THREE.Scene) {
@@ -179,8 +184,16 @@ export class MarsBase {
       const x = Math.cos(angle) * dist;
       const z = Math.sin(angle) * dist;
       const s = 0.25 + rng() * rng() * 1.6;
-      const rock = toonMesh(geo, rng() > 0.5 ? PALETTE.rock : PALETTE.soil, 0.04);
-      rock.scale.set(s * (0.8 + rng() * 0.6), s * (0.5 + rng() * 0.4), s * (0.8 + rng() * 0.6));
+      const color = rng() > 0.5 ? PALETTE.rock : PALETTE.soil;
+      const sx = s * (0.8 + rng() * 0.6);
+      const sy = s * (0.5 + rng() * 0.4);
+      const sz = s * (0.8 + rng() * 0.6);
+      const r = Math.max(sx, sz);
+      // Trilha do rover: nenhuma pedra na faixa principal (senão ele poderia ficar preso para sempre).
+      if (distanceToRoverTrack(x, z) < r + 2) continue;
+      this.roverRocks.push({ x, z, r });
+      const rock = toonMesh(geo, color, 0.04);
+      rock.scale.set(sx, sy, sz);
       rock.position.set(x, terrainHeight(x, z) + s * 0.2, z);
       rock.rotation.set(rng(), rng() * 3, rng());
       this.root.add(rock);
@@ -373,6 +386,10 @@ export class MarsBase {
     for (const x of [-0.75, 0, 0.75]) {
       for (const z of [-0.75, 0.75]) {
         const w = toonMesh(wheelGeo, PALETTE.shadow, 0.04);
+        this.roverWheels.push(w);
+        // Raio da roda visível ao girar (sem isso a roda lisa parece parada).
+        const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.27), new THREE.MeshBasicMaterial({ color: PALETTE.tech }));
+        w.add(spoke);
         w.position.set(x, 0.3, z);
         this.rover.add(w);
       }
@@ -438,6 +455,7 @@ export class MarsBase {
 
   setRoverStuck(at: THREE.Vector3 | null): void {
     this.roverStuckAt = at;
+    this.roverHeading = null; // ao voltar a andar, o nariz recomeça da direção do movimento
     if (!at) this.rover.rotation.set(0, this.rover.rotation.y, 0);
   }
 
@@ -473,19 +491,22 @@ export class MarsBase {
   }
 
   /**
-   * O trecho à frente (~7 m) da rota com desvio `off` passa perto de algum astronauta?
+   * O trecho à frente (~8 m) da rota com desvio `off` passa perto de algum astronauta?
    * Usa a mesma medida para a rota atual e para as rotas alternativas do desvio.
    */
-  private routeHits(crew: THREE.Vector3[], off: number): THREE.Vector3 | null {
+  private routeHits(crew: THREE.Vector3[], off: number): { x: number; z: number } | null {
     // O rover anda ~2,8 m/s e leva ~1 s para mudar de faixa: precisa enxergar longe o bastante para desviar a tempo.
-    const LOOKAHEAD = 7;
+    const LOOKAHEAD = 8;
     const SAFE = 1.4; // meia-largura do rover (~0,65) + astronauta (~0,35) + folga
     const a = this.roverAngle;
     const speed = Math.hypot(Math.sin(a) * (26 + off), Math.cos(a) * (15 + off));
-    for (const c of crew) {
-      for (let i = 1; i <= 10; i++) {
-        const p = this.roverPoint(a + ((i / 10) * LOOKAHEAD) / speed, off);
-        if (Math.hypot(c.x - p.x, c.z - p.z) < SAFE) return c;
+    const ROVER_HALF = 0.9; // meia-largura do rover + folga, para pedras e prédios
+    for (let i = 1; i <= 10; i++) {
+      const p = this.roverPoint(a + ((i / 10) * LOOKAHEAD) / speed, off);
+      for (const c of crew) if (Math.hypot(c.x - p.x, c.z - p.z) < SAFE) return c;
+      for (const k of this.roverRocks) if (Math.hypot(k.x - p.x, k.z - p.z) < k.r + ROVER_HALF) return k;
+      for (const o of this.obstacles) {
+        if (Math.abs(p.x - o.center.x) < o.half.x + ROVER_HALF && Math.abs(p.z - o.center.z) < o.half.z + ROVER_HALF) return o.center;
       }
     }
     return null;
@@ -566,23 +587,54 @@ export class MarsBase {
       }
       // Elipse por fora da base e dos painéis (painéis vão até x ≈ 22).
       if (!this.roverBlocked) {
+        const a0 = this.roverAngle;
         this.roverAngle += dt * 0.06 * s.scienceBlocks;
-        // Muda de faixa suavemente (3 m/s de lado).
-        const step = 3 * dt;
+        // Troca de faixa limitada a uma curva natural: no máximo ~0,6 m de lado por metro à frente (~30°).
+        const forward = (this.roverAngle - a0) * Math.hypot(Math.sin(a0) * (26 + this.roverOffset), Math.cos(a0) * (15 + this.roverOffset));
+        const step = forward * 0.6;
         this.roverOffset += THREE.MathUtils.clamp(this.roverOffsetTarget - this.roverOffset, -step, step);
       }
-      const off = this.roverOffset;
-      const { x, z } = this.roverPoint(this.roverAngle, off);
-      const sideways = THREE.MathUtils.clamp(this.roverOffsetTarget - off, -1, 1) * 0.35; // inclina o nariz para o lado do desvio
-      const dx = -Math.sin(this.roverAngle) * (26 + off) + Math.cos(this.roverAngle) * sideways * 10;
-      const dz = Math.cos(this.roverAngle) * (15 + off) + Math.sin(this.roverAngle) * sideways * 10;
-      this.rover.rotation.y = Math.atan2(-dz, dx);
-      this.rover.position.set(x, terrainHeight(x, z), z);
+      const { x, z } = this.roverPoint(this.roverAngle, this.roverOffset);
+      const y = terrainHeight(x, z);
+      const moved = Math.hypot(x - this.rover.position.x, z - this.rover.position.z);
+      if (moved > 1e-4 && moved < 2) {
+        // Nariz mira um ponto ~0,5 m à frente na trajetória planejada (sem "drift" nas curvas e desvios).
+        const speedHere = Math.hypot(Math.sin(this.roverAngle) * (26 + this.roverOffset), Math.cos(this.roverAngle) * (15 + this.roverOffset));
+        const aheadOff = this.roverOffset + THREE.MathUtils.clamp(this.roverOffsetTarget - this.roverOffset, -0.3, 0.3);
+        const ahead = this.roverPoint(this.roverAngle + 0.5 / speedHere, aheadOff);
+        const target = Math.atan2(-(ahead.z - z), ahead.x - x);
+        if (this.roverHeading === null) this.roverHeading = target;
+        const diff = Math.atan2(Math.sin(target - this.roverHeading), Math.cos(target - this.roverHeading));
+        this.roverHeading += diff * Math.min(1, dt * 15);
+        // Rodas giram conforme a distância (raio 0,3 m).
+        for (const w of this.roverWheels) w.rotation.z -= moved / 0.3;
+      }
+      // Terreno: inclina o rover conforme o relevo (frente/trás = arfagem, lados = rolagem).
+      const h = this.roverHeading ?? 0;
+      const fx = Math.cos(h);
+      const fz = -Math.sin(h);
+      const front = terrainHeight(x + fx, z + fz);
+      const back = terrainHeight(x - fx, z - fz);
+      const left = terrainHeight(x - fz * 0.65, z + fx * 0.65);
+      const right = terrainHeight(x + fz * 0.65, z - fx * 0.65);
+      this.rover.rotation.order = 'YZX';
+      this.rover.rotation.set(Math.atan2(left - right, 1.3), h, Math.atan2(front - back, 2));
+      this.rover.position.set(x, y, z);
     } else {
       this.roverBlocked = false;
     }
     this.roverWarning.material.color.setHex(this.roverBlocked && Math.sin(time * 10) > 0 ? 0xffb020 : 0x5a4a2a);
   }
+}
+
+/** Distância (m) de um ponto até a trilha principal do rover (elipse centro (2,2), semi-eixos 26 e 15). */
+function distanceToRoverTrack(x: number, z: number): number {
+  let best = Infinity;
+  for (let i = 0; i < 360; i++) {
+    const a = (i / 360) * Math.PI * 2;
+    best = Math.min(best, Math.hypot(x - (2 + Math.cos(a) * 26), z - (2 + Math.sin(a) * 15)));
+  }
+  return best;
 }
 
 /** Relevo: plano perto da base, dunas suaves longe dela (INTERPRETADO até o Mars Trek entrar). */
