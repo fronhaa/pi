@@ -5,17 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pi — Space Apps</title>
     <style>
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #8ecae6; }
+      :root { --ink: #1a1a2e; --sky: #8ecae6; --accent: #ff8c42; }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: var(--sky); }
       canvas { display: block; }
+
       #hud {
         position: fixed; left: 16px; bottom: 16px;
-        font: 600 14px/1.4 system-ui, sans-serif; color: #1a1a2e;
+        font: 600 14px/1.4 system-ui, sans-serif; color: var(--ink);
         background: #ffffffcc; padding: 8px 12px; border-radius: 12px;
-        border: 3px solid #1a1a2e; user-select: none;
+        border: 3px solid var(--ink); user-select: none;
+      }
+      body.loading #hud { display: none; }
+
+      /* Tela de carregamento: HTML/CSS puro para aparecer antes de qualquer JS. Ver src/ui/LoadingScreen.ts */
+      #loading {
+        position: fixed; inset: 0; z-index: 10;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+        background: var(--sky); color: var(--ink);
+        font: 700 18px/1.4 system-ui, sans-serif;
+        transition: opacity 0.4s ease;
+      }
+      #loading.hidden { opacity: 0; pointer-events: none; }
+      #loading h1 { margin: 0; font-size: 48px; letter-spacing: 2px; text-shadow: 3px 3px 0 #fff; }
+      #loading .bar {
+        position: relative; overflow: hidden;
+        width: min(320px, 80vw); height: 22px;
+        background: #fff; border: 4px solid var(--ink); border-radius: 999px;
+      }
+      #loading .bar::after {
+        content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 40%;
+        background: var(--accent); border-radius: 999px;
+        animation: slide 1.1s ease-in-out infinite;
+      }
+      #loading.error .bar::after { animation: none; left: 0; width: 100%; background: #ef476f; }
+      #loading-status { min-height: 1.4em; text-align: center; padding: 0 16px; }
+      #loading button {
+        display: none; font: inherit; color: var(--ink); cursor: pointer;
+        background: #ffd166; border: 4px solid var(--ink); border-radius: 12px; padding: 6px 18px;
+      }
+      #loading.error button { display: block; }
+      @keyframes slide { 0% { left: -40%; } 100% { left: 100%; } }
+      @media (prefers-reduced-motion: reduce) {
+        #loading .bar::after { animation: none; left: 0; width: 100%; opacity: 0.6; }
       }
     </style>
   </head>
-  <body>
+  <body class="loading">
+    <div id="loading" role="status" aria-live="polite">
+      <h1>Pi</h1>
+      <div class="bar" aria-hidden="true"></div>
+      <div id="loading-status">Carregando…</div>
+      <button type="button" onclick="location.reload()">Tentar de novo</button>
+    </div>
     <div id="hud">WASD / setas: mover · Espaço: pular</div>
     <script type="module" src="/src/main.ts"></script>
   </body>

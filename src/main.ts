@@ -1,4 +1,25 @@
-import { Game } from '@/core/Game';
+import { LoadingScreen } from '@/ui/LoadingScreen';
 
-// Ponto de entrada: inicializa o Rapier (WASM) e sobe o jogo.
-Game.create(document.body).then((game) => game.start());
+/**
+ * Ponto de entrada. Este arquivo é propositalmente pequeno: o jogo (Three.js + Rapier, ~1,7 MB)
+ * é carregado sob demanda com import(), então a tela de carregamento aparece na hora.
+ * Ver docs/decisoes/0003-manter-rapier-apesar-do-tamanho-do-bundle.md
+ */
+async function boot(): Promise<void> {
+  const loading = new LoadingScreen();
+  try {
+    loading.setStatus('Baixando o jogo…');
+    const { Game } = await import('@/core/Game');
+
+    loading.setStatus('Ligando a física…');
+    const game = await Game.create(document.body);
+
+    game.start();
+    loading.hide();
+  } catch (err) {
+    console.error(err);
+    loading.showError('Não foi possível carregar o jogo. Verifique a conexão.');
+  }
+}
+
+boot();
