@@ -1,24 +1,75 @@
 import * as THREE from 'three';
 import { PALETTE, toonMesh } from '@/render/toon';
 import type { SceneryModel } from '@/render/sceneryModel';
-import { ROVER_TRACK, nearestTrackAngle, terrainHeight, type Obstacle } from './layout';
+import { terrainHeight, type Obstacle } from './layout';
 import type { Rock } from './terrain';
 
-/** Ciclo do rover: segundos andando e segundos parado estudando (valores de cena, não de regra). */
-const ROVER_DRIVE_SECONDS = 8;
-const ROVER_STUDY_SECONDS = 5;
-/** Velocidade da volta para a trilha depois de desatolar (m/s), parecida com a do rover andando. */
-const ROVER_RETURN_SPEED = 2.5;
+// Valores de cena (só visual), não regras do jogo.
+
+/** Centro da base: o rover mede daqui o quanto está longe. */
+const BASE_CENTER = { x: 2, z: 2 };
+/**
+ * Até onde o rover vai explorar (m do centro da base): mais blocos de ciência, destinos mais longe.
+ * Com 1 bloco ele fica perto (até ~25 m); com 6 ou mais chega a ~50 m, ainda dentro do zoom máximo da câmera.
+ */
+const RANGE_MIN = 20;
+const RANGE_PER_BLOCK = 5;
+const RANGE_MAX = 50;
+/** Largura da faixa de destinos: ele explora entre (alcance − isto) e o alcance. */
+const RANGE_BAND = 14;
+/** Mais perto que isto do centro ficam os prédios e os painéis: nenhum destino aqui. */
+const RANGE_INNER_MIN = 15;
+/**
+ * Miolo da base (prédios, painéis): o rover não atravessa, contorna por fora num círculo deste raio.
+ * Sem isso ele podia entrar entre os prédios e ficar sem saída.
+ */
+const CORE_RADIUS = 14;
+const ORBIT_RADIUS = 19;
+/** Quanto ele avança no contorno por vez (rad): o ponto de passagem anda junto com ele. */
+const ORBIT_STEP = 0.9;
+/** Velocidade andando (m/s) e giro máximo (rad/s): ele vira aos poucos, como um veículo de verdade. */
+const DRIVE_SPEED = 2.4;
+const TURN_RATE = 1.3;
+/** Parado estudando no destino (s). */
+const STUDY_SECONDS = 5;
+/** Quanto à frente ele olha para desviar (m), meia-largura com folga e distância segura de um astronauta. */
+const LOOKAHEAD = 6;
+const ROVER_HALF = 0.9;
+const CREW_SAFE = 1.4;
+/** Astronauta colado: para na hora. */
+const CREW_NEAR = 1.7;
+/** Direções que ele testa para desviar (rad, a partir da direção do destino). */
+const DETOURS = [0, 0.35, -0.35, 0.7, -0.7, 1.05, -1.05, 1.4, -1.4, 1.75, -1.75];
 /** Ângulo do braço: guardado (em pé) e estudando (apontado para o chão à frente). */
 const ARM_STOWED = 1.35;
 const ARM_DEPLOYED = -0.75;
 
-const { cx: CX, cz: CZ, rx: RX, rz: RZ } = ROVER_TRACK;
+/** Até onde o rover explora com estes blocos de ciência: faixa [perto, longe] em metros do centro da base. */
+export function exploreRange(scienceBlocks: number): { near: number; far: number } {
+  const far = THREE.MathUtils.clamp(RANGE_MIN + RANGE_PER_BLOCK * scienceBlocks, RANGE_MIN + 3, RANGE_MAX);
+  return { near: Math.max(RANGE_INNER_MIN, far - RANGE_BAND), far };
+}
+
+interface Target {
+  x: number;
+  z: number;
+  /** Para a esta distância do destino (na frente da pedra, não em cima dela). */
+  stop: number;
+  rock: Rock | null;
+  /** Segundos dirigindo até ele; demorou demais (preso atrás de algo), escolhe outro. */
+  driving: number;
+  limit: number;
+}
 
 /**
- * Rover de seis rodas (VEH-001), inspirado no Perseverance (INTERPRETADO). Só visual: anda pela trilha
- * em volta da base quando há blocos de ciência, para e estuda rochas, desvia de astronautas, pedras
- * e prédios, e fica atolado quando o problema "rover atolado" está aberto.
+ * Rover de seis rodas (VEH-001), inspirado no Perseverance (INTERPRETADO). Só visual.
+ *
+ * Com blocos de ciência ele EXPLORA: escolhe uma pedra (ou um ponto) para estudar, dirige até lá,
+ * para e estuda (o braço desce, a câmera olha a pedra), e escolhe o próximo destino. Quanto mais
+ * blocos, mais longe da base ficam os destinos (`exploreRange`): a criança vê a energia virar
+ * exploração. No caminho ele desvia de prédios, pedras e astronautas (como o AutoNav do
+ * Perseverance); sem passagem, ou com um astronauta colado, para e pisca a luz âmbar.
+ * À noite ou sem blocos, fica parado. Com o problema "rover atolado", fica preso no lugar.
  * Troca o modelo simples pelo rover .glb do Grégor quando ele carrega (docs/rover-e-base-de-pesquisa.md).
  */
 export class Rover {
@@ -30,27 +81,17 @@ export class Rover {
   private wheelRadius = 0.3;
   /** Rover atolado: fica parado e inclinado neste ponto até alguém resolver. */
   private stuckAt: THREE.Vector3 | null = null;
-  private angle = 0;
-  /** Rover parado porque há um astronauta na rota (e quanto tempo a rota está livre de novo). */
+  /** Parado porque há um astronauta (ou nenhuma passagem) à frente, e há quanto tempo a frente está livre. */
   private blocked = false;
   private clearFor = 0;
-  /** Desvio lateral da elipse (m): + para fora, − para dentro. O rover recalcula e desvia de astronautas. */
-  private offset = 0;
-  private offsetTarget = 0;
-  /** Rodas (giram conforme a distância percorrida) e direção do nariz (segue o movimento real). */
+  /** Rodas (giram conforme a distância percorrida) e direção do nariz (0 = +X; gira no sentido anti-horário visto de cima). */
   private readonly wheels: THREE.Object3D[] = [];
-  private heading: number | null = null;
-  /** "Volante": metros de lado por metro à frente (−0,6 a 0,6). Gira aos poucos, como um veículo de verdade. */
-  private steer = 0;
-  private readonly warning: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
-  /**
-   * Ciclo do rover real: anda um trecho, para e estuda, segue. Rovers passam a maior parte do sol
-   * parados fazendo ciência (o recorde do Perseverance foi ~4 h 24 min de direção num sol de 24 h 39 min).
-   */
+  private heading = 0;
+  private target: Target | null = null;
+  private lastRock: Rock | null = null;
   private phase: 'drive' | 'study' = 'drive';
-  /** Depois de desatolar: volta andando do lugar onde atolou até a trilha (sem teleporte). */
-  private returning: { from: THREE.Vector3; elapsed: number; duration: number } | null = null;
-  private phaseLeft = ROVER_DRIVE_SECONDS;
+  private studyLeft = 0;
+  private readonly warning: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   /** Cabeça da câmera (gira para olhar a rocha), braço robótico (desce para estudar) e luz do instrumento. */
   private readonly head: THREE.Group;
   private readonly arm: THREE.Group;
@@ -58,7 +99,7 @@ export class Rover {
 
   /**
    * @param obstacles caixas dos prédios (o rover desvia delas)
-   * @param rocks pedras do terreno (o rover desvia delas e olha para elas ao estudar)
+   * @param rocks pedras do terreno (destinos de estudo; ele desvia das outras)
    */
   constructor(
     private readonly obstacles: readonly Obstacle[],
@@ -108,7 +149,6 @@ export class Rover {
     this.warning.position.set(0.7, 2.36, 0);
     this.root.add(this.warning);
     this.root.position.set(12.5, 0, 9);
-
   }
 
   /** Troca o rover simples pelo .glb: a lógica de andar, parar e desviar continua a mesma. */
@@ -131,27 +171,13 @@ export class Rover {
   setStuck(at: THREE.Vector3 | null): void {
     const wasStuck = this.stuckAt !== null;
     this.stuckAt = at;
-    this.heading = null; // ao voltar a andar, o nariz recomeça da direção do movimento
-    if (!at) this.root.rotation.set(0, this.root.rotation.y, 0);
+    if (!at) this.root.rotation.set(0, this.heading, 0);
+    if (at) this.heading = 0.7; // a inclinação de atolado usa este giro
+    // Desatolou: segue explorando a partir de onde está (anda até o próximo destino, sem teleporte).
     if (!at && wasStuck) {
-      // Desatolou: continua a volta a partir do ponto da trilha mais perto e anda até lá (antes ele "teleportava"
-      // para onde a trilha estava quando atolou).
-      const p = this.root.position;
-      this.angle = nearestTrackAngle(p.x, p.z);
-      this.offset = 0;
-      this.offsetTarget = 0;
-      this.steer = 0;
-      const target = this.point(this.angle, 0);
-      const dist = Math.hypot(target.x - p.x, target.z - p.z);
-      this.returning = { from: p.clone(), elapsed: 0, duration: Math.max(1, dist / ROVER_RETURN_SPEED) };
+      this.target = null;
       this.phase = 'drive';
-      this.phaseLeft = ROVER_DRIVE_SECONDS;
     }
-  }
-
-  /** Desvio lateral atual do rover (m). */
-  get detour(): number {
-    return this.offset;
   }
 
   /** O rover está parado estudando uma rocha? (para testes) */
@@ -159,69 +185,128 @@ export class Rover {
     return this.phase === 'study';
   }
 
-  /** O rover está parado esperando um astronauta sair da rota? (para testes e interface) */
+  /** O rover está parado esperando um astronauta sair da frente? (para testes e interface) */
   get isWaiting(): boolean {
     return this.blocked;
   }
 
-  /** Posição na elipse do rover com desvio lateral `off` (m). */
-  private point(angle: number, off: number): { x: number; z: number } {
-    return { x: CX + Math.cos(angle) * (RX + off), z: CZ + Math.sin(angle) * (RZ + off) };
+  /** Distância do rover até o centro da base (m). (para testes) */
+  get distanceFromBase(): number {
+    return Math.hypot(this.root.position.x - BASE_CENTER.x, this.root.position.z - BASE_CENTER.z);
+  }
+
+  /** Destino atual (para testes). */
+  get destination(): { x: number; z: number } | null {
+    return this.target ? { x: this.target.x, z: this.target.z } : null;
+  }
+
+  // ---------- destino ----------
+
+  private fromBase(x: number, z: number): number {
+    return Math.hypot(x - BASE_CENTER.x, z - BASE_CENTER.z);
+  }
+
+  /** O ponto fica dentro (ou colado) de um prédio? */
+  private insideObstacle(x: number, z: number, margin: number): boolean {
+    return this.obstacles.some((o) => Math.abs(x - o.center.x) < o.half.x + margin && Math.abs(z - o.center.z) < o.half.z + margin);
   }
 
   /**
-   * O trecho à frente (~8 m) da rota com desvio `off` passa perto de algum astronauta?
-   * Usa a mesma medida para a rota atual e para as rotas alternativas do desvio.
+   * Escolhe o próximo destino dentro da faixa de exploração: de preferência uma pedra (o que um rover
+   * real vai estudar), longe o bastante de onde ele está para valer a viagem. Sem pedra na faixa, um ponto livre.
    */
-  private routeHits(crew: THREE.Vector3[], off: number): { x: number; z: number } | null {
-    // O rover anda ~2,8 m/s e leva ~1 s para mudar de faixa: precisa enxergar longe o bastante para desviar a tempo.
-    const LOOKAHEAD = 8;
-    const SAFE = 1.4; // meia-largura do rover (~0,65) + astronauta (~0,35) + folga
-    const a = this.angle;
-    const speed = Math.hypot(Math.sin(a) * (RX + off), Math.cos(a) * (RZ + off));
-    const ROVER_HALF = 0.9; // meia-largura do rover + folga, para pedras e prédios
-    for (let i = 1; i <= 10; i++) {
-      const p = this.point(a + ((i / 10) * LOOKAHEAD) / speed, off);
-      for (const c of crew) if (Math.hypot(c.x - p.x, c.z - p.z) < SAFE) return c;
-      for (const k of this.rocks) if (Math.hypot(k.x - p.x, k.z - p.z) < k.r + ROVER_HALF) return k;
-      for (const o of this.obstacles) {
-        if (Math.abs(p.x - o.center.x) < o.half.x + ROVER_HALF && Math.abs(p.z - o.center.z) < o.half.z + ROVER_HALF) return o.center;
+  private pickTarget(scienceBlocks: number): void {
+    const { near, far } = exploreRange(scienceBlocks);
+    const p = this.root.position;
+    const rocks = this.rocks.filter((k) => {
+      const d = this.fromBase(k.x, k.z);
+      return d >= near && d <= far && k !== this.lastRock && Math.hypot(k.x - p.x, k.z - p.z) > 8;
+    });
+    let x: number;
+    let z: number;
+    let stop = 1;
+    let rock: Rock | null = null;
+    if (rocks.length) {
+      rock = rocks[Math.floor(Math.random() * rocks.length)];
+      ({ x, z } = rock);
+      stop = rock.r + 1.6;
+    } else {
+      let tries = 0;
+      do {
+        const a = Math.random() * Math.PI * 2;
+        const d = near + Math.random() * (far - near);
+        x = BASE_CENTER.x + Math.cos(a) * d;
+        z = BASE_CENTER.z + Math.sin(a) * d;
+      } while (this.insideObstacle(x, z, 2) && ++tries < 20);
+    }
+    const dist = Math.hypot(x - p.x, z - p.z);
+    this.target = { x, z, stop, rock, driving: 0, limit: (dist / DRIVE_SPEED) * 2.5 + 8 };
+    this.lastRock = rock;
+  }
+
+  /** A linha reta nesta direção, até `length` m, passa livre de prédios, pedras (menos a do destino) e astronautas? */
+  private pathFree(heading: number, length: number, crew: THREE.Vector3[]): boolean {
+    const p = this.root.position;
+    const fx = Math.cos(heading);
+    const fz = -Math.sin(heading);
+    // O que já encosta nele agora (ex.: desatolou ao lado de uma pedra) não bloqueia: ele precisa conseguir sair dali.
+    const touching = (x: number, z: number, r: number) => Math.hypot(x - p.x, z - p.z) < r;
+    const steps = Math.max(1, Math.ceil(length));
+    for (let i = 1; i <= steps; i++) {
+      const s = (i / steps) * length;
+      const x = p.x + fx * s;
+      const z = p.z + fz * s;
+      if (this.fromBase(x, z) > RANGE_MAX + 6) return false;
+      if (this.insideObstacle(x, z, ROVER_HALF) && !this.insideObstacle(p.x, p.z, ROVER_HALF)) return false;
+      for (const k of this.rocks) {
+        if (k === this.target?.rock || touching(k.x, k.z, k.r + ROVER_HALF)) continue;
+        if (Math.hypot(k.x - x, k.z - z) < k.r + ROVER_HALF) return false;
       }
+      for (const c of crew) if (Math.hypot(c.x - x, c.z - z) < CREW_SAFE) return false;
     }
-    return null;
+    return true;
   }
 
   /**
-   * Recalcula a rota: se há astronauta à frente, escolhe um desvio livre (3 m para dentro ou para fora,
-   * de preferência pelo lado oposto ao astronauta). Sem desvio livre, ou com astronauta colado: para.
-   * Sem ninguém na rota original, volta para ela.
+   * Próximo ponto da viagem: o destino, se a linha reta até ele não corta o miolo da base; senão, um ponto
+   * no contorno, um pouco à frente, pelo lado mais curto. Dentro do miolo, primeiro sai para fora.
    */
-  private plan(crew: THREE.Vector3[]): boolean {
-    const DETOUR = 3;
-    const NEAR = 1.7;
-    const pos = this.root.position;
-    if (crew.some((c) => Math.hypot(c.x - pos.x, c.z - pos.z) < NEAR)) return true; // colado: para
-    if (!this.routeHits(crew, 0)) {
-      this.offsetTarget = 0;
-      return false;
-    }
-    if (!this.routeHits(crew, this.offsetTarget) && this.offsetTarget !== 0) return false; // desvio atual serve
-    const who = this.routeHits(crew, 0)!;
-    // Lado do astronauta em relação à elipse: fora (> 1) ou dentro (< 1).
-    const outside = ((who.x - CX) / RX) ** 2 + ((who.z - CZ) / RZ) ** 2 > 1;
-    for (const off of outside ? [-DETOUR, DETOUR] : [DETOUR, -DETOUR]) {
-      if (!this.routeHits(crew, off)) {
-        this.offsetTarget = off;
-        return false;
-      }
-    }
-    return true; // nenhuma rota livre: espera
+  private waypoint(): { x: number; z: number; final: boolean } {
+    const t = this.target!;
+    const p = this.root.position;
+    const { x: cx, z: cz } = BASE_CENTER;
+    const orbit = (a: number) => ({ x: cx + Math.cos(a) * ORBIT_RADIUS, z: cz + Math.sin(a) * ORBIT_RADIUS, final: false });
+    const ap = Math.atan2(p.z - cz, p.x - cx);
+    if (this.fromBase(p.x, p.z) < CORE_RADIUS) return orbit(ap);
+    // Ponto do segmento rover → destino mais perto do centro da base.
+    const dx = t.x - p.x;
+    const dz = t.z - p.z;
+    const k = THREE.MathUtils.clamp(((cx - p.x) * dx + (cz - p.z) * dz) / (dx * dx + dz * dz || 1), 0, 1);
+    if (this.fromBase(p.x + dx * k, p.z + dz * k) >= CORE_RADIUS) return { x: t.x, z: t.z, final: true };
+    const at = Math.atan2(t.z - cz, t.x - cx);
+    const diff = Math.atan2(Math.sin(at - ap), Math.cos(at - ap));
+    return orbit(ap + THREE.MathUtils.clamp(diff, -ORBIT_STEP, ORBIT_STEP));
   }
 
   /**
-   * Estudando: o braço desce, a cabeça olha para a pedra mais perto (se houver) e a ponta do
-   * instrumento pisca. Andando ou parado: tudo volta ao lugar.
+   * Para onde virar agora: a direção do próximo ponto, se estiver livre; senão, o desvio livre mais perto dela
+   * (empatados, o que exige virar menos). null = nenhuma passagem.
    */
+  private steer(crew: THREE.Vector3[]): number | null {
+    const t = this.target!;
+    const w = this.waypoint();
+    const p = this.root.position;
+    const toTarget = Math.atan2(-(w.z - p.z), w.x - p.x);
+    const length = w.final ? Math.min(LOOKAHEAD, Math.max(1, Math.hypot(t.x - p.x, t.z - p.z) - t.stop)) : LOOKAHEAD;
+    const turn = (h: number) => Math.abs(Math.atan2(Math.sin(h - this.heading), Math.cos(h - this.heading)));
+    const options = DETOURS.map((d) => toTarget + d).sort((a, b) => Math.abs(a - toTarget) - Math.abs(b - toTarget) || turn(a) - turn(b));
+    const ahead = options.find((h) => this.pathFree(h, length, crew));
+    if (ahead !== undefined) return ahead;
+    // Encurralado (a frente toda fechada): manobra para qualquer lado livre, o que exige virar menos.
+    const around = Array.from({ length: 16 }, (_, i) => (i / 16) * Math.PI * 2).sort((a, b) => turn(a) - turn(b));
+    return around.find((h) => this.pathFree(h, 2, crew)) ?? null;
+  }
+
   private animateTools(studying: boolean, dt: number, time: number): void {
     // Rover .glb: ao parar para estudar, o mastro escaneia e a broca desce; ao voltar a andar, para tudo.
     if (this.model && studying !== this.modelStudying) {
@@ -251,6 +336,8 @@ export class Rover {
     this.probe.material.color.setHex(studying && Math.sin(time * 8) > 0 ? 0x9fe3ff : PALETTE.tech);
   }
 
+  // ---------- por frame ----------
+
   /**
    * Um passo da animação. `crew` = astronautas visíveis lá fora (o rover desvia deles);
    * sem blocos de ciência, ou à noite, ele fica parado.
@@ -259,90 +346,83 @@ export class Rover {
     if (this.stuckAt) {
       this.root.position.set(this.stuckAt.x + 1.6, terrainHeight(this.stuckAt.x, this.stuckAt.z) - 0.25, this.stuckAt.z + 0.6);
       this.root.rotation.set(0.18, 0.7, 0.12);
+      this.blocked = false;
       this.animateTools(false, dt, time);
     } else if (scienceBlocks > 0 && !night) {
-      this.root.rotation.x = 0;
-      this.root.rotation.z = 0;
-      // Segurança: recalcula e desvia de astronautas; para só sem rota livre. Retoma após 0,6 s.
-      if (this.plan(crew)) {
-        this.blocked = true;
-        this.clearFor = 0;
-      } else if (this.blocked) {
-        this.clearFor += dt;
-        if (this.clearFor > 0.6) this.blocked = false;
-      }
-      // Anda um trecho, para e estuda, segue (como o rover real). O tempo só corre fora do bloqueio.
-      if (!this.blocked) {
-        this.phaseLeft -= dt;
-        if (this.phaseLeft <= 0) {
-          this.phase = this.phase === 'drive' ? 'study' : 'drive';
-          this.phaseLeft = this.phase === 'drive' ? ROVER_DRIVE_SECONDS : ROVER_STUDY_SECONDS;
-        }
-      }
-      const studying = this.phase === 'study' && !this.blocked;
-      this.animateTools(studying, dt, time);
-      // Elipse por fora da base e dos painéis (painéis vão até x ≈ 22).
-      // Durante a volta para a trilha, o ponto-alvo fica parado (senão o rover acelera para alcançá-lo).
-      if (!this.blocked && !studying && !this.returning) {
-        const a0 = this.angle;
-        this.angle += dt * 0.06 * scienceBlocks;
-        const forward = (this.angle - a0) * Math.hypot(Math.sin(a0) * (RX + this.offset), Math.cos(a0) * (RZ + this.offset));
-        // Volante: quer virar até ~30° (0,6) para o lado do desvio, aliviando perto da faixa-alvo; gira no máximo 1,5/s.
-        const remaining = this.offsetTarget - this.offset;
-        const desired = THREE.MathUtils.clamp(remaining / 1.5, -0.6, 0.6);
-        this.steer += THREE.MathUtils.clamp(desired - this.steer, -1.5 * dt, 1.5 * dt);
-        const lateral = this.steer * forward;
-        // Não passa da faixa-alvo.
-        this.offset = Math.abs(lateral) > Math.abs(remaining) && Math.sign(lateral) === Math.sign(remaining) ? this.offsetTarget : this.offset + lateral;
-      }
-      let { x, z } = this.point(this.angle, this.offset);
-      const ret = this.returning;
-      if (ret && !this.blocked && !studying) {
-        // Voltando para a trilha: mistura suave do lugar onde atolou até o ponto atual da trilha.
-        ret.elapsed += dt;
-        const k = THREE.MathUtils.smoothstep(ret.elapsed / ret.duration, 0, 1);
-        x = THREE.MathUtils.lerp(ret.from.x, x, k);
-        z = THREE.MathUtils.lerp(ret.from.z, z, k);
-        if (ret.elapsed >= ret.duration) this.returning = null;
-      } else if (ret) {
-        // Parado (estudando ou esperando): fica onde está, no meio do caminho de volta.
-        const k = THREE.MathUtils.smoothstep(ret.elapsed / ret.duration, 0, 1);
-        x = THREE.MathUtils.lerp(ret.from.x, x, k);
-        z = THREE.MathUtils.lerp(ret.from.z, z, k);
-      }
-      const y = terrainHeight(x, z);
-      const moved = Math.hypot(x - this.root.position.x, z - this.root.position.z);
-      if (moved > 1e-4 && moved < 2 && this.returning) {
-        // Voltando para a trilha: o nariz aponta para onde ele está indo.
-        this.heading = Math.atan2(-(z - this.root.position.z), x - this.root.position.x);
-        for (const w of this.wheels) w.rotation.z -= moved / this.wheelRadius;
-      } else if (moved > 1e-4 && moved < 2) {
-        // Nariz = direção exata do movimento: tangente da elipse + componente lateral do volante (sem "drift").
-        const a = this.angle;
-        const tx = -Math.sin(a) * (RX + this.offset);
-        const tz = Math.cos(a) * (RZ + this.offset);
-        const tl = Math.hypot(tx, tz);
-        const vx = tx / tl + this.steer * Math.cos(a);
-        const vz = tz / tl + this.steer * Math.sin(a);
-        this.heading = Math.atan2(-vz, vx);
-        // Rodas giram conforme a distância (raio 0,3 m).
-        for (const w of this.wheels) w.rotation.z -= moved / this.wheelRadius;
-      }
-      // Terreno: inclina o rover conforme o relevo (frente/trás = arfagem, lados = rolagem).
-      const h = this.heading ?? 0;
-      const fx = Math.cos(h);
-      const fz = -Math.sin(h);
-      const front = terrainHeight(x + fx, z + fz);
-      const back = terrainHeight(x - fx, z - fz);
-      const left = terrainHeight(x - fz * 0.65, z + fx * 0.65);
-      const right = terrainHeight(x + fz * 0.65, z - fx * 0.65);
-      this.root.rotation.order = 'YZX';
-      this.root.rotation.set(Math.atan2(left - right, 1.3), h, Math.atan2(front - back, 2));
-      this.root.position.set(x, y, z);
+      this.explore(dt, time, crew, scienceBlocks);
     } else {
       this.blocked = false;
       this.animateTools(false, dt, time);
     }
     this.warning.material.color.setHex(this.blocked && Math.sin(time * 10) > 0 ? 0xffb020 : 0x5a4a2a);
+  }
+
+  private explore(dt: number, time: number, crew: THREE.Vector3[], scienceBlocks: number): void {
+    const p = this.root.position;
+    if (this.phase === 'study') {
+      this.studyLeft -= dt;
+      this.animateTools(true, dt, time);
+      if (this.studyLeft <= 0) {
+        this.phase = 'drive';
+        this.target = null;
+      }
+      return;
+    }
+    // Sem destino, ou o destino ficou longe demais (tiraram blocos de ciência): escolhe outro.
+    const { far } = exploreRange(scienceBlocks);
+    if (!this.target || this.fromBase(this.target.x, this.target.z) > far + 4) this.pickTarget(scienceBlocks);
+    const t = this.target!;
+    t.driving += dt;
+    if (t.driving > t.limit) {
+      this.pickTarget(scienceBlocks); // preso atrás de algo: tenta outro lugar
+      return;
+    }
+    // Chegou: para e estuda.
+    if (Math.hypot(t.x - p.x, t.z - p.z) <= t.stop) {
+      this.phase = 'study';
+      this.studyLeft = STUDY_SECONDS;
+      this.blocked = false;
+      return;
+    }
+
+    // Segurança: astronauta colado, ou astronauta fechando a passagem → para e pisca. Retoma 0,6 s depois de a frente liberar.
+    // Sem passagem por causa de pedras ou prédios (sem astronauta): não espera, escolhe outro destino.
+    const close = crew.some((c) => Math.hypot(c.x - p.x, c.z - p.z) < CREW_NEAR);
+    const heading = close ? null : this.steer(crew);
+    if (heading === null && !close && this.steer([]) === null) {
+      this.blocked = false;
+      this.pickTarget(scienceBlocks);
+      return;
+    }
+    if (heading === null) {
+      this.blocked = true;
+      this.clearFor = 0;
+    } else if (this.blocked) {
+      this.clearFor += dt;
+      if (this.clearFor > 0.6) this.blocked = false;
+    }
+    this.animateTools(false, dt, time);
+    if (this.blocked || heading === null) return;
+
+    // Vira aos poucos para a direção escolhida e anda mais devagar nas curvas fechadas.
+    const diff = Math.atan2(Math.sin(heading - this.heading), Math.cos(heading - this.heading));
+    this.heading += THREE.MathUtils.clamp(diff, -TURN_RATE * dt, TURN_RATE * dt);
+    const speed = DRIVE_SPEED * Math.max(0.35, Math.cos(diff));
+    const step = speed * dt;
+    const x = p.x + Math.cos(this.heading) * step;
+    const z = p.z - Math.sin(this.heading) * step;
+    for (const w of this.wheels) w.rotation.z -= step / this.wheelRadius;
+
+    // Terreno: inclina o rover conforme o relevo (frente/trás = arfagem, lados = rolagem).
+    const h = this.heading;
+    const fx = Math.cos(h);
+    const fz = -Math.sin(h);
+    const front = terrainHeight(x + fx, z + fz);
+    const back = terrainHeight(x - fx, z - fz);
+    const left = terrainHeight(x - fz * 0.65, z + fx * 0.65);
+    const right = terrainHeight(x + fz * 0.65, z - fx * 0.65);
+    this.root.rotation.order = 'YZX';
+    this.root.rotation.set(Math.atan2(left - right, 1.3), h, Math.atan2(front - back, 2));
+    this.root.position.set(x, terrainHeight(x, z), z);
   }
 }

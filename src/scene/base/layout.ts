@@ -127,26 +127,13 @@ export const PROBLEM_SPOTS: Record<ProblemKind, THREE.Vector3> = {
   tornBag: new THREE.Vector3(SHELTER_CENTER.x, 0, SHELTER_CENTER.z + 3.9),
 };
 
-/** Trilha do rover: elipse em volta da base e dos painéis (painéis vão até x ≈ 22). */
+/**
+ * Faixa sem pedras em volta da base (elipse): o caminho de saída e de volta do rover fica livre, e as pedras
+ * de estudo ficam espalhadas fora dela. O rover em si explora livre (src/scene/base/Rover.ts).
+ */
 export const ROVER_TRACK = { cx: 2, cz: 2, rx: 26, rz: 15 } as const;
 
-/** Ângulo da trilha do rover mais perto de um ponto. */
-export function nearestTrackAngle(x: number, z: number): number {
-  const { cx, cz, rx, rz } = ROVER_TRACK;
-  let best = 0;
-  let bestD = Infinity;
-  for (let i = 0; i < 360; i++) {
-    const a = (i / 360) * Math.PI * 2;
-    const d = Math.hypot(x - (cx + Math.cos(a) * rx), z - (cz + Math.sin(a) * rz));
-    if (d < bestD) {
-      bestD = d;
-      best = a;
-    }
-  }
-  return best;
-}
-
-/** Distância (m) de um ponto até a trilha principal do rover. */
+/** Distância (m) de um ponto até a faixa sem pedras. */
 export function distanceToRoverTrack(x: number, z: number): number {
   const { cx, cz, rx, rz } = ROVER_TRACK;
   let best = Infinity;

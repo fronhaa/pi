@@ -119,9 +119,9 @@ export class BaseScene {
     return this.rover.root;
   }
 
-  /** Desvio lateral atual do rover (m). */
-  get roverDetour(): number {
-    return this.rover.detour;
+  /** Distância do rover até o centro da base (m): cresce com os blocos de ciência. (para testes) */
+  get roverDistance(): number {
+    return this.rover.distanceFromBase;
   }
 
   /** O rover está parado estudando uma rocha? (para testes) */

@@ -71,7 +71,7 @@ function buildRocks(root: THREE.Object3D): Rock[] {
     const sy = s * (0.5 + rng() * 0.4);
     const sz = s * (0.8 + rng() * 0.6);
     const r = Math.max(sx, sz);
-    // Trilha do rover: nenhuma pedra na faixa principal (senão ele poderia ficar preso para sempre).
+    // Faixa sem pedras em volta da base (caminho de saída e volta do rover).
     if (distanceToRoverTrack(x, z) < r + 2) continue;
     // Nada de pedra em cima do abrigo de regolito e dos sacos em volta dele.
     if (Math.hypot(x - SHELTER_CENTER.x, z - SHELTER_CENTER.z) < r + 4.5) continue;
