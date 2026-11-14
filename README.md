@@ -21,6 +21,7 @@ Controles: **WASD / setas** para mover, **Espaço** para pular.
 | `npm run build`      | Gera a versão de produção em `dist/`            |
 | `npm run preview`    | Serve o `dist/` localmente                      |
 | `npm run docs:adr -- "título"` | Cria um novo registro de decisão (ADR) |
+| `npm run fetch-data` | Atualiza as tempestades solares reais (precisa de `NASA_API_KEY` no `.env`, ver [docs/dados.md](docs/dados.md)) |
 
 ## Documentação
 
