@@ -262,6 +262,8 @@ Tempos e efeitos são valores iniciais de jogo, ainda a balancear.
 
 **Ligação com o modo Terra e Marte.** A Terra não controla astronautas, mas pode avisar antes ("poeira a caminho dos painéis"). Se a antena ficar desalinhada, a mensagem da Terra não chega. Assim, consertar a antena passa a importar para os dois lados.
 
+**Implementado (14/11/2026):** dia de 75 s com pausa (P) e botão "Terminar o dia"; consertar clicando no "!" com o astronauta selecionado, pelo botão "Enviar" na lista de problemas ou chegando perto e apertando **E**; a tripulação contorna os prédios (busca de caminho). Decisões além do GDD: terminar o dia cedo conta os problemas que ainda não apareceram como não resolvidos; poeira não limpa = +20% de poeira; a câmara de descompressão soma 3 s às tarefas de fora. Ainda não: "comandante fica na antena durante alerta" e velocidade mais lenta para crianças menores. Equilíbrio medido (`npm run balance`, atenta resolvendo tudo): nunca perde; 3★ em ~19% (erupções reais) e ~43% (simuladas), contra ~69% antes dos problemas, por causa da dose +1 por tarefa fora. **Ajuste a decidir pelo time.**
+
 **O que ensina:** tempo e lugar também são recursos limitados, a equipe precisa dividir tarefas, e sair da base tem um custo.
 
 ### Ordem de construção no hackathon

@@ -9,12 +9,14 @@
 import { readFileSync } from 'node:fs';
 import { CONFIG } from '../src/sim/config.ts';
 import { Mission } from '../src/sim/mission.ts';
-import type { EnergyPlan, Flare } from '../src/sim/types.ts';
+import type { EnergyPlan, Flare, Problem } from '../src/sim/types.ts';
 
 type Strategy = {
   name: string;
   plan(m: Mission): EnergyPlan;
   card(m: Mission): string;
+  /** Problemas pela base: a tripulação vai resolver este? */
+  fix(m: Mission, p: Problem): boolean;
 };
 
 const N = Number(process.env.BALANCE_N || 2000);
@@ -44,6 +46,7 @@ const strategies: Strategy[] = [
     name: 'Só ciência, sem guardar bateria',
     plan: (m) => ({ life: 0, shield: 0, science: m.state.blocks }),
     card: (m) => (m.state.pendingCard!.id === 'cargoShip' ? 'experiment' : firstOption(m)),
+    fix: () => false,
   },
   {
     name: 'Só segurança, sem ciência',
@@ -57,11 +60,13 @@ const strategies: Strategy[] = [
       const id = m.state.pendingCard!.id;
       return ({ dustyPanels: 'wait', mysteryRock: 'skip', greenhouseLeak: 'fixNow', cargoShip: 'shieldKit', brokenSensor: 'askEarth', subsurfaceIce: 'drill' } as const)[id];
     },
+    fix: () => true,
   },
   {
     name: 'Ignora a blindagem',
     plan: (m) => fill(m.state.blocks, 3, 0, 2),
     card: (m) => (m.state.pendingCard!.id === 'cargoShip' ? 'batteries' : firstOption(m)),
+    fix: (_m, p) => p.kind !== 'tornBag',
   },
   {
     name: 'Reage aos alertas e guarda reserva',
@@ -87,6 +92,8 @@ const strategies: Strategy[] = [
       if (id === 'brokenSensor') return 'askEarth';
       return s.res.life < 60 && s.res.battery >= 40 ? 'drill' : 'notNow';
     },
+    // Resolve todos os problemas (medido: triagem simples perde mais por falta de energia).
+    fix: () => true,
   },
 ];
 
@@ -99,6 +106,11 @@ function run(strategy: Strategy, flares: Flare[]) {
         m.answerCard(strategy.card(m));
         if (m.state.outcome.status !== 'playing') break;
       }
+      for (const p of m.state.problems) {
+        m.openProblem(p.uid);
+        if (strategy.fix(m, p)) m.resolveProblem(p.uid);
+      }
+      if (m.state.outcome.status !== 'playing') break;
       m.endSol(strategy.plan(m));
     }
     const o = m.state.outcome;
