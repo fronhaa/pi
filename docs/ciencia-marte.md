@@ -3,7 +3,7 @@
 > Base de fatos **reais e conferidos**, com fonte aberta, para usar no jogo (cartões "Você sabia?", ajuda "?", relatório, tela final), no guia do professor e na apresentação para os juízes.
 > Conferido em 14/11/2026. Público: crianças de 7 a 12 anos ([publico-e-impacto.md](publico-e-impacto.md)).
 >
-> Origem: análise de uma base de conhecimento gerada pelo Gemini, que tinha bons temas, mas números sem fonte, alguns errados e APIs fora do ar. Só entrou aqui o que foi **conferido em fonte oficial aberta**. O que ficou de fora está em [O que não usar](#o-que-não-usar).
+> Só entra aqui o que foi **conferido em fonte oficial aberta e lida**. Este documento é a referência do projeto para fatos científicos.
 
 ## Regras deste documento
 
@@ -108,27 +108,12 @@ Chamadas feitas com chave própria do `api.nasa.gov`. Detalhes de cada API: [api
 | InSight Mars Weather | HTTP 200, mas os dados param em outubro de 2020 | Não usar: missão encerrada, outra região (Elysium). O jogo usa o MEDA do Perseverance, em Jezero |
 | Mars Rover Photos | HTTP 404 "No such app" | Aposentada. Fotos pelos feeds do JPL |
 
-## O que não usar
-
-Itens da base do Gemini que **não** entram no projeto:
-
-| Item | Motivo |
-| --- | --- |
-| Temperatura mínima de −125 °C | A NASA diz cerca de −153 °C (F2) |
-| Perclorato de 0,5 a 1% | O documento da NASA de 2026 traz 0,3 a 0,5% (F8) |
-| "Evento solar exige abortar a saída em menos de 30 min" | A norma fala em encerrar em até 2 h (F7); os 30 min não têm fonte |
-| API InSight Weather e Mars Rover Photos | Parada em 2020 e aposentada (tabela acima) |
-| Endpoint DONKI `FLR` | Devolve 404 |
-| Pressão e oxigênio da cabine (56,5 kPa, 34% O₂), CO₂ interno | Corretos como estudo de engenharia, mas não ensinam nada para o nosso público |
-| Seção "Diretrizes para o assistente de IA" | Foca IoT, telemetria e hardware e conflita com o `CLAUDE.md` e o pilar de simplicidade |
-| "*Suitport* como padrão" | É um conceito em estudo. Se aparecer no jogo, é FICCIONAL ou INTERPRETADO |
-
 ## Pendentes de fonte
 
 Ideias boas que só entram com link oficial aberto:
 
 - Rotina da tripulação da CHAPEA (horas de exercício e de sono por dia). Combina com o oficial médico.
-- Proporção de tempo dentro e fora da base (o Gemini diz 80 a 90% dentro).
+- Proporção de tempo que a tripulação passa dentro e fora da base.
 - Duração das saídas e saídas sempre em dupla.
 - Composição exata do ar (95% CO₂) e pressão em relação à Terra (menos de 1%): a página de fatos da NASA só diz "fina" e "principalmente CO₂".
 
@@ -138,11 +123,10 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
 
 ### Como foi conferido
 
-1. A base do Gemini (`base_de_conhecimento_opera_es_humanas_em_marte_nasa_space_apps.md`, recebida do time) foi lida e cada afirmação virou uma pergunta a conferir.
-2. Para cada número, foi feita uma busca restrita a domínios oficiais (`nasa.gov`, `jpl.nasa.gov`, `science.nasa.gov`, `nap.nationalacademies.org`).
-3. O documento de origem foi **baixado e lido**: páginas HTML com `curl` e PDFs com `pdftotext`/leitura página a página. Só entrou o que está escrito na fonte.
-4. As APIs foram chamadas de verdade com uma chave do `api.nasa.gov` (a chave não está registrada aqui nem no repositório).
-5. O resultado foi cruzado com o que o projeto já tinha documentado ([apis-nasa.md](apis-nasa.md), [game-design.md](game-design.md)).
+1. Para cada tema, foi feita uma busca restrita a domínios oficiais (`nasa.gov`, `jpl.nasa.gov`, `science.nasa.gov`, `nap.nationalacademies.org`).
+2. O documento de origem foi **baixado e lido**: páginas HTML com `curl` e PDFs com `pdftotext`/leitura página a página. Só entrou o que está escrito na fonte.
+3. As APIs foram chamadas de verdade com uma chave do `api.nasa.gov` (a chave não está registrada aqui nem no repositório).
+4. O resultado foi cruzado com o que o projeto já tinha documentado ([apis-nasa.md](apis-nasa.md), [game-design.md](game-design.md)).
 
 ### 1. NASA Science: Mars Facts
 
