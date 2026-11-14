@@ -65,8 +65,13 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
   `Crew.loadChibi()` baixa o `.glb` uma vez, clona para os 4 papéis e troca o laranja do traje pela cor do papel
   (`ROLE_COLORS`). Animações: `walk` ao andar, `jump` no Espaço, `interact` ao consertar. Até carregar (ou se falhar),
   fica o boneco simples de cápsulas.
-- Dentro da base: os módulos do habitat são translúcidos (como a cúpula), com piso. Quem está dentro aparece no seu
-  módulo (`HABITAT_SPOTS`) ou na estufa consertando o vazamento (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de
+- Base e rover: `research-base.glb` e `rover.glb` (ver [rover-e-base-de-pesquisa.md](rover-e-base-de-pesquisa.md)),
+  carregados por `MarsBase.loadModels()` com `src/render/sceneryModel.ts`. A base fica em `HABITAT_POSITION`, com a porta
+  do airlock (`ENTRANCES.habitat`) virada para a câmera. O rover usa a mesma lógica de andar, parar e desviar; as rodas
+  `wheel_0..5` giram pela distância e, ao parar para estudar, tocam `scan` e `drill`. Até carregar (ou se falhar), ficam
+  o módulo e o rover simples.
+- Dentro da base: o casco (`hull_shell`) é translúcido, como a cúpula, com um piso dentro. Quem está dentro aparece em
+  fila no casco (`HABITAT_SPOTS`) ou na estufa consertando o vazamento (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de
   descompressão, some.
 - O resto é feito com primitivas (leve). Modelos `.glb` novos: exportar do Blender em glTF Binary,
   eixo Y para cima, em metros, com cores sólidas; ao carregar, trocar os materiais por `toonMaterial(cor)`.

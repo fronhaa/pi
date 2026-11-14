@@ -132,6 +132,7 @@ export class Game {
     this.controls.maxPolarAngle = 1.38;
 
     this.base = new MarsBase(this.scene);
+    void this.base.loadModels();
     this.scene.add(this.crew.root);
     void this.crew.loadChibi();
     // A tripulação fica dentro da base por padrão; só aparece lá fora numa EVA (GDD).
