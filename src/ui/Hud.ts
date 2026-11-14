@@ -10,11 +10,25 @@ import { formatDate, getLang, t, type StringKey } from '@/i18n';
 import type { MarsMessage } from '@/net/protocol';
 import { h, openDialog } from './dom';
 
+type RoleId = 'commander' | 'engineer' | 'medic' | 'scientist';
+
 export interface DayView {
   remaining: number;
   paused: boolean;
-  selected: string;
-  problems: { uid: number; kind: ProblemKind; status: 'open' | 'done' | 'pending'; progress: number; worker?: string; working: boolean }[];
+  selected: RoleId;
+  /** Tempestade hoje (aviso recebido): ninguém sai da base. */
+  evaBanned: boolean;
+  /** Tem uma dupla lá fora (ou na câmara de descompressão). */
+  evaActive: boolean;
+  crew: { role: RoleId; place: 'inside' | 'airlock' | 'outside' }[];
+  problems: {
+    uid: number;
+    kind: ProblemKind;
+    status: 'open' | 'done' | 'pending';
+    progress: number;
+    worker?: string;
+    phase?: 'airlock' | 'walking' | 'working';
+  }[];
 }
 
 export interface HudCallbacks {
@@ -23,9 +37,11 @@ export interface HudCallbacks {
   /** "Terminar o sol" ou "Começar o dia" (quando há problemas hoje). */
   onEndSol(plan: EnergyPlan): void;
   onSendProblem(uid: number): void;
+  /** Termina a EVA: a dupla volta para dentro. */
+  onEvaReturn(): void;
   onPause(): void;
   onEndDay(): void;
-  onSelect(role: 'commander' | 'engineer' | 'medic' | 'scientist'): void;
+  onSelect(role: RoleId): void;
   onPlanChange(plan: EnergyPlan): void;
   onNasaData(): void;
   onToggleLang(): void;
@@ -64,6 +80,7 @@ export class Hud {
   private readonly planEl = h('section', { class: 'plan panel', 'aria-labelledby': 'plan-title' });
   private readonly crewChip = h('div', { class: 'crew-chip', 'aria-live': 'polite' });
   private crewView: { status: 'loading' | 'ready' | 'off'; role?: string } = { status: 'loading' };
+  private placesView = { inside: 4, outside: 0 };
   private coop: CoopHud | null = null;
   private dayView: DayView | null = null;
 
@@ -126,6 +143,13 @@ export class Hud {
     this.renderCrew();
   }
 
+  /** Quantos astronautas estão dentro e fora da base (EVA). */
+  setPlaces(inside: number, outside: number): void {
+    if (this.placesView.inside === inside && this.placesView.outside === outside) return;
+    this.placesView = { inside, outside };
+    this.renderCrew();
+  }
+
   /** Aviso curto que some sozinho (ex.: fato sobre a gravidade de Marte). */
   toast(text: string, source?: string): void {
     const el = h('div', { class: 'toast panel', role: 'status' }, text, source ? h('small', {}, source) : null);
@@ -135,19 +159,21 @@ export class Hud {
 
   private renderCrew(): void {
     const c = this.crewView;
-    if (c.status === 'off') {
-      this.crewChip.hidden = true;
-      return;
-    }
+    const places = h('strong', {}, t('eva.inOut', this.placesView));
     this.crewChip.hidden = false;
+    // Lá fora (EVA), o astronauta escolhido anda com setas ou toque; dentro, só o contador.
+    const out = this.placesView.outside > 0;
     this.crewChip.replaceChildren(
       c.status === 'loading'
-        ? h('span', {}, t('scene.loadingPhysics'))
-        : h('span', {},
-            h('strong', {}, t('crew.selected', { name: t(`crew.${c.role}` as StringKey) })),
-            h('span', { class: 'keys' }, ` · ${t('crew.hint.keys')}`),
-            h('span', { class: 'touch' }, ` · ${t('crew.hint.touch')}`),
-          ),
+        ? h('span', {}, places, ` · ${t('scene.loadingPhysics')}`)
+        : c.status === 'off' || !out
+          ? h('span', {}, places)
+          : h('span', {},
+              places,
+              ` · ${t('crew.selected', { name: t(`crew.${c.role}` as StringKey) })}`,
+              h('span', { class: 'keys' }, ` · ${t('crew.hint.keys')}`),
+              h('span', { class: 'touch' }, ` · ${t('crew.hint.touch')}`),
+            ),
     );
   }
 
@@ -204,34 +230,55 @@ export class Hud {
     const focusedLabel = (document.activeElement as HTMLElement | null)?.getAttribute?.('aria-label');
     const items = v.problems.map((p) => {
       const def = PROBLEMS[p.kind];
+      const problem = t(`problem.${p.kind}` as StringKey);
       const status =
         p.status === 'done' ? t('day.done')
-        : p.working ? t('day.working', { name: name(p.worker), pct: Math.round(p.progress * 100) })
+        : p.phase === 'working' ? t('day.working', { name: name(p.worker), pct: Math.round(p.progress * 100) })
+        : p.phase === 'airlock' ? t('eva.airlock', { name: name(p.worker) })
         : p.worker ? t('day.walking', { name: name(p.worker) })
+        : def.outside && v.evaBanned ? t('eva.bannedWait')
         : t('day.waiting');
-      const sendLabel = t('day.send', { name: name(v.selected), problem: t(`problem.${p.kind}` as StringKey) });
+      let action: HTMLElement | null = null;
+      if (p.status === 'open' && !p.worker) {
+        const banned = def.outside && v.evaBanned;
+        const label = banned ? t('eva.bannedShort') : def.outside ? t('eva.send') : t('day.fixInside');
+        const aria = def.outside ? t('eva.sendAria', { problem }) : t('day.fixInsideAria', { problem });
+        action = h('button', { class: 'btn', type: 'button', 'aria-label': aria, disabled: v.paused || banned, onclick: () => this.cb.onSendProblem(p.uid) }, label);
+      }
       return h('div', { class: `problem ${p.status === 'done' ? 'done' : ''}` },
         h('div', { class: 'name' },
-          `${p.status === 'done' ? '✅' : '⚠️'} ${t(`problem.${p.kind}` as StringKey)}`,
+          `${p.status === 'done' ? '✅' : '⚠️'} ${problem}`,
           h('small', {}, `${t(`problem.${p.kind}.where` as StringKey)} · ${def.outside ? t('problem.outside') : t('problem.inside')}`),
           h('small', { class: 'status' }, status),
           p.progress > 0 && p.status !== 'done' ? h('div', { class: 'bar good' }, h('i', { style: `width:${Math.round(p.progress * 100)}%` })) : null,
         ),
-        p.status === 'open' && p.worker !== v.selected
-          ? h('button', { class: 'btn', type: 'button', 'aria-label': sendLabel, disabled: v.paused, onclick: () => this.cb.onSendProblem(p.uid) }, t('day.sendShort', { name: name(v.selected) }))
-          : null,
+        action,
       );
     });
+    const placeIcon = { inside: '🏠', airlock: '🚪', outside: '👩‍🚀' } as const;
+    const crewRow = h('div', { class: 'crew-row', role: 'group', 'aria-label': t('eva.crewTitle') },
+      h('span', { class: 'crew-row-title' }, 'EVA', helpButton('help.eva', 'EVA')),
+      ...v.crew.map((c) => {
+        const where = t(`crew.place.${c.place}` as StringKey);
+        return h('button', {
+          type: 'button', class: `crew-pick ${c.place}`, 'aria-pressed': String(c.role === v.selected),
+          'aria-label': `${name(c.role)}, ${where}`, title: `${name(c.role)} · ${where}`,
+          onclick: () => this.cb.onSelect(c.role),
+        }, `${placeIcon[c.place]} ${t(`crew.short.${c.role}` as StringKey)}`);
+      }),
+    );
     this.planEl.replaceChildren(
       h('div', { class: 'plan-top' },
         h('strong', { id: 'plan-title' }, v.paused ? t('day.paused') : t('day.title')),
         h('span', { class: 'clock', 'aria-label': t('day.remaining', { s: v.remaining }) }, `☀️ ${t('day.remaining', { s: v.remaining })}`),
       ),
-      h('p', { class: 'day-hint' }, t('day.hint')),
+      v.evaBanned ? h('p', { class: 'day-warn', role: 'status' }, t('eva.banned')) : h('p', { class: 'day-hint' }, t('day.hint')),
+      crewRow,
       ...(items.length ? items : [h('p', { class: 'day-hint' }, t('day.none'))]),
       this.coop?.note ? h('p', { class: 'coop-note', role: 'status' }, this.coop.note) : '',
       !this.coop || this.coop.canEnd
         ? h('div', { class: 'plan-actions' },
+            v.evaActive ? h('button', { class: 'btn', type: 'button', 'aria-label': t('eva.return'), disabled: v.paused, onclick: () => this.cb.onEvaReturn() }, t('eva.return')) : null,
             h('button', { class: 'btn', type: 'button', 'aria-label': v.paused ? t('day.resume') : t('day.pause'), onclick: () => this.cb.onPause() }, v.paused ? t('day.resume') : t('day.pause')),
             h('button', { class: 'btn primary', type: 'button', 'aria-label': t('day.end'), onclick: () => this.cb.onEndDay() }, t('day.end')),
           )

@@ -1,6 +1,7 @@
 import { CONFIG } from './config.ts';
 import { Mission } from './mission.ts';
 import { parseMissions, pickHistorical, type MissionsFile } from './historical.ts';
+import { PROBLEMS } from './problems.ts';
 import type { EnergyPlan, Flare, HistoricalMission } from './types.ts';
 
 /**
@@ -52,6 +53,18 @@ export function previewSol(planJson: string): string {
   const plan = JSON.parse(planJson) as EnergyPlan;
   if (m.state.pendingCard || !m.isPlanValid(plan)) return 'null';
   return JSON.stringify(m.previewSol(plan));
+}
+
+/** EVA proibida hoje (tempestade avisada)? Regra em Mission.evaBanned. */
+export function evaBanned(): boolean {
+  return current().evaBanned;
+}
+
+/** O problema pode ser consertado agora? Com a EVA proibida, os de fora não (ninguém pode sair). */
+export function canResolve(uid: number): boolean {
+  const m = current();
+  const p = m.state.problems.find((x) => x.uid === uid);
+  return !!p && !(m.evaBanned && PROBLEMS[p.kind].outside);
 }
 
 export function openProblem(uid: number): void {

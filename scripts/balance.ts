@@ -9,6 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { CONFIG } from '../src/sim/config.ts';
 import { Mission } from '../src/sim/mission.ts';
+import { PROBLEMS } from '../src/sim/problems.ts';
 import { parseMissions } from '../src/sim/historical.ts';
 import type { EnergyPlan, Flare, HistoricalMission, Location, Problem } from '../src/sim/types.ts';
 
@@ -125,6 +126,8 @@ function run(strategy: Strategy, flares: Flare[], historical: HistoricalMission 
       }
       for (const p of m.state.problems) {
         m.openProblem(p.uid);
+        // EVA proibida (tempestade hoje): os problemas de fora não podem ser resolvidos.
+        if (m.evaBanned && PROBLEMS[p.kind].outside) continue;
         if (strategy.fix(m, p)) m.resolveProblem(p.uid);
       }
       if (m.state.outcome.status !== 'playing') break;

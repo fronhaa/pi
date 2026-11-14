@@ -28,9 +28,26 @@ export interface ChibiAstronautInstance {
 const NO_OUTLINE =
   /^(eye|brow|cheek|mouth|hair|visor|face_skin|helmet_lining|helmet_vent_slot|chest_light|chest_triangle|chest_panel_screen|backpack_light|backpack_led|backpack_screen|patch_|knee.*_strap|earcup.*_(disc|ring|core)|tablet_(screen|icon|line|bar|bumper|back))/;
 
-export async function loadChibiAstronaut(url = CHIBI_ASTRONAUT_URL): Promise<ChibiAstronautInstance> {
-  const gltf = await new GLTFLoader().loadAsync(url);
-  const root = gltf.scene as unknown as THREE.Group;
+/** Laranja de destaque do traje no .glb (pode ser trocado por papel com `accent`). */
+const GLB_ACCENT = new THREE.Color(0xe8792b);
+
+/** O .glb é baixado uma vez só; cada astronauta recebe um clone. */
+const gltfCache = new Map<string, ReturnType<GLTFLoader['loadAsync']>>();
+
+export async function loadChibiAstronaut(
+  url = CHIBI_ASTRONAUT_URL,
+  opts: { accent?: THREE.ColorRepresentation } = {},
+): Promise<ChibiAstronautInstance> {
+  let pending = gltfCache.get(url);
+  if (!pending) {
+    pending = new GLTFLoader().loadAsync(url);
+    gltfCache.set(url, pending);
+    pending.catch(() => gltfCache.delete(url));
+  }
+  const gltf = await pending;
+  // Peças rígidas sem esqueleto: um clone comum basta (geometria compartilhada, materiais trocados abaixo).
+  const root = gltf.scene.clone(true) as unknown as THREE.Group;
+  const accent = opts.accent !== undefined ? new THREE.Color(opts.accent) : null;
 
   // materiais toon, um por cor do .glb
   const cache = new Map<THREE.Material, THREE.MeshToonMaterial>();
@@ -42,7 +59,8 @@ export async function loadChibiAstronaut(url = CHIBI_ASTRONAUT_URL): Promise<Chi
     const src = mesh.material as THREE.MeshStandardMaterial;
     let mat = cache.get(src);
     if (!mat) {
-      mat = toonMaterial(src.color);
+      const isAccent = accent && colorClose(src.color, GLB_ACCENT);
+      mat = toonMaterial(isAccent ? accent : src.color);
       mat.emissive.copy(src.emissive);
       mat.emissiveIntensity = src.emissiveIntensity;
       mat.transparent = src.transparent;
@@ -85,6 +103,7 @@ export async function loadChibiAstronaut(url = CHIBI_ASTRONAUT_URL): Promise<Chi
       return action;
     },
     stop(fade = 0.2) {
+      if (!current) return;
       current?.fadeOut(fade);
       current = null;
     },
@@ -92,4 +111,8 @@ export async function loadChibiAstronaut(url = CHIBI_ASTRONAUT_URL): Promise<Chi
       mixer.update(dt);
     },
   };
+}
+
+function colorClose(a: THREE.Color, b: THREE.Color): boolean {
+  return Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b) < 0.06;
 }

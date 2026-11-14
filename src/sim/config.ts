@@ -47,10 +47,22 @@ export const CONFIG = {
     /** Segundos do dia em que o problema pode aparecer. */
     spawnWindow: { min: 3, max: 35 },
     daySeconds: 75,
+    /** Câmara de descompressão: segundos para sair e para voltar (GDD). */
     airlockSeconds: 3,
     /** Dose ao terminar uma tarefa fora da base (escala do jogo, INTERPRETADO). */
     outsideDose: 1,
     effects: { dust: 20, lifeLeak: 10, shieldBag: 8 },
+  },
+
+  /**
+   * EVA (saída da base com traje). A tripulação fica dentro por padrão; problema de fora exige EVA.
+   * Regras de jogo (INTERPRETADO), inspiradas no planejamento da NASA (GDD, "EVA: sair da base").
+   */
+  eva: {
+    /** No máximo uma dupla fora ao mesmo tempo. */
+    maxOutside: 2,
+    /** No sol em que a tempestade chega (com o aviso da Terra recebido), ninguém sai. */
+    banOnStormDay: true,
   },
 
   /**

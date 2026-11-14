@@ -68,6 +68,19 @@ Os astronautas andam pela cena com física **em cada aparelho**. Para todos vere
 
 Medido com duas abas (14/11/2026): depois de uma caminhada de ~10 m, a posição do astronauta ficou igual nas duas telas (diferença de 0,00 m). Código: `Game.coopCrewTick` e `Game.applyRemoteCrew` (cliente) e `server/internal/coop/crew.go`.
 
+## EVA no modo em grupo
+
+Desde o PR #21, saída é sempre **em dupla** (EVA), no máximo uma dupla por vez, e **proibida no dia de tempestade solar** (`Mission.evaBanned`). No modo em grupo:
+
+1. **Parceiro automático.** Quem manda um astronauta resolver um problema lá fora escolhe a dupla na hora: o jogo prefere um parceiro livre **do mesmo jogador**; se não houver, pega o de outro jogador. O cliente manda `eva` com `pair: [líder, parceiro]`.
+2. **Uma EVA por sala.** O servidor guarda a dupla ativa (`state.eva`: `pair` e `by`, o jogador que comanda). Se já houver uma, recusa com `eva_busy`; no dia de tempestade, `eva_banned`. Nos dois casos o cliente traz o astronauta de volta.
+3. **Durante a EVA**, os dois astronautas são comandados por quem iniciou (`by`), mesmo que o parceiro seja de outro jogador. O dono do parceiro vê o aviso "Esse astronauta está em EVA com o Jogador N." e o recebe de volta quando a dupla entra pela câmara.
+4. **Fim.** Quando a dupla toda está dentro, o cliente manda `eva_end`. O servidor também limpa a EVA ao sair da fase `day`.
+5. **Lugar visível para todos.** `crew_pos` leva `place` (`inside`, `airlock`, `outside`): nos outros aparelhos o astronauta entra ou sai do habitat junto.
+6. **Tempestade no servidor.** `problem_resolve` de problema lá fora é recusado (`eva_banned`) no dia de tempestade; a decisão vem de `Mission.evaBanned` em `src/sim`, rodada pelo goja (`EvaBanned`, `CanResolve` em `engine.go`).
+
+Medido com duas abas (14/11/2026): A com o Comandante, B com os outros três. A mandou o Comandante limpar painéis; o servidor registrou a dupla Comandante + Engenheiro comandada por A, B viu os dois saírem e voltarem, não conseguiu pegar o Engenheiro durante a EVA e o recebeu de volta no fim. Código: `server/internal/coop/eva.go`, `Game.ts` (`pickBuddy`, `onEvaEnd`, `applyRemoteCrew`) e `CrewTasks.setRemotePlace`.
+
 ## Protocolo (WebSocket, JSON)
 
 Endereço: `wss://<host>/ws`. Cada mensagem é um objeto com `t` (tipo).
@@ -88,16 +101,18 @@ Endereço: `wss://<host>/ws`. Cada mensagem é um objeto com `t` (tipo).
 | `pause` / `end_day` | — | Comandante, na fase `day` |
 | `problem_progress` | `uid`, `progress` (0–1) | Jogador de Marte, na fase `day` (o cliente manda no máximo ~4 por segundo) |
 | `problem_resolve` | `uid` | Jogador de Marte, na fase `day` |
-| `crew_pos` | `list`: `[{role, x, z, tx?, tz?}]` | Dono dos papéis, em qualquer fase da partida (menos no fim). Só visual: o servidor confere o dono e repassa |
+| `crew_pos` | `list`: `[{role, x, z, tx?, tz?, place?}]` (`place`: `inside`, `airlock`, `outside`) | Dono dos papéis (ou quem comanda a EVA, para a dupla), em qualquer fase da partida (menos no fim). Só visual: o servidor confere quem controla e repassa |
+| `eva` | `pair`: `[líder, parceiro]` (papéis de Marte diferentes) | Dono do líder, na fase `day`; recusa com `eva_busy` (já há uma) ou `eva_banned` (tempestade) |
+| `eva_end` | — | Quem iniciou a EVA, quando a dupla volta |
 
 **Servidor → cliente**
 
 | `t` | Conteúdo |
 | --- | --- |
 | `welcome` | `code`, `playerId`, `token` (guarde para reconectar) |
-| `state` | A cada mudança (no dia, também a cada segundo do relógio): `phase` (`lobby`, `earth`, `mars`, `day`, `ended`), `you`, `players`, `autoEarth`, e `mars` e/ou `earth` conforme os papéis. O relatório do último sol vem em `mars.lastReport` / `earth.lastReport`. |
+| `state` | A cada mudança (no dia, também a cada segundo do relógio): `phase` (`lobby`, `earth`, `mars`, `day`, `ended`), `you`, `players`, `autoEarth`, e `mars` e/ou `earth` conforme os papéis, e `eva` (`pair`, `by`) se houver uma dupla lá fora. O relatório do último sol vem em `mars.lastReport` / `earth.lastReport`. |
 | `crew` | `list`: posição e destino dos astronautas de **outro** jogador (quem mandou não recebe de volta). O `state` também traz `crew` com a última posição de cada um, para quem reconecta |
-| `error` | `code`: `room_not_found`, `room_full`, `role_taken`, `need_commander`, `not_your_role`, `wrong_phase`, `card_pending`, `invalid`, `bad_token`, `server_full`, `too_fast` |
+| `error` | `code`: `room_not_found`, `room_full`, `role_taken`, `need_commander`, `not_your_role`, `wrong_phase`, `card_pending`, `invalid`, `bad_token`, `server_full`, `too_fast`, `eva_busy`, `eva_banned` |
 
 Limites: 5 jogadores por sala, 1.000 salas, mensagens de até 4 KB, 20 ações por segundo por conexão.
 

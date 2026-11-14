@@ -190,6 +190,18 @@ func (m *Mission) PreviewSol(plan EnergyPlan) (json.RawMessage, error) {
 	return json.RawMessage(v.String()), nil
 }
 
+// EvaBanned: EVA proibida hoje (regra em Mission.evaBanned, src/sim/mission.ts).
+func (m *Mission) EvaBanned() bool {
+	v, err := m.e.call("evaBanned")
+	return err == nil && v.ToBoolean()
+}
+
+// CanResolve: o problema pode ser consertado agora (com a EVA proibida, os de fora não).
+func (m *Mission) CanResolve(uid int) bool {
+	v, err := m.e.call("canResolve", uid)
+	return err == nil && v.ToBoolean()
+}
+
 func (m *Mission) OpenProblem(uid int) error {
 	_, err := m.do("openProblem", uid)
 	return err

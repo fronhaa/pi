@@ -11,7 +11,7 @@ export interface ProblemDef {
   kind: ProblemKind;
   /** Segundos de trabalho no local. */
   taskSeconds: number;
-  /** Fora da base: passa pela câmara de descompressão e soma dose ao terminar. */
+  /** Fora da base: exige EVA (dupla, câmara de descompressão) e soma dose ao terminar. */
   outside: boolean;
 }
 
@@ -25,19 +25,21 @@ export const PROBLEMS: Record<ProblemKind, ProblemDef> = {
 
 export const PROBLEM_KINDS = Object.keys(PROBLEMS) as ProblemKind[];
 
-/** Tempo total no local: tarefa + câmara de descompressão para sair (GDD: 3 s para sair). */
+/** Segundos de trabalho no local. A câmara de descompressão é contada à parte, na saída da EVA. */
 export function taskTime(kind: ProblemKind): number {
-  const d = PROBLEMS[kind];
-  return d.taskSeconds + (d.outside ? CONFIG.problems.airlockSeconds : 0);
+  return PROBLEMS[kind].taskSeconds;
 }
 
-/** Sorteia os problemas do dia: só a partir do sol 3, 1 ou 2 por dia, tipos diferentes. */
-export function scheduleProblems(sol: number, rng: Rng, nextUid: () => number): Problem[] {
+/**
+ * Sorteia os problemas do dia: só a partir do sol 3, 1 ou 2 por dia, tipos diferentes.
+ * `exclude`: tipos que já continuam de ontem (não aparecem duas vezes no mesmo lugar).
+ */
+export function scheduleProblems(sol: number, rng: Rng, nextUid: () => number, exclude: ProblemKind[] = []): Problem[] {
   const c = CONFIG.problems;
   if (sol < c.firstSol) return [];
   const count = rng.int(c.minPerDay, c.maxPerDay);
   return rng
-    .shuffle(PROBLEM_KINDS)
+    .shuffle(PROBLEM_KINDS.filter((k) => !exclude.includes(k)))
     .slice(0, count)
     .map((kind) => ({
       uid: nextUid(),
