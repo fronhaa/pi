@@ -26,6 +26,8 @@ export interface CrewMotionOptions {
   camera: THREE.Camera;
   onSelect?: (role: Role) => void;
   onFirstJump?: () => void;
+  /** Modo em grupo: quais astronautas ESTE jogador controla (os outros são de outros jogadores). Sem isso, todos. */
+  canControl?: (role: Role) => boolean;
   /** Rover animado pela cena: ganha um corpo cinemático que bloqueia os astronautas. */
   rover?: THREE.Object3D;
 }
@@ -90,6 +92,7 @@ export class CrewMotion {
   }
 
   select(role: Role): void {
+    if (this.opts.canControl && !this.opts.canControl(role)) return;
     this.selected = role;
     for (const r of ROLES) this.opts.crew.members[r].setSelected(r === role);
     this.opts.onSelect?.(role);
@@ -128,6 +131,27 @@ export class CrewMotion {
     this.cancelAuto(role);
     delete this.targets[role];
     delete this.dests[role];
+  }
+
+  /** Posição atual no chão (plano XZ). Modo em grupo: o dono manda para os outros jogadores. */
+  positionOf(role: Role): THREE.Vector3 {
+    const t = this.bodies[role].translation();
+    return new THREE.Vector3(t.x, 0, t.z);
+  }
+
+  /** Está dentro do habitat ou do abrigo (escondido)? */
+  isInside(role: Role): boolean {
+    return this.insideRoles.has(role);
+  }
+
+  /** Coloca o astronauta direto num ponto (modo em grupo: corrigir a posição que outro jogador mandou). */
+  teleport(role: Role, x: number, z: number): void {
+    if (this.insideRoles.has(role)) return;
+    this.stop(role);
+    delete this.routes[role];
+    const body = this.bodies[role];
+    body.setTranslation({ x, y: CENTER_Y, z }, true);
+    body.setLinvel({ x: 0, y: 0, z: 0 }, true);
   }
 
   /** Quantos astronautas estão dentro (habitat ou abrigo). */
@@ -254,7 +278,7 @@ export class CrewMotion {
       let vx = 0;
       let vz = 0;
 
-      if (this.enabled && role === this.selected) {
+      if (this.enabled && role === this.selected && (!this.opts.canControl || this.opts.canControl(role))) {
         const axis = input.moveAxis();
         if (axis.x !== 0 || axis.z !== 0) {
           // Setas relativas à câmera: "para cima" é para longe da câmera.

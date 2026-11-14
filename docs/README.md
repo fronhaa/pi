@@ -13,6 +13,7 @@ Ela vive junto com o código, então é versionada, revisada em PR e nunca fica 
 | [art-bible.md](art-bible.md) | Artistas e quem gera concept art. Direção de arte oficial: estilo, paleta, escala, códigos de asset, aprovação. |
 | [apis-nasa.md](apis-nasa.md) | Quem vai buscar dados reais. Quais APIs da NASA usar, CORS, formato da resposta e uso no jogo. |
 | [servidor-coop.md](servidor-coop.md) | Quem mexe no coop online ou no VPS. Servidor Go, regras do coop, protocolo, deploy e como as regras de `src/sim` rodam no servidor. |
+| [ciencia-marte.md](ciencia-marte.md) | Quem escreve texto educativo, ajuda "?" ou a apresentação. Fatos reais de Marte conferidos, com fonte, página e trecho original, e textos para a criança em PT/EN. |
 | [dados.md](dados.md) | Quem mexe nos dados reais da NASA: fontes, coleta e como atualizar. |
 | [arquitetura.md](arquitetura.md) | Todo mundo, no primeiro dia. Pastas, loop do jogo, quem é dono de quê. |
 | [fisica.md](fisica.md) | Quem vai criar objetos, personagens ou fases. |

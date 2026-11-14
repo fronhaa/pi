@@ -49,12 +49,24 @@ flowchart LR
 | Energia | Cada papel só muda a sua parte. O total nunca passa dos blocos do sol. Se uma carta reduz os blocos, o plano é cortado (ciência, depois blindagem, depois vida). |
 | Cartas, "Começar o dia", pausar e "Terminar o dia" | Só o comandante. |
 | Dia em tempo real | O **relógio é do servidor**: ele abre cada problema no segundo sorteado e encerra o dia aos 75 s ou quando tudo foi consertado. Sem problemas no sol (sóis 1 e 2), "Começar o dia" vai direto para a noite, como no solo. |
-| Consertar problemas | Qualquer jogador de Marte manda um astronauta na própria tela; o progresso e o "consertado" vão para o servidor, que aplica as regras (dose fora da base, consequência à noite). Dois jogadores consertando o mesmo problema: conta uma vez. |
+| Consertar problemas | Cada jogador de Marte manda **o astronauta do seu papel**; o progresso e o "consertado" vão para o servidor, que aplica as regras (dose fora da base, consequência à noite). Dois jogadores consertando o mesmo problema: conta uma vez. |
+| Tripulação na tela | **Cada jogador controla só o astronauta do(s) próprio(s) papel(is)** (o comandante também fica com os papéis sem dono). Tocar no astronauta de outro mostra "Esse astronauta é do Jogador N". Todos veem **todos** os astronautas andando: ver [Tripulação sincronizada](#tripulação-sincronizada). |
 | Missões históricas | Iguais ao solo: a primeira partida da sala usa uma missão de força média; as seguintes, qualquer uma. Sem `missions.json`, erupções sorteadas. |
 | Prévia do plano | Calculada pelo servidor com as mesmas regras (`Mission.previewSol`) e enviada em `mars.preview`. Com jogador na Terra, a prévia **não** mostra a tempestade de amanhã: avisar é papel da Terra. |
 | Antena desalinhada | Se ninguém consertou a antena, no sol seguinte Marte vê "sem sinal" e a mensagem da Terra **se perde**. |
 | O que cada um vê | A Terra vê previsão, recursos e o relatório, **não** o plano. Marte vê o plano e as mensagens, **não** a previsão nem a agenda das tempestades (revelada no fim). |
 | Dados pessoais | Nenhum: sem nome, sem conta, sem banco. Na tela, "Jogador 1..5". Tudo em memória; a sala some 15 min depois que todos saem. |
+
+## Tripulação sincronizada
+
+Os astronautas andam pela cena com física **em cada aparelho**. Para todos verem o mesmo:
+
+1. O dono de cada astronauta manda `crew_pos` com a posição e o destino, **no máximo ~3 vezes por segundo** e só se andou mais de 15 cm. Quando o destino muda (clique no chão, ordem para um problema), manda na hora.
+2. O servidor confere que quem mandou é dono daquele papel e repassa aos outros jogadores. Ele **não** aplica regra nenhuma com a posição; as regras dos problemas já chegam por `problem_progress` e `problem_resolve`.
+3. Nos outros aparelhos, o astronauta anda até o destino recebido, com o mesmo desvio de prédios (`moveRole`). Andando pelas setas, sem destino, ele segue as posições recebidas. Se estiver a mais de 6 m do lugar certo (ex.: acabou de entrar), é corrigido de uma vez.
+4. À noite, todos entram no habitat ou no abrigo do mesmo jeito em todas as telas, sem precisar de rede.
+
+Medido com duas abas (14/11/2026): depois de uma caminhada de ~10 m, a posição do astronauta ficou igual nas duas telas (diferença de 0,00 m). Código: `Game.coopCrewTick` e `Game.applyRemoteCrew` (cliente) e `server/internal/coop/crew.go`.
 
 ## Protocolo (WebSocket, JSON)
 
@@ -76,6 +88,7 @@ Endereço: `wss://<host>/ws`. Cada mensagem é um objeto com `t` (tipo).
 | `pause` / `end_day` | — | Comandante, na fase `day` |
 | `problem_progress` | `uid`, `progress` (0–1) | Jogador de Marte, na fase `day` (o cliente manda no máximo ~4 por segundo) |
 | `problem_resolve` | `uid` | Jogador de Marte, na fase `day` |
+| `crew_pos` | `list`: `[{role, x, z, tx?, tz?}]` | Dono dos papéis, em qualquer fase da partida (menos no fim). Só visual: o servidor confere o dono e repassa |
 
 **Servidor → cliente**
 
@@ -83,6 +96,7 @@ Endereço: `wss://<host>/ws`. Cada mensagem é um objeto com `t` (tipo).
 | --- | --- |
 | `welcome` | `code`, `playerId`, `token` (guarde para reconectar) |
 | `state` | A cada mudança (no dia, também a cada segundo do relógio): `phase` (`lobby`, `earth`, `mars`, `day`, `ended`), `you`, `players`, `autoEarth`, e `mars` e/ou `earth` conforme os papéis. O relatório do último sol vem em `mars.lastReport` / `earth.lastReport`. |
+| `crew` | `list`: posição e destino dos astronautas de **outro** jogador (quem mandou não recebe de volta). O `state` também traz `crew` com a última posição de cada um, para quem reconecta |
 | `error` | `code`: `room_not_found`, `room_full`, `role_taken`, `need_commander`, `not_your_role`, `wrong_phase`, `card_pending`, `invalid`, `bad_token`, `server_full`, `too_fast` |
 
 Limites: 5 jogadores por sala, 1.000 salas, mensagens de até 4 KB, 20 ações por segundo por conexão.

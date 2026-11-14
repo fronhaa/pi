@@ -8,6 +8,8 @@ Jogo 3D cartoon no navegador para o desafio NASA Space Apps 2026 "Junior Astrona
 - Leia `docs/desafio.md` e `docs/game-design.md` (o que estamos construindo e por quê), depois `docs/arquitetura.md`. Para física, `docs/fisica.md`; para visual, `docs/art-bible.md` (direção de arte) e `docs/estilo-visual.md` (como está no código).
 - Siga `docs/convencoes.md` (identificadores em inglês, comentários/docs em português, alias `@/`).
 
+- Fato científico em texto do jogo, do professor ou da apresentação: use só o que está em `docs/ciencia-marte.md` (com fonte e trecho original). Fato novo entra lá primeiro, com link oficial aberto e lido.
+
 ## Regras do projeto
 
 - `src/sim/` é simulação pura: sem DOM, sem Three.js; imports relativos com `.ts`. Todo número de jogo fica em `src/sim/config.ts`; mudou um, rode `npm run balance`.
