@@ -21,11 +21,44 @@ Jogo 3D cartoon no navegador para o desafio NASA Space Apps 2026 "Junior Astrona
 ## Documentação (obrigatório)
 
 - Mudou uma regra do jogo, então atualize `docs/game-design.md`. Todo número real usado no jogo precisa de fonte registrada.
+- Mudou `src/sim/`? Rode `npm run build` (ou `npm run sim:bundle`) e commite `server/internal/sim/simjs/sim.js` junto: o servidor coop (Go) roda essas mesmas regras. Só mexa em Go se surgir campo novo em `src/sim/types.ts` que o servidor use (ver `docs/servidor-coop.md`, ADR 0006).
 
 - Mudou como um sistema funciona, então atualize o guia correspondente em `docs/` na mesma mudança.
 - Decisão técnica importante (lib, técnica, padrão): crie um ADR com `npm run docs:adr -- "título"` e preencha.
 - Nunca reescreva um ADR aceito; crie um novo que o substitua.
 
+## Modo em grupo (servidor coop)
+
+Guia completo: `docs/servidor-coop.md`. Decisões: ADR 0005 e 0006.
+
+- **Regras num lugar só:** o servidor Go (`server/`) roda o próprio `src/sim`, empacotado em `server/internal/sim/simjs/sim.js` (goja). Nunca escreva regra de jogo em Go.
+- **Mudou o protocolo** (ação nova, campo novo para os jogadores)? Mude os dois lados juntos: `src/net/protocol.ts` (cliente) e `server/internal/coop/` (servidor), mais a tabela do protocolo em `docs/servidor-coop.md`.
+- **Mudou algo que roda no dia ou no plano** (`src/core/Game.ts`, `src/ui/Hud.ts`)? Confira o modo em grupo: ali o estado vem do servidor (`this.coop.view`), não de `this.mission`.
+- **Crianças / LGPD:** o servidor não guarda nome, conta nem nenhum dado pessoal. Não acrescente.
+- **Verificar o servidor:** `cd server && go vet ./... && go test ./...` (Go 1.27+).
+
+### Atualizar o servidor no VPS (Coder `sisgeon/devs`)
+
+Só quando pedirem. Roda no Docker do workspace (`DOCKER_HOST=tcp://dind-devs:2375`), na pasta `~/jezero-coop`, porta `18095`.
+Da raiz do repositório, já na `main` atualizada:
+
+```bash
+git archive main | coder ssh devs -- 'rm -rf ~/jezero-coop.new && mkdir ~/jezero-coop.new && tar -x -C ~/jezero-coop.new && rm -rf ~/jezero-coop && mv ~/jezero-coop.new ~/jezero-coop'
+coder ssh devs -- 'cd ~/jezero-coop/server && COOP_BIND=0.0.0.0 COOP_PORT=18095 ALLOWED_ORIGINS="*.trycloudflare.com,localhost:*" docker compose up -d --build --no-deps jezero-coop'
+coder ssh devs -- 'docker logs jezero-coop-tunnel 2>&1 | grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" | tail -1'   # link do jogo
+```
+
+- Use sempre `--no-deps jezero-coop`: recria só o servidor e **o link do Cloudflare continua o mesmo**. Reiniciar o `jezero-coop-tunnel` troca o link, e o time precisa ser avisado do novo.
+- Confira com `curl <link>/healthz` (deve trazer `realFlares` e `historicalMissions` maiores que zero).
+- **Não mexa** no `nginx-staging`, no `webjasper-cloudflare` nem em outros containers daquele Docker: são o staging compartilhado da Web Jasper. A porta 8080 já é do `nginx-staging`.
+
+## Git e PRs
+
+- Trabalhe em branch (`feat/`, `fix/`, `docs/`…) e abra PR; nunca commite direto na `main`.
+- Antes de abrir PR, traga a `main` atualizada (outras pessoas mergeiam rápido) e resolva conflitos mantendo o modo em grupo funcionando.
+- Merge só com 1 aprovação ou quando a pessoa pedir explicitamente.
+
 ## Verificação
 
 - `npm run typecheck` e `npm run build` devem passar; `npm run balance` se mexer em `src/sim/`.
+- Mexeu em `server/` ou no protocolo: `go test ./...` em `server/`.

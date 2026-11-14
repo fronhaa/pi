@@ -35,4 +35,6 @@ adiciona a linha na tabela abaixo. Preencha, abra PR e discuta lá.
 | [0002](0002-estilo-toon.md) | Estilo visual toon com inverted hull | Aceito |
 | [0003](0003-manter-rapier-apesar-do-tamanho-do-bundle.md) | Manter Rapier apesar do tamanho do bundle | Substituído em parte por [0004](0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md) |
 | [0004](0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md) | Jogo da Missão Jezero em TypeScript, com Rapier sob demanda | Aceito |
+| [0005](0005-servidor-coop-em-go-com-as-regras.md) | Servidor coop em Go com as regras | Substituído em parte por [0006](0006-servidor-roda-as-regras-do-typescript-goja.md) |
+| [0006](0006-servidor-roda-as-regras-do-typescript-goja.md) | Servidor roda as regras do TypeScript (goja) | Proposto |
 <!-- adr-index:fim (não remova, usado pelo scripts/new-adr.mjs) -->

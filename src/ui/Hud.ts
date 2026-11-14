@@ -1,5 +1,5 @@
 import { CONFIG } from '@/sim/config';
-import type { EnergyPlan, Flare, GameState, Message, ProblemKind, Resources } from '@/sim/types';
+import type { EnergyPlan, Flare, GameState, ProblemKind, Resources } from '@/sim/types';
 import { PROBLEMS } from '@/sim/problems';
 import type { Mission } from '@/sim/mission';
 import { CONFIG as SIM } from '@/sim/config';
@@ -7,6 +7,7 @@ import { CONFIG as SIM } from '@/sim/config';
 /** Prévia calculada pela simulação (Mission.previewSol). */
 export type PlanPreview = ReturnType<Mission['previewSol']>;
 import { formatDate, getLang, t, type StringKey } from '@/i18n';
+import type { MarsMessage } from '@/net/protocol';
 import { h, openDialog } from './dom';
 
 type RoleId = 'commander' | 'engineer' | 'medic' | 'scientist';
@@ -50,6 +51,16 @@ export interface HudCallbacks {
 type PlanKey = keyof EnergyPlan;
 const PLAN_KEYS: PlanKey[] = ['life', 'shield', 'science'];
 
+/** Modo em grupo: o que ESTE jogador pode fazer (docs/servidor-coop.md). null = jogo solo. */
+export interface CoopHud {
+  /** Partes do plano que o papel do jogador controla. */
+  editable: PlanKey[];
+  /** Só o comandante começa o dia, termina o sol e pausa. */
+  canEnd: boolean;
+  /** Aviso curto no topo do plano (ex.: "A Terra está mandando a mensagem…"). */
+  note?: string;
+}
+
 /**
  * Interface sobre a cena (UI-001): barra superior, recursos, mensagens da Terra e plano de energia.
  * Só mostra o estado e repassa decisões; as regras ficam em src/sim.
@@ -68,6 +79,7 @@ export class Hud {
   private readonly crewChip = h('div', { class: 'crew-chip', 'aria-live': 'polite' });
   private crewView: { status: 'loading' | 'ready' | 'off'; role?: string } = { status: 'loading' };
   private placesView = { inside: 4, outside: 0 };
+  private coop: CoopHud | null = null;
   private dayView: DayView | null = null;
 
   constructor(
@@ -103,6 +115,18 @@ export class Hud {
 
   getPlan(): EnergyPlan {
     return { ...this.plan };
+  }
+
+  /** Modo em grupo: permissões deste jogador. null volta ao solo. */
+  setCoop(coop: CoopHud | null): void {
+    this.coop = coop;
+    this.renderPlan();
+  }
+
+  /** Modo em grupo: o plano vem do servidor (todos veem o mesmo). */
+  setPlan(plan: EnergyPlan): void {
+    this.plan = { ...plan };
+    this.renderPlan();
   }
 
   /** Dia em tempo real: troca o plano de energia pela lista de problemas. null = volta ao plano. */
@@ -192,7 +216,7 @@ export class Hud {
   }
 
   private renderMessages(): void {
-    const msgs = this.state?.messages ?? [];
+    const msgs = (this.state?.messages ?? []) as MarsMessage[];
     this.messages.replaceChildren(h('h2', { id: 'msg-title' }, t('msg.title')), ...msgs.map(messageEl));
   }
 
@@ -246,11 +270,14 @@ export class Hud {
       v.evaBanned ? h('p', { class: 'day-warn', role: 'status' }, t('eva.banned')) : h('p', { class: 'day-hint' }, t('day.hint')),
       crewRow,
       ...(items.length ? items : [h('p', { class: 'day-hint' }, t('day.none'))]),
-      h('div', { class: 'plan-actions' },
-        v.evaActive ? h('button', { class: 'btn', type: 'button', 'aria-label': t('eva.return'), disabled: v.paused, onclick: () => this.cb.onEvaReturn() }, t('eva.return')) : null,
-        h('button', { class: 'btn', type: 'button', 'aria-label': v.paused ? t('day.resume') : t('day.pause'), onclick: () => this.cb.onPause() }, v.paused ? t('day.resume') : t('day.pause')),
-        h('button', { class: 'btn primary', type: 'button', 'aria-label': t('day.end'), onclick: () => this.cb.onEndDay() }, t('day.end')),
-      ),
+      this.coop?.note ? h('p', { class: 'coop-note', role: 'status' }, this.coop.note) : '',
+      !this.coop || this.coop.canEnd
+        ? h('div', { class: 'plan-actions' },
+            v.evaActive ? h('button', { class: 'btn', type: 'button', 'aria-label': t('eva.return'), disabled: v.paused, onclick: () => this.cb.onEvaReturn() }, t('eva.return')) : null,
+            h('button', { class: 'btn', type: 'button', 'aria-label': v.paused ? t('day.resume') : t('day.pause'), onclick: () => this.cb.onPause() }, v.paused ? t('day.resume') : t('day.pause')),
+            h('button', { class: 'btn primary', type: 'button', 'aria-label': t('day.end'), onclick: () => this.cb.onEndDay() }, t('day.end')),
+          )
+        :'',
     );
     if (focusedLabel) this.planEl.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focusedLabel)}"]`)?.focus();
   }
@@ -265,6 +292,8 @@ export class Hud {
     const used = this.plan.life + this.plan.shield + this.plan.science;
     const leftover = s.blocks - used;
     const blocked = this.busy || s.pendingCard !== null || s.outcome.status !== 'playing';
+    const coop = this.coop;
+    const canEdit = (k: PlanKey) => !coop || coop.editable.includes(k);
 
     const blocks = h('div', { class: 'blocks', 'aria-hidden': 'true' });
     for (const k of PLAN_KEYS) for (let i = 0; i < this.plan[k]; i++) blocks.append(h('span', { class: k }));
@@ -301,9 +330,9 @@ export class Hud {
         'div',
         { class: 'plan-row' },
         h('div', { class: 'name' }, name, forecastFor(k), h('small', {}, t(`plan.hint.${k}` as StringKey))),
-        h('button', { type: 'button', 'aria-label': t('plan.minus', { name }), disabled: blocked || this.plan[k] === 0, onclick: () => this.change(k, -1) }, '−'),
+        h('button', { type: 'button', 'aria-label': t('plan.minus', { name }), disabled: blocked || !canEdit(k) || this.plan[k] === 0, onclick: () => this.change(k, -1) }, '−'),
         h('div', { class: 'count', 'aria-live': 'polite' }, String(this.plan[k])),
-        h('button', { type: 'button', 'aria-label': t('plan.plus', { name }), disabled: blocked || leftover === 0, onclick: () => this.change(k, +1) }, '+'),
+        h('button', { type: 'button', 'aria-label': t('plan.plus', { name }), disabled: blocked || !canEdit(k) || leftover === 0, onclick: () => this.change(k, +1) }, '+'),
       );
     };
 
@@ -313,6 +342,10 @@ export class Hud {
         h('strong', { id: 'plan-title' }, t('plan.today', { n: s.blocks })),
         s.res.dust > 0 ? h('span', { class: 'dust' }, t('plan.dustNote', { n: Math.round(s.res.dust) })) : null,
         blocks,
+        coop?.note ? h('p', { class: 'coop-note', role: 'status' }, coop.note) : null,
+        coop && coop.editable.length > 0
+          ? h('p', { class: 'coop-note' }, t('coop.yourParts', { parts: coop.editable.map((k) => t(`plan.${k}` as StringKey)).join(', ') }))
+          : null,
       ),
       ...PLAN_KEYS.map(row),
       h('div', { class: 'plan-row battery' },
@@ -326,9 +359,11 @@ export class Hud {
       )] : []),
       h('div', { class: 'plan-actions' },
         h('button', {
-          class: 'btn primary', type: 'button', disabled: blocked,
+          class: 'btn primary', type: 'button', disabled: blocked || (coop !== null && !coop.canEnd),
           onclick: () => this.cb.onEndSol(this.getPlan()),
-        }, s.pendingCard ? t('plan.answerCardFirst') : s.problems.length > 0 ? t('plan.startDay') : t('plan.endSol')),
+        }, s.pendingCard ? t('plan.answerCardFirst')
+          : coop && !coop.canEnd ? t('coop.notYours')
+          : s.problems.length > 0 ? t('plan.startDay') : t('plan.endSol')),
       ),
     );
     // Mantém o foco do teclado no mesmo botão depois de redesenhar.
@@ -341,6 +376,7 @@ export class Hud {
     const used = this.plan.life + this.plan.shield + this.plan.science;
     if (delta > 0 && used >= s.blocks) return;
     if (delta < 0 && this.plan[k] === 0) return;
+    if (this.coop && !this.coop.editable.includes(k)) return;
     this.plan[k] += delta;
     this.renderPlan();
     this.cb.onPlanChange(this.getPlan());
@@ -396,9 +432,13 @@ function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
   return when === 'alert' ? t('msg.stormAlert.cme', { strength, speed, sol: sol ?? 0 }) : t('msg.stormToday.cme', { strength });
 }
 
-function messageEl(m: Message): HTMLElement {
+function messageEl(m: MarsMessage): HTMLElement {
   const delay = 'delayMin' in m ? h('span', { class: 'meta' }, t('msg.delay', { n: m.delayMin })) : null;
   switch (m.kind) {
+    case 'earth':
+      return h('div', { class: `msg${m.option === 'storm' ? ' storm' : m.option === 'dust' ? ' dust' : ''}` },
+        t('msg.earth', { text: t(`coop.earth.opt.${m.option}` as StringKey) }),
+        m.flare ? h('span', { class: 'meta' }, flareBadge(m.flare)) : null, delay);
     case 'stormAlert':
       return h('div', { class: 'msg storm' }, stormText(m.flare, 'alert', m.impactSol), h('span', { class: 'meta' }, flareBadge(m.flare)), delay);
     case 'stormToday':

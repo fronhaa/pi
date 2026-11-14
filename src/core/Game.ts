@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import '@/ui/style.css';
 import { Mission } from '@/sim/mission';
-import type { EnergyPlan, Resources } from '@/sim/types';
+import type { CardId, EnergyPlan, GameState, Message, Problem, Resources, SolReport } from '@/sim/types';
 import { loadFlares, type FlareSource } from '@/data/flares';
 import { isFirstGame, loadMissions, markPlayed, type MissionSource } from '@/data/missions';
 import { pickHistorical } from '@/sim/historical';
@@ -12,6 +12,9 @@ import { PROBLEMS } from '@/sim/problems';
 import { Hud } from '@/ui/Hud';
 import { showCard, showEnd, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
 import { formatDate, getLang, setLang, t } from '@/i18n';
+import { Lobby, showEarthTurn, showModeChoice } from '@/ui/coop';
+import { CoopClient, coopServerUrl } from '@/net/CoopClient';
+import { BLOCK_ROLE, type CoopState } from '@/net/protocol';
 import { Input } from './Input';
 import { CrewTasks } from './CrewTasks';
 import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
@@ -26,6 +29,30 @@ import type { StringKey } from '@/i18n';
 const NIGHT_MS = 2200;
 /** A noite espera a tripulação entrar, mas no máximo isto (ms); quem não chegou entra direto. */
 const NIGHT_MAX_MS = 6000;
+
+const PLAN_KEYS = ['life', 'shield', 'science'] as const;
+
+/** Modo em grupo: o servidor manda na partida; aqui só mostramos e repassamos decisões (docs/servidor-coop.md). */
+interface CoopSession {
+  client: CoopClient;
+  lobby: Lobby;
+  state: CoopState | null;
+  /** Estado montado para a interface a partir do que o servidor mandou. */
+  view: GameState | null;
+  shownReportSol: number;
+  cardSol: number;
+  earthSol: number;
+  endShown: boolean;
+  /** Durante a animação da noite, estados novos esperam aqui. */
+  nightBusy: boolean;
+  pending: CoopState | null;
+  closeEarth: (() => void) | null;
+  /** Problemas que já têm marcador na cena. */
+  marked: Set<number>;
+  /** Último envio de progresso por problema (limita a ~4 por segundo). */
+  progressSent: Map<number, number>;
+  historyToastShown: boolean;
+}
 
 
 /**
@@ -47,6 +74,7 @@ export class Game {
   private night = false;
   private stormNight = false;
   private nightRes: Resources | null = null;
+  private coop: CoopSession | null = null;
 
   // Movimentação da tripulação: física carregada sob demanda (ADR 0004).
   private readonly input = new Input();
@@ -101,7 +129,10 @@ export class Game {
     container.appendChild(uiRoot);
     this.hud = new Hud(uiRoot, {
       onEndSol: (plan) => this.startDay(plan),
-      preview: (plan) => (this.mission && this.mission.isPlanValid(plan) && !this.mission.state.pendingCard ? this.mission.previewSol(plan) : null),
+      // Em grupo, a prévia vem do servidor (mesmas regras, estado real da partida).
+      preview: (plan) =>
+        this.coop ? (this.coop.state?.mars?.preview ?? null)
+        : this.mission && this.mission.isPlanValid(plan) && !this.mission.state.pendingCard ? this.mission.previewSol(plan) : null,
       onSendProblem: (uid) => this.send(uid),
       onEvaReturn: () => this.tasks.returnNow(),
       onPause: () => this.togglePause(),
@@ -110,6 +141,7 @@ export class Game {
       onPlanChange: (plan) => {
         this.plan = plan;
         this.updateScene();
+        this.sendCoopPlan(plan);
       },
       onNasaData: () => showNasaData(this.flares, this.missions, this.mission.state.historical),
       onToggleLang: () => {
@@ -129,7 +161,8 @@ export class Game {
     this.setupHover();
     this.offscreen = new OffscreenArrows(this.renderer.domElement, (uid) => this.send(uid));
     this.scene.add(this.markers.root);
-    this.tasks = new CrewTasks(() => this.mission, this.crew);
+    // No modo em grupo, o CrewTasks conversa com o servidor por um adaptador (coopTaskMission).
+    this.tasks = new CrewTasks(() => (this.coop ? this.coopTaskMission() : this.mission), this.crew);
     this.tasks.onChange = () => {
       this.refreshDayHud();
       this.hud.setPlaces(4 - this.tasks.outsideCount, this.tasks.outsideCount);
@@ -147,7 +180,7 @@ export class Game {
       if (p.kind === 'roverStuck') this.base.setRoverStuck(null);
       this.hud.render();
       this.updateScene();
-      if (this.mission.state.outcome.status !== 'playing') this.endDay();
+      if (!this.coop && this.mission.state.outcome.status !== 'playing') this.endDay();
     };
     this.setupKeys();
 
@@ -167,8 +200,23 @@ export class Game {
 
   start(): void {
     this.renderer.setAnimationLoop((t) => this.frame(t));
-    showTutorial(() => this.beginSol());
+    this.chooseMode();
     void this.loadMotion();
+  }
+
+  /** Com servidor coop configurado, pergunta: sozinho ou em grupo. Sem servidor, vai direto ao solo. */
+  private chooseMode(): void {
+    const url = coopServerUrl();
+    if (!url) {
+      showTutorial(() => this.beginSol());
+      return;
+    }
+    const saved = new CoopClient(url).savedSession();
+    if (saved) {
+      this.startCoop(url, saved); // recarregou a página no meio de uma partida em grupo
+      return;
+    }
+    showModeChoice(() => showTutorial(() => this.beginSol()), () => this.startCoop(url));
   }
 
   /** Carrega o Rapier em segundo plano. Se falhar, o jogo continua só com a interface (GDD). */
@@ -346,6 +394,10 @@ export class Game {
 
   /** "Começar o dia": se não há problemas hoje (sóis 1 e 2), vai direto para a noite. */
   private startDay(plan: EnergyPlan): void {
+    if (this.coop) {
+      this.coop.client.send({ t: 'start_day' }); // o servidor confere se é o comandante
+      return;
+    }
     const m = this.mission;
     if (!m.isPlanValid(plan) || m.state.pendingCard) return;
     this.plan = plan;
@@ -362,12 +414,24 @@ export class Game {
 
   private togglePause(): void {
     if (this.phase !== 'day') return;
+    if (this.coop) {
+      this.coop.client.send({ t: 'pause' });
+      return;
+    }
     this.paused = !this.paused;
     if (this.motion) this.motion.enabled = !this.paused;
     this.refreshDayHud();
   }
 
   private updateDay(dt: number): void {
+    if (this.coop) {
+      // Em grupo, o relógio e a abertura dos problemas são do servidor; aqui só o trabalho dos astronautas.
+      this.tasks.update(dt);
+      for (const p of this.coop.view?.problems ?? []) {
+        if (p.status === 'open') this.markers.setProgress(p.uid, p.progress, this.tasks.isWorking(p.uid));
+      }
+      return;
+    }
     const m = this.mission;
     this.dayElapsed += dt;
     for (const p of m.state.problems) {
@@ -390,6 +454,10 @@ export class Game {
 
   private endDay(): void {
     if (this.phase !== 'day') return;
+    if (this.coop) {
+      this.coop.client.send({ t: 'end_day' });
+      return;
+    }
     this.phase = 'night';
     this.paused = false;
     this.tasks.clear();
@@ -412,7 +480,8 @@ export class Game {
       return;
     }
     const name = t(`crew.${this.selected}` as StringKey);
-    const items = this.mission.state.problems
+    // Em grupo, os problemas vêm do servidor.
+    const items = (this.coop?.view ?? this.mission.state).problems
       .filter((p) => p.status === 'open')
       .map((p) => {
         const problem = t(`problem.${p.kind}` as StringKey);
@@ -428,9 +497,10 @@ export class Game {
 
   private refreshDayHud(): void {
     if (this.phase !== 'day') return;
-    const s = this.mission.state;
+    const s = this.coop?.view ?? this.mission.state;
+    const coopDay = this.coop?.state?.mars?.day;
     this.hud.setDay({
-      remaining: Math.max(0, Math.ceil(CONFIG.problems.daySeconds - this.dayElapsed)),
+      remaining: coopDay ? coopDay.remaining : Math.max(0, Math.ceil(CONFIG.problems.daySeconds - this.dayElapsed)),
       paused: this.paused,
       selected: this.selected,
       evaBanned: this.mission.evaBanned,
@@ -476,10 +546,17 @@ export class Game {
   private endSol(plan: EnergyPlan): void {
     const m = this.mission;
     if (!m.isPlanValid(plan) || m.state.pendingCard) return;
-    this.phase = 'night';
     const stormTonight = m.stormToday !== undefined;
     const report = m.endSol(plan);
+    this.playNight(report, stormTonight, m.state, () => {
+      if (m.state.outcome.status === 'playing') this.beginSol();
+      else this.finish();
+    });
+  }
 
+  /** Noite: a cena mostra o resultado do dia enquanto escurece; depois, o relatório. Solo e grupo. */
+  private playNight(report: SolReport, stormTonight: boolean, state: GameState, onDone: () => void): void {
+    this.phase = 'night';
     // Noite: a cena mostra o resultado do dia enquanto escurece.
     this.hud.setBusy(true);
     this.night = true;
@@ -498,15 +575,14 @@ export class Game {
       reported = true;
       window.clearTimeout(cap);
       this.motion?.forceInside();
-      showReport(report, m.state, () => {
+      showReport(report, state, () => {
         this.night = false;
         this.stormNight = false;
         this.nightRes = null;
         // De manhã a tripulação continua dentro; só sai numa EVA (GDD).
         if (this.motion) this.motion.enabled = true;
         this.hud.setBusy(false);
-        if (m.state.outcome.status === 'playing') this.beginSol();
-        else this.finish();
+        onDone();
       });
     };
     const cap = window.setTimeout(report_, NIGHT_MAX_MS);
@@ -532,7 +608,7 @@ export class Game {
   }
 
   private updateScene(): void {
-    const s = this.mission.state;
+    const s = this.coop?.view ?? this.mission.state;
     this.base.setState({
       res: this.nightRes ?? s.res,
       alert: !this.night && s.messages.some((m) => m.kind === 'stormAlert' || m.kind === 'stormToday'),
@@ -541,6 +617,264 @@ export class Game {
       earthMessage: !this.night && s.messages.some((m) => m.kind !== 'dustNow'),
       scienceBlocks: this.plan.science,
     });
+  }
+
+  // ---------- modo em grupo ----------
+
+  private startCoop(url: string, saved?: { code: string; token: string }): void {
+    const client = new CoopClient(url);
+    const lobby = new Lobby({
+      create: () => client.create(),
+      join: (code) => client.join(code),
+      claim: (role) => client.send({ t: 'claim', role }),
+      release: (role) => client.send({ t: 'release', role }),
+      start: () => client.send({ t: 'start' }),
+      leave: () => this.leaveCoop(),
+    });
+    const c: CoopSession = {
+      client, lobby, state: null, view: null, shownReportSol: 0, cardSol: 0, earthSol: 0,
+      endShown: false, nightBusy: false, pending: null, closeEarth: null,
+      marked: new Set(), progressSent: new Map(), historyToastShown: false,
+    };
+    this.coop = c;
+    client.onState = (s) => this.onCoopState(s);
+    client.onError = (code) => {
+      if (lobby.isOpen()) {
+        lobby.showError(code);
+        if (c.state?.phase === 'lobby') lobby.renderRoom(c.state);
+        else lobby.renderEntry();
+      } else {
+        this.hud.toast(t(`coop.err.${code}`));
+      }
+    };
+    client.onStatus = (status) => {
+      if (status === 'reconnecting') this.hud.toast(t('coop.offline'));
+      if (status === 'closed' && this.coop === c && !c.state) {
+        lobby.showError('offline');
+        lobby.renderEntry();
+      }
+    };
+    if (saved) client.rejoin(saved);
+    else lobby.renderEntry();
+  }
+
+  private leaveCoop(): void {
+    const c = this.coop;
+    if (!c) return;
+    this.leaveCoopDay();
+    this.coop = null;
+    c.client.leave();
+    c.lobby.close();
+    c.closeEarth?.();
+    this.hud.setCoop(null);
+    this.newMission();
+    this.chooseMode();
+  }
+
+  private onCoopState(s: CoopState): void {
+    const c = this.coop;
+    if (!c) return;
+    if (c.nightBusy) {
+      c.pending = s;
+      return;
+    }
+    c.state = s;
+    if (s.phase === 'lobby') {
+      c.lobby.renderRoom(s);
+      return;
+    }
+    c.lobby.close();
+
+    const report = s.mars?.lastReport ?? s.earth?.lastReport ?? null;
+    const sol = s.mars?.sol ?? s.earth?.sol ?? 1;
+    // Partida nova (recomeçou): zera o que já foi mostrado.
+    if (!report || report.sol < c.shownReportSol) c.shownReportSol = report?.sol ?? 0;
+    if (sol < c.cardSol) c.cardSol = 0;
+    if (sol < c.earthSol) c.earthSol = 0;
+    if (sol === 1 && !report) c.historyToastShown = c.historyToastShown && c.shownReportSol === 0;
+
+    if (report && report.sol > c.shownReportSol) {
+      c.shownReportSol = report.sol;
+      c.closeEarth?.();
+      c.closeEarth = null;
+      this.leaveCoopDay();
+      c.nightBusy = true;
+      const view = this.coopView(s);
+      c.view = view;
+      this.playNight(report, report.storm !== null, view, () => {
+        c.nightBusy = false;
+        const next = c.pending ?? s;
+        c.pending = null;
+        this.applyCoopState(next);
+      });
+      return;
+    }
+    this.applyCoopState(s);
+  }
+
+  private applyCoopState(s: CoopState): void {
+    const c = this.coop;
+    if (!c) return;
+    c.state = s;
+    const view = this.coopView(s);
+    c.view = view;
+    this.hud.setState(view);
+    if (s.mars) {
+      this.plan = { ...s.mars.plan };
+      this.hud.setPlan(s.mars.plan);
+    }
+
+    const roles = s.you.roles;
+    const isCommander = roles.includes('commander');
+    const isEarth = roles.includes('earth');
+    const onlyEarth = isEarth && roles.every((r) => r === 'earth');
+    let note: string | undefined;
+    if (s.phase === 'earth' && !isEarth) note = t('coop.wait.earth');
+    else if (s.phase === 'earth' && s.earth?.sent) note = t('coop.earth.sent');
+    else if (s.phase === 'mars' && view.pendingCard && !isCommander) note = t('coop.wait.card');
+    else if (s.phase === 'mars' && onlyEarth) note = t('coop.wait.mars');
+    else if (s.phase === 'day' && onlyEarth) note = t('coop.wait.day');
+    this.hud.setCoop({
+      editable: s.phase === 'mars' ? PLAN_KEYS.filter((k) => roles.includes(BLOCK_ROLE[k])) : [],
+      canEnd: isCommander && (s.phase === 'mars' || s.phase === 'day'),
+      note,
+    });
+
+    if (s.mars?.historical && view.sol === 1 && !c.historyToastShown) {
+      c.historyToastShown = true;
+      this.hud.toast(t('mission.start', { id: s.mars.historical.id, date: formatDate(s.mars.historical.startUtc) }), t('mission.source'));
+    }
+
+    // Dia em tempo real: o relógio é do servidor; cada jogador de Marte conserta com os astronautas.
+    if (s.phase === 'day' && s.mars && !onlyEarth) this.enterCoopDay(s);
+    else if (this.phase === 'day') this.leaveCoopDay();
+    this.updateScene();
+
+    if (s.phase === 'mars' && isCommander && view.pendingCard && c.cardSol !== view.sol) {
+      c.cardSol = view.sol;
+      showCard(view.pendingCard, (option) => c.client.send({ t: 'card', option }));
+    }
+    if (s.phase === 'earth' && isEarth && s.earth && !s.earth.sent && c.earthSol !== s.earth.sol) {
+      c.earthSol = s.earth.sol;
+      c.closeEarth = showEarthTurn(s, (option) => {
+        c.closeEarth = null;
+        c.client.send({ t: 'earth', option });
+      });
+    }
+    if (s.phase === 'ended' && !c.endShown) {
+      c.endShown = true;
+      showEnd(view, () => {
+        if (s.you.host) {
+          c.endShown = false;
+          c.historyToastShown = false;
+          c.client.send({ t: 'start' });
+        } else {
+          this.hud.toast(t('coop.again.wait'));
+        }
+      });
+    }
+    if (s.phase !== 'ended') c.endShown = false;
+  }
+
+  private enterCoopDay(s: CoopState): void {
+    const c = this.coop!;
+    const m = s.mars!;
+    if (this.phase !== 'day') {
+      this.phase = 'day';
+      this.hud.setBusy(true);
+    }
+    this.paused = m.day?.paused ?? false;
+    if (this.motion) this.motion.enabled = !this.paused;
+    for (const p of m.problems) {
+      if (p.status === 'open' && !c.marked.has(p.uid)) {
+        c.marked.add(p.uid);
+        this.markers.add(p.uid, p.kind);
+        if (p.kind === 'roverStuck') this.base.setRoverStuck(PROBLEM_SPOTS.roverStuck);
+        this.hud.toast(t('problem.new', { problem: t(`problem.${p.kind}` as StringKey) }), this.problemTipShown ? undefined : t('day.hint'));
+        this.problemTipShown = true;
+      }
+      if (p.status === 'done' && c.marked.has(p.uid)) {
+        c.marked.delete(p.uid);
+        this.markers.remove(p.uid);
+        if (p.kind === 'roverStuck') this.base.setRoverStuck(null);
+      }
+    }
+    this.refreshDayHud();
+  }
+
+  private leaveCoopDay(): void {
+    if (this.phase === 'day') this.phase = 'morning';
+    this.paused = false;
+    this.tasks.clear();
+    this.markers.clear();
+    this.offscreen.clear();
+    this.coop?.marked.clear();
+    this.base.setRoverStuck(null);
+    this.hud.setDay(null);
+  }
+
+  /** O CrewTasks pensa que fala com a simulação; em grupo, o progresso e o conserto vão para o servidor. */
+  private coopTaskMission(): Mission {
+    const c = this.coop!;
+    const state = c.view ?? this.mission.state;
+    const find = (uid: number): Problem | undefined => state.problems.find((x) => x.uid === uid);
+    return {
+      state,
+      setProblemProgress: (uid: number, progress: number) => {
+        const p = find(uid);
+        if (p && p.status !== 'done') p.progress = progress;
+        const now = performance.now();
+        if (progress === 0 || now - (c.progressSent.get(uid) ?? 0) > 250) {
+          c.progressSent.set(uid, now);
+          c.client.send({ t: 'problem_progress', uid, progress });
+        }
+      },
+      resolveProblem: (uid: number) => {
+        const p = find(uid);
+        if (p) {
+          p.status = 'done';
+          p.progress = 1;
+        }
+        c.client.send({ t: 'problem_resolve', uid });
+      },
+    } as unknown as Mission;
+  }
+
+  /** Monta, a partir do que o servidor mandou, o estado que a interface e a cena já sabem mostrar. */
+  private coopView(s: CoopState): GameState {
+    const m = s.mars;
+    const e = s.earth;
+    const last = m?.lastReport ?? e?.lastReport ?? null;
+    const cardSols = new Map<number, CardId>();
+    if (m?.lastReport && m.reportCard) cardSols.set(m.lastReport.sol, m.reportCard as CardId);
+    return {
+      seed: 0,
+      historical: null,
+      sol: m?.sol ?? e?.sol ?? 1,
+      res: m?.res ?? e?.res ?? this.mission.state.res,
+      blocks: m?.blocks ?? 0,
+      storms: m?.storms ?? [],
+      dustStormSol: 0,
+      dustHold: 0,
+      cardSols,
+      pendingCard: m?.pendingCard ?? null,
+      // A interface também mostra a mensagem "earth" do modo em grupo (Hud.messageEl).
+      messages: (m?.messages ?? []) as unknown as Message[],
+      problems: (m?.problems ?? []).map((p) => ({ ...p })),
+      commsDown: m?.commsDown ?? false,
+      reports: last ? [last] : [],
+      outcome: m?.outcome ?? e?.outcome ?? { status: 'playing' },
+    };
+  }
+
+  /** O jogador mexeu nos blocos: manda só as partes do papel dele que mudaram. */
+  private sendCoopPlan(plan: EnergyPlan): void {
+    const c = this.coop;
+    const server = c?.state?.mars?.plan;
+    if (!c || !server || c.state?.phase !== 'mars') return;
+    for (const k of PLAN_KEYS) {
+      if (plan[k] !== server[k] && c.state.you.roles.includes(BLOCK_ROLE[k])) c.client.send({ t: 'blocks', key: k, value: plan[k] });
+    }
   }
 
   // ---------- render ----------
