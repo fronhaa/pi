@@ -20,6 +20,7 @@ import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
 import { ENTRANCES, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
 import { ProblemMarkers } from '@/scene/ProblemMarkers';
+import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CONFIG } from '@/sim/config';
 import type { StringKey } from '@/i18n';
 
@@ -91,6 +92,7 @@ export class Game {
   private selected: Role = 'commander';
   private readonly tasks: CrewTasks;
   private readonly markers = new ProblemMarkers();
+  private offscreen!: OffscreenArrows;
   private hudTick = 0;
   private problemTipShown = false;
 
@@ -152,6 +154,7 @@ export class Game {
     this.scene.add(this.targetMarker);
     this.setupPointer();
     this.setupHover();
+    this.offscreen = new OffscreenArrows(this.renderer.domElement, (uid) => this.tasks.assign(this.selected, uid));
     this.scene.add(this.markers.root);
     // No modo em grupo, o CrewTasks conversa com o servidor por um adaptador (coopTaskMission).
     this.tasks = new CrewTasks(() => (this.coop ? this.coopTaskMission() : this.mission), this.crew);
@@ -433,6 +436,7 @@ export class Game {
     this.paused = false;
     this.tasks.clear();
     this.markers.clear();
+    this.offscreen.clear();
     this.base.setRoverStuck(null);
     this.hud.setDay(null);
     if (this.mission.state.outcome.status !== 'playing') {
@@ -440,6 +444,27 @@ export class Game {
       return;
     }
     this.endSol(this.plan);
+  }
+
+  /** Setas na borda para os problemas abertos que estão fora da tela (só de dia, sem pausa de janela). */
+  private updateOffscreen(): void {
+    if (this.phase !== 'day') {
+      this.offscreen.clear();
+      return;
+    }
+    const name = t(`crew.${this.selected}` as StringKey);
+    const items = this.mission.state.problems
+      .filter((p) => p.status === 'open')
+      .map((p) => {
+        const problem = t(`problem.${p.kind}` as StringKey);
+        return {
+          uid: p.uid,
+          world: PROBLEM_SPOTS[p.kind].clone().setY(2.6),
+          label: problem,
+          ariaLabel: t('offscreen.aria', { problem, name }),
+        };
+      });
+    this.offscreen.update(items, this.camera);
   }
 
   private refreshDayHud(): void {
@@ -858,6 +883,7 @@ export class Game {
       }
     }
     this.markers.update(t, this.camera);
+    this.updateOffscreen();
     if (this.motion) this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)
     else this.crew.update(dt);
     const marker = this.targetMarker.material as THREE.MeshBasicMaterial;
