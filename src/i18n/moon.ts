@@ -67,7 +67,7 @@ const pt = {
   'end.lesson.delay': 'A Terra está perto: da Lua, as mensagens chegam em cerca de 1 segundo. Em Marte, levam de 3 a 22 minutos!',
 
   'tutorial.1.text': 'Sua tripulação vive no polo sul da Lua, perto da cratera Shackleton, por 15 dias.',
-  'tutorial.2.text': 'Todo dia os painéis dão alguns blocos de energia. Você divide entre suporte de vida, blindagem e ciência. O que sobrar vai para a bateria, que a base gasta enquanto todos dormem.',
+  'tutorial.2.text': 'Todo dia os painéis dão blocos de energia: quanto mais Sol, mais blocos. Você divide entre suporte de vida, blindagem e ciência. O que sobrar vai para a bateria, que a base gasta enquanto todos dormem.',
   'tutorial.3.text': 'A Terra avisa quando vem uma tempestade solar. Reforce a blindagem antes! Às vezes as montanhas fazem sombra por dias: guarde bateria. Durante o dia, problemas aparecem pela base: mande um astronauta consertar.',
 
   'data.donki.use': 'Cada tempestade solar do jogo usa uma erupção solar real registrada pela NASA, com a data e a classe (M = média, X = forte). A dose no jogo é uma escala nossa, não uma medição na Lua.',
@@ -147,7 +147,7 @@ const en: Record<keyof typeof pt, string> = {
   'end.lesson.delay': 'Earth is close: from the Moon, messages arrive in about 1 second. On Mars, they take 3 to 22 minutes!',
 
   'tutorial.1.text': 'Your crew lives at the Moon’s south pole, near Shackleton Crater, for 15 days.',
-  'tutorial.2.text': 'Every day the panels give some energy blocks. You split them between life support, shielding and science. What is left goes to the battery, which the base uses while everyone sleeps.',
+  'tutorial.2.text': 'Every day the panels give energy blocks: the more Sun, the more blocks. You split them between life support, shielding and science. What is left goes to the battery, which the base uses while everyone sleeps.',
   'tutorial.3.text': 'Earth warns you when a solar storm is coming. Reinforce the shielding first! Sometimes the mountains cast shadows for days: save battery. During the day, problems appear around the base: send an astronaut to fix them.',
 
   'data.donki.use': 'Each solar storm in the game uses a real solar flare recorded by NASA, with its date and class (M = medium, X = strong). The dose in the game is our own scale, not a measurement on the Moon.',

@@ -88,6 +88,8 @@ export class Game {
   private stormNight = false;
   /** Lua: a noite que está passando é a noite fria da sombra (só ela escurece a cena). */
   private shadowNight = false;
+  /** Luz do Sol (0–1) do dia que acabou, para a cena durante a noite (o estado já é o do dia seguinte). */
+  private nightSun = 1;
   private nightRes: Resources | null = null;
   private coop: CoopSession | null = null;
 
@@ -585,6 +587,7 @@ export class Game {
     if (!m.isPlanValid(plan) || m.state.pendingCard) return;
     const stormTonight = m.stormToday !== undefined;
     this.shadowNight = m.shadowLeft() > 0;
+    this.nightSun = m.sunlightToday() / 100;
     const report = m.endSol(plan);
     this.playNight(report, stormTonight, m.state, () => {
       if (m.state.outcome.status === 'playing') this.beginSol();
@@ -664,6 +667,7 @@ export class Game {
       scienceBlocks: this.plan.science,
       // De noite, o estado já é o do dia seguinte: a sombra que vale é a da noite que está passando.
       shadow: this.night ? this.shadowNight : s.messages.some((m) => m.kind === 'shadowNow'),
+      sunlight: this.night ? this.nightSun : this.coop ? 1 : this.mission.sunlightToday() / 100,
     });
   }
 
@@ -918,6 +922,7 @@ export class Game {
       storms: m?.storms ?? [],
       dustStormSol: 0,
       shadowSol: 0,
+      sunlight: [],
       dustHold: 0,
       cardSols,
       pendingCard: m?.pendingCard ?? null,

@@ -85,7 +85,24 @@ export const CONFIG = {
     restCost: 15,
     shadowNightCost: 30,
     /** Sombra das montanhas do polo sul: dias seguidos com pouca luz (substitui a tempestade de poeira). */
-    shadow: { firstSol: 4, lastSol: 11, sols: 3, blocks: 4 },
+    shadow: { firstSol: 4, lastSol: 11, sols: 3 },
+    /**
+     * Luz do Sol de cada dia (%). Sem ar, o Sol pleno na Lua é forte (mais que o dobro da luz que chega a Marte),
+     * então 100% de luz dá mais blocos que em Marte. Mas no polo sul o Sol anda rente ao horizonte e passa atrás de
+     * morros mais altos ou mais baixos: a luz muda dia a dia, e dá para prever (caminho do Sol + relevo).
+     * O relevo e a curva são do jogo (INTERPRETADO); o que é real é o porquê.
+     */
+    sun: {
+      fullBlocks: 14,
+      /** Dias comuns: luz entre min e 100%. */
+      minLight: 40,
+      /** Dias de sombra das montanhas: só uma beirada do Sol aparece. */
+      shadowLight: { min: 25, max: 35 },
+      /** O Sol dá a volta no horizonte em ~29,5 dias; os morros fazem a luz subir e descer em ciclos de alguns dias. */
+      cycleDays: { min: 5, max: 8 },
+      /** Quantos dias à frente a previsão mostra. */
+      forecastDays: 2,
+    },
     /** A luz leva ~1,3 s da Terra à Lua (384.400 km). Só para mostrar; as mensagens chegam na hora. */
     commDelaySec: 1.3,
     /** A 3ª estrela: dose abaixo disto (a radiação de todo dia já é o dobro da de Marte). */

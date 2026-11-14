@@ -55,6 +55,8 @@ export class Mission {
       .slice(0, CONFIG.cards.perGame);
     const ids = this.rng.shuffle(moon ? MOON_CARD_POOL : CARD_POOL).slice(0, CONFIG.cards.perGame);
     sols.forEach((s, i) => cardSols.set(s, ids[i]));
+    // Luz do Sol de cada dia na Lua (sorteada por último: em Marte nada muda na sequência).
+    const sunlight = moon ? this.sunProfile(shadowSol) : [];
 
     this.state = {
       seed,
@@ -73,6 +75,7 @@ export class Mission {
       storms,
       dustStormSol,
       shadowSol,
+      sunlight,
       dustHold: 0,
       cardSols,
       pendingCard: null,
@@ -119,6 +122,34 @@ export class Mission {
 
   get stormToday(): ScheduledStorm | undefined {
     return this.state.storms.find((s) => s.sol === this.state.sol);
+  }
+
+  /**
+   * Luz do Sol (%) de cada dia na Lua: o Sol anda rente ao horizonte e passa atrás de morros, então a luz sobe e
+   * desce em ciclos de alguns dias (com variação de um dia para o outro). Nos dias de sombra, só uma beirada aparece.
+   * Arredondado de 5 em 5 para a criança ler fácil.
+   */
+  private sunProfile(shadowSol: number): number[] {
+    const { minLight, shadowLight, cycleDays } = CONFIG.moon.sun;
+    const period = this.rng.int(cycleDays.min, cycleDays.max);
+    const phase = this.rng.next() * Math.PI * 2;
+    const out: number[] = [];
+    for (let d = 1; d <= CONFIG.sols; d++) {
+      const inShadow = d >= shadowSol && d < shadowSol + CONFIG.moon.shadow.sols;
+      if (inShadow) {
+        out.push(round5(this.rng.int(shadowLight.min, shadowLight.max)));
+        continue;
+      }
+      const wave = 0.5 + 0.5 * Math.sin((2 * Math.PI * d) / period + phase);
+      const k = clamp(wave + (this.rng.next() - 0.5) * 0.3, 0, 1);
+      out.push(round5(minLight + (100 - minLight) * k));
+    }
+    return out;
+  }
+
+  /** Luz do Sol de hoje (%); 100 em Marte (lá a energia muda pela poeira). */
+  sunlightToday(sol = this.state.sol): number {
+    return this.state.location === 'moon' ? (this.state.sunlight[sol - 1] ?? 100) : 100;
   }
 
   /** Bateria gasta até amanhã: noite de Marte; na Lua, descanso da tripulação ou noite fria da sombra. */
@@ -178,13 +209,21 @@ export class Mission {
     if (s.shadowSol && s.shadowSol === sol + 1) msgs.push({ kind: 'shadowAlert', delayMin: delay(), sol: s.shadowSol });
     if (this.shadowLeft(sol) > 0) msgs.push({ kind: 'shadowNow', left: this.shadowLeft(sol) });
     if (msgs.length === 0) msgs.push({ kind: 'allClear', delayMin: delay() });
+    if (moon) {
+      // Previsão da luz: na vida real dá para calcular (caminho do Sol + mapa do relevo). Sem sinal, não chega.
+      const next = s.sunlight.slice(sol, sol + CONFIG.moon.sun.forecastDays);
+      msgs.push({ kind: 'sunForecast', today: this.sunlightToday(sol), next });
+    }
     return msgs;
   }
 
-  /** Blocos do dia: 10 (na sombra da Lua, menos), reduzidos na proporção da poeira, mínimo 2. */
+  /**
+   * Blocos do dia, reduzidos na proporção da poeira, mínimo 2.
+   * Marte: 10. Lua: 12 com Sol pleno, vezes a luz do Sol de hoje.
+   */
   private updateBlocks(): void {
     const { panelBlocks, minBlocks } = CONFIG.energy;
-    const light = this.shadowLeft() > 0 ? CONFIG.moon.shadow.blocks : panelBlocks;
+    const light = this.state.location === 'moon' ? (CONFIG.moon.sun.fullBlocks * this.sunlightToday()) / 100 : panelBlocks;
     this.state.blocks = Math.max(minBlocks, Math.round(light * (1 - this.state.res.dust / 100)));
   }
 
@@ -336,6 +375,10 @@ export class Mission {
       lines.push({ key: 'report.dust.wind', params: { dust: Math.round(Math.max(0, before.dust - CONFIG.dust.windCleanPerSol)) } });
     }
     if (this.shadowLeft() > 0) lines.push({ key: 'report.shadow', params: { blocks: s.blocks }, tone: 'bad' });
+    else if (s.location === 'moon') {
+      const light = this.sunlightToday();
+      lines.push({ key: 'report.sunlight', params: { light, blocks: s.blocks }, tone: light >= 80 ? 'good' : light <= 55 ? 'bad' : 'neutral' });
+    }
 
     const fx = CONFIG.problems.effects;
     for (const p of failed) {
@@ -349,6 +392,7 @@ export class Mission {
     const roverStuckToday = s.problems.some((p) => p.kind === 'roverStuck' && p.status !== 'pending');
     if (s.location === 'moon') {
       if (s.sol === 1) lines.push(...this.factOnce('fact.moon.radiation'));
+      if (s.sol === 2) lines.push(...this.factOnce('fact.moon.sun'));
       if (s.sol === s.shadowSol) lines.push(...this.factOnce('fact.moon.shadow'));
       if (roverStuckToday) lines.push(...this.factOnce('fact.moon.lunokhod'));
       if (s.problems.some((p) => p.kind === 'antenna' && p.status !== 'pending')) lines.push(...this.factOnce('fact.moon.relay'));
@@ -415,6 +459,10 @@ export { stormDose } from './day.ts';
 
 function range(a: number, b: number): number[] {
   return Array.from({ length: b - a + 1 }, (_, i) => a + i);
+}
+
+function round5(n: number): number {
+  return Math.round(n / 5) * 5;
 }
 
 function round1(n: number): number {

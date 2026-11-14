@@ -142,8 +142,30 @@ var JezeroSim = (function(exports) {
 			shadow: {
 				firstSol: 4,
 				lastSol: 11,
-				sols: 3,
-				blocks: 4
+				sols: 3
+			},
+			/**
+			* Luz do Sol de cada dia (%). Sem ar, o Sol pleno na Lua é forte (mais que o dobro da luz que chega a Marte),
+			* então 100% de luz dá mais blocos que em Marte. Mas no polo sul o Sol anda rente ao horizonte e passa atrás de
+			* morros mais altos ou mais baixos: a luz muda dia a dia, e dá para prever (caminho do Sol + relevo).
+			* O relevo e a curva são do jogo (INTERPRETADO); o que é real é o porquê.
+			*/
+			sun: {
+				fullBlocks: 14,
+				/** Dias comuns: luz entre min e 100%. */
+				minLight: 40,
+				/** Dias de sombra das montanhas: só uma beirada do Sol aparece. */
+				shadowLight: {
+					min: 25,
+					max: 35
+				},
+				/** O Sol dá a volta no horizonte em ~29,5 dias; os morros fazem a luz subir e descer em ciclos de alguns dias. */
+				cycleDays: {
+					min: 5,
+					max: 8
+				},
+				/** Quantos dias à frente a previsão mostra. */
+				forecastDays: 2
 			},
 			/** A luz leva ~1,3 s da Terra à Lua (384.400 km). Só para mostrar; as mensagens chegam na hora. */
 			commDelaySec: 1.3,
@@ -521,6 +543,7 @@ var JezeroSim = (function(exports) {
 			const sols = this.rng.shuffle(range(CONFIG.cards.firstSol, CONFIG.cards.lastSol).filter((s) => s !== eventSol)).slice(0, CONFIG.cards.perGame);
 			const ids = this.rng.shuffle(moon ? MOON_CARD_POOL : CARD_POOL).slice(0, CONFIG.cards.perGame);
 			sols.forEach((s, i) => cardSols.set(s, ids[i]));
+			const sunlight = moon ? this.sunProfile(shadowSol) : [];
 			this.state = {
 				seed,
 				location,
@@ -538,6 +561,7 @@ var JezeroSim = (function(exports) {
 				storms,
 				dustStormSol,
 				shadowSol,
+				sunlight,
 				dustHold: 0,
 				cardSols,
 				pendingCard: null,
@@ -582,6 +606,31 @@ var JezeroSim = (function(exports) {
 		}
 		get stormToday() {
 			return this.state.storms.find((s) => s.sol === this.state.sol);
+		}
+		/**
+		* Luz do Sol (%) de cada dia na Lua: o Sol anda rente ao horizonte e passa atrás de morros, então a luz sobe e
+		* desce em ciclos de alguns dias (com variação de um dia para o outro). Nos dias de sombra, só uma beirada aparece.
+		* Arredondado de 5 em 5 para a criança ler fácil.
+		*/
+		sunProfile(shadowSol) {
+			const { minLight, shadowLight, cycleDays } = CONFIG.moon.sun;
+			const period = this.rng.int(cycleDays.min, cycleDays.max);
+			const phase = this.rng.next() * Math.PI * 2;
+			const out = [];
+			for (let d = 1; d <= CONFIG.sols; d++) {
+				if (d >= shadowSol && d < shadowSol + CONFIG.moon.shadow.sols) {
+					out.push(round5(this.rng.int(shadowLight.min, shadowLight.max)));
+					continue;
+				}
+				const k = clamp(.5 + .5 * Math.sin(2 * Math.PI * d / period + phase) + (this.rng.next() - .5) * .3, 0, 1);
+				out.push(round5(minLight + (100 - minLight) * k));
+			}
+			return out;
+		}
+		/** Luz do Sol de hoje (%); 100 em Marte (lá a energia muda pela poeira). */
+		sunlightToday(sol = this.state.sol) {
+			var _this$state$sunlight;
+			return this.state.location === "moon" ? (_this$state$sunlight = this.state.sunlight[sol - 1]) !== null && _this$state$sunlight !== void 0 ? _this$state$sunlight : 100 : 100;
 		}
 		/** Bateria gasta até amanhã: noite de Marte; na Lua, descanso da tripulação ou noite fria da sombra. */
 		nightCost() {
@@ -652,12 +701,23 @@ var JezeroSim = (function(exports) {
 				kind: "allClear",
 				delayMin: delay()
 			});
+			if (moon) {
+				const next = s.sunlight.slice(sol, sol + CONFIG.moon.sun.forecastDays);
+				msgs.push({
+					kind: "sunForecast",
+					today: this.sunlightToday(sol),
+					next
+				});
+			}
 			return msgs;
 		}
-		/** Blocos do dia: 10 (na sombra da Lua, menos), reduzidos na proporção da poeira, mínimo 2. */
+		/**
+		* Blocos do dia, reduzidos na proporção da poeira, mínimo 2.
+		* Marte: 10. Lua: 12 com Sol pleno, vezes a luz do Sol de hoje.
+		*/
 		updateBlocks() {
 			const { panelBlocks, minBlocks } = CONFIG.energy;
-			const light = this.shadowLeft() > 0 ? CONFIG.moon.shadow.blocks : panelBlocks;
+			const light = this.state.location === "moon" ? CONFIG.moon.sun.fullBlocks * this.sunlightToday() / 100 : panelBlocks;
 			this.state.blocks = Math.max(minBlocks, Math.round(light * (1 - this.state.res.dust / 100)));
 		}
 		answerCard(optionId) {
@@ -867,6 +927,17 @@ var JezeroSim = (function(exports) {
 				params: { blocks: s.blocks },
 				tone: "bad"
 			});
+			else if (s.location === "moon") {
+				const light = this.sunlightToday();
+				lines.push({
+					key: "report.sunlight",
+					params: {
+						light,
+						blocks: s.blocks
+					},
+					tone: light >= 80 ? "good" : light <= 55 ? "bad" : "neutral"
+				});
+			}
 			const fx = CONFIG.problems.effects;
 			for (const p of failed) {
 				if (p.kind === "antenna") this.nextCommsDown = true;
@@ -887,6 +958,7 @@ var JezeroSim = (function(exports) {
 			const roverStuckToday = s.problems.some((p) => p.kind === "roverStuck" && p.status !== "pending");
 			if (s.location === "moon") {
 				if (s.sol === 1) lines.push(...this.factOnce("fact.moon.radiation"));
+				if (s.sol === 2) lines.push(...this.factOnce("fact.moon.sun"));
 				if (s.sol === s.shadowSol) lines.push(...this.factOnce("fact.moon.shadow"));
 				if (roverStuckToday) lines.push(...this.factOnce("fact.moon.lunokhod"));
 				if (s.problems.some((p) => p.kind === "antenna" && p.status !== "pending")) lines.push(...this.factOnce("fact.moon.relay"));
@@ -961,6 +1033,9 @@ var JezeroSim = (function(exports) {
 	};
 	function range(a, b) {
 		return Array.from({ length: b - a + 1 }, (_, i) => a + i);
+	}
+	function round5(n) {
+		return Math.round(n / 5) * 5;
 	}
 	function round1(n) {
 		return Math.round(n * 10) / 10;

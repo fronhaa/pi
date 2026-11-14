@@ -66,6 +66,8 @@ export type Message =
   /** Só na Lua: sombra das montanhas amanhã / hoje (`left` = dias de sombra que faltam, contando hoje). */
   | { kind: 'shadowAlert'; delayMin: number; sol: number }
   | { kind: 'shadowNow'; left: number }
+  /** Só na Lua: luz do Sol prevista (%) hoje e nos próximos dias. */
+  | { kind: 'sunForecast'; today: number; next: number[] }
   | { kind: 'allClear'; delayMin: number }
   | { kind: 'noSignal' };
 
@@ -123,6 +125,8 @@ export interface GameState {
   dustStormSol: number;
   /** Primeiro dia da sombra das montanhas (só Lua; 0 em Marte). Dura CONFIG.moon.shadow.sols dias. */
   shadowSol: number;
+  /** Só na Lua: luz do Sol (%) de cada dia (índice 0 = dia 1). Vazio em Marte. */
+  sunlight: number[];
   /** Sóis restantes em que a poeira da tempestade não é limpa pelo vento. */
   dustHold: number;
   cardSols: Map<number, CardId>;

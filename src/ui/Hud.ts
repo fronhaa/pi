@@ -300,6 +300,7 @@ export class Hud {
     this.planEl.replaceChildren(
       h('div', { class: 'plan-top' },
         h('strong', { id: 'plan-title' }, t('plan.today', { n: s.blocks })),
+        s.location === 'moon' ? h('span', { class: 'dust' }, t('plan.sunNote', { n: s.sunlight[s.sol - 1] ?? 100 })) : null,
         s.res.dust > 0 ? h('span', { class: 'dust' }, t('plan.dustNote', { n: Math.round(s.res.dust) })) : null,
         blocks,
         coop?.note ? h('p', { class: 'coop-note', role: 'status' }, coop.note) : null,
@@ -413,6 +414,10 @@ function messageEl(m: MarsMessage): HTMLElement {
       return h('div', { class: 'msg storm' }, t('msg.noSignal'));
     case 'shadowAlert':
       return h('div', { class: 'msg dust' }, t('msg.shadowAlert', { n: SIM.moon.shadow.sols }), delay);
+    case 'sunForecast':
+      return h('div', { class: 'msg' },
+        m.next.length ? t('msg.sunForecast', { today: m.today, next: m.next.map((n) => `${n}%`).join(', ') }) : t('msg.sunForecast.last', { today: m.today }),
+        h('span', { class: 'meta' }, t('msg.sunForecast.note')));
     case 'shadowNow':
       return h('div', { class: 'msg dust' }, m.left > 1 ? t('msg.shadowNow', { n: m.left }) : t('msg.shadowNow.last'));
   }

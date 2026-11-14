@@ -60,7 +60,7 @@ Na Lua (`MarsBase.setLocation('moon')`), só as cores de **terreno** mudam: os m
 
 Outras diferenças na Lua: estrelas visíveis de dia, quase sem névoa, sem partículas de poeira no ar, Sol branco e baixo
 (sombras compridas, como no polo sul), mesetas achatadas (viram bordas de cratera) e crateras extras longe da base.
-Nos dias de sombra das montanhas (`SceneState.shadow`), a luz do Sol cai para 30%. A noite (descanso da tripulação) quase não escurece a cena na Lua (12% do escurecimento de Marte), porque no polo sul o Sol não se põe a cada 24 h; só a noite da sombra fica escura de verdade.
+A luz do Sol da cena acompanha a luz do dia (`SceneState.sunlight`, 0–1): de 20% a 100% da intensidade, então dias de pouco Sol e de sombra ficam mais escuros. A noite (descanso da tripulação) quase não escurece a cena na Lua (12% do escurecimento de Marte), porque no polo sul o Sol não se põe a cada 24 h; só a noite da sombra fica escura de verdade.
 
 ## Espessura do contorno
 

@@ -91,6 +91,9 @@ type Message struct {
 	Sol       int     `json:"sol,omitempty"`
 	// Left: dias de sombra que faltam (mensagem "shadowNow", só na base lunar).
 	Left int `json:"left,omitempty"`
+	// Today/Next: luz do Sol prevista em % (mensagem "sunForecast", só na base lunar).
+	Today int   `json:"today,omitempty"`
+	Next  []int `json:"next,omitempty"`
 }
 
 type ReportLine struct {
@@ -161,6 +164,7 @@ type GameState struct {
 	Storms       []ScheduledStorm   `json:"storms"`
 	DustStormSol int                `json:"dustStormSol"`
 	ShadowSol    int                `json:"shadowSol"`
+	Sunlight     []int              `json:"sunlight"`
 	DustHold     int                `json:"dustHold"`
 	CardSols     map[int]CardID     `json:"cardSols"`
 	PendingCard  *Card              `json:"pendingCard"`

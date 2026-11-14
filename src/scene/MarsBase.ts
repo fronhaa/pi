@@ -13,6 +13,8 @@ export interface SceneState {
   scienceBlocks: number;
   /** Lua: dia de sombra das montanhas (a luz do Sol fica fraca). */
   shadow?: boolean;
+  /** Lua: luz do Sol de hoje (0–1). O Sol passa atrás dos morros e a cena fica mais clara ou mais escura. */
+  sunlight?: number;
 }
 
 /**
@@ -730,7 +732,7 @@ export class MarsBase {
 
     // Na Lua a poeira fica nos painéis, mas não escurece o céu (não há vento para levantá-la).
     const skyDust = moon ? 0 : dustK;
-    this.sun.intensity = THREE.MathUtils.lerp((moon ? 2.6 : 2.2) * (1 - skyDust * 0.5) * (s.shadow ? 0.3 : 1), 0.15, n);
+    this.sun.intensity = THREE.MathUtils.lerp((moon ? 2.6 : 2.2) * (1 - skyDust * 0.5) * (moon ? 0.2 + 0.8 * (s.sunlight ?? 1) : 1), 0.15, n);
     this.hemi.intensity = THREE.MathUtils.lerp(moon ? 1.05 : 1.3, 0.35, n);
     // Sem ar, as estrelas aparecem até de dia na Lua.
     (this.stars.material as THREE.PointsMaterial).opacity = moon ? Math.max(0.75, n) : n;
