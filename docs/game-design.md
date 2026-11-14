@@ -82,7 +82,7 @@ Todos esses números são simplificados para o jogo e ficam em um único arquivo
 
 ## Eventos e decisões
 
-Cada partida sorteia 1 das 6 [missões históricas](#calendário-da-missão-janelas-históricas-reais), que traz 3 tempestades solares reais, além de 1 tempestade de poeira e 4 das 6 cartas de decisão. Assim, nenhuma partida é igual à outra, o que incentiva a criança a testar estratégias diferentes.
+Cada partida sorteia 1 das 6 [missões históricas](#calendário-da-missão-janelas-históricas-reais), que traz 3 tempestades solares reais, além de 1 tempestade de poeira e 4 das 8 cartas de decisão. Assim, nenhuma partida é igual à outra, o que incentiva a criança a testar estratégias diferentes.
 
 **Tempestade solar e atraso de comunicação.** O alerta chega pela antena um sol antes do impacto. Ele diz a força da tempestade, a data real do evento e quantos minutos a mensagem levou para chegar: na missão histórica, o atraso real daquele sol (JPL Horizons); sem ela, sorteado entre 3 e 22. No sol do impacto, um segundo aviso lembra que é a última chance de reforçar a blindagem. As tempestades acontecem entre o sol 4 e o sol 14, com pelo menos 2 sóis de distância entre elas.
 
@@ -152,6 +152,23 @@ A missão 3 tem as três tempestades fortes nos sóis 10, 12 e 14: a estratégia
 | Nave de carga | Baterias: bateria +30 | Kit de blindagem: blindagem +30 | Experimento: ciência +15 | Espaço de carga é limitado |
 | Sensor quebrado | Pedir ajuda à Terra: ciência −10 | Consertar sozinhos: 50% de chance de dar errado (bateria −20) | — | Atraso de comunicação força decisões autônomas |
 | Gelo no subsolo | Perfurar: bateria −20, vida +20 | Agora não | — | Recursos locais custam energia para extrair |
+| Fazer oxigênio (MOXIE) | Ligar o MOXIE: bateria −15, vida +10 | Guardar a energia | — | Fazer oxigênio em Marte é possível, mas gasta energia |
+| Caminho do rover | Caminho seguro: ciência +5 | Atalho: ciência +15, mas 50% de chance de o rover atolar hoje (vira o problema "Rover atolado"; sem resgate até a noite, a ciência do dia se perde) | — | Rapidez contra risco; o rover real escolhe o caminho para fugir de areia |
+
+Os números das duas últimas cartas ficam em `CONFIG.rover` (`src/sim/config.ts`). Se o rover já ia atolar no mesmo dia, o atalho não cria um segundo problema.
+
+### Fatos reais dos rovers
+
+Cada fato aparece **uma vez por missão**, ligado ao que a criança acabou de viver. O fato é REAL; o efeito no jogo (números das cartas, chance de atolar) é INTERPRETADO.
+
+| Onde aparece | Fato | Fonte |
+| --- | --- | --- |
+| Lição da carta "Fazer oxigênio" | O MOXIE do Perseverance fez 122 g de oxigênio em Marte (até 12 g por hora) | [NASA, 2023](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/) |
+| Lição da carta "Caminho do rover" | O Perseverance dirige sozinho (AutoNav) em mais de 90% do caminho, desviando de perigos | [NASA](https://science.nasa.gov/missions/mars-2020-perseverance/driving-farther-and-faster-with-autonomous-navigation-and-helicopter-scouting) |
+| Relatório do sol 1 | O Perseverance também usa baterias para os picos de consumo (gera cerca de 110 W) | [JPL, press kit](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/) |
+| Relatório do sol da tempestade de poeira | Em 2018, uma tempestade de poeira global cortou a energia do Opportunity; a missão terminou em 2019 | [NASA](https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/) |
+| Relatório do sol em que o rover atolou | Em 2009, o Spirit atolou em areia fofa; a NASA encerrou a missão em 2011 | [JPL](https://www.jpl.nasa.gov/missions/mars-exploration-rover-spirit-mer-spirit/) |
+| Tela "Dados da NASA" | O RAD do Curiosity mediu cerca de 0,67 mSv por dia na superfície de Marte (cratera Gale, 2012–2013). É a única medição de radiação **em Marte** no jogo; nunca é convertida na dose do jogo | [NASA](https://www.nasa.gov/news-release/nasa-rover-results-include-first-age-measurement-on-mars-and-help-for-human-exploration/) |
 
 ## Vitória, derrota e estrelas
 
@@ -180,6 +197,8 @@ Medição de 2026-11-14 (`npm run balance`, 2.000 partidas por estratégia). Com
 mais difícil, porque o DONKI só registra erupções a partir de M5.0 (não há classe C, a "fraca"). A forma se mantém.
 
 Qualquer mudança nos números deve manter essa forma: as duas estratégias extremas falham e a estratégia atenta vence.
+
+**Com as cartas do rover** (MOXIE e "Caminho do rover", 2026-11-14, 1.000 partidas por estratégia, erupções reais, simuladas e as 6 missões): a forma se mantém em todos os cenários. As estratégias extremas continuam falhando sempre, "ignora a blindagem" não mudou, e a estratégia atenta (que pega o atalho e resgata o rover) termina com 1 estrela um pouco menos vezes (ex.: erupções reais, de 9% para 5%).
 
 ## Modo cooperativo
 
@@ -429,7 +448,7 @@ Isso é parte do ensino, não enfeite.
 | Noite | A tripulação anda até a escotilha do habitat e entra para dormir; o relatório do sol espera todos entrarem (no mínimo 2,2 s e no máximo 6 s; quem não chegar entra direto). De manhã, todos saem pela mesma porta e voltam andando aos postos, e o jogador pode assumir qualquer um no caminho |
 | Noite de tempestade | A tripulação corre para o abrigo de regolito, entra e sai por ali de manhã |
 | Mensagem da Terra | A antena pisca |
-| Energia na ciência | O rover anda em volta da base; se um astronauta estiver na rota, ele recalcula e desvia (3 m para dentro ou para fora), também de pedras e prédios; sem rota livre ou com o astronauta colado, para e pisca uma luz âmbar. As rodas giram, ele inclina com o relevo e é sólido: astronautas não o atravessam |
+| Energia na ciência | O rover anda um trecho (8 s), **para e estuda** (5 s: o braço desce até o chão, a ponta do instrumento pisca e a câmera vira para a pedra mais perto) e segue, como os rovers reais, que passam a maior parte do sol parados fazendo ciência: no recorde do Perseverance, foram cerca de 4 h 24 min dirigindo num sol de 24 h 39 min ([JPL](https://www.jpl.nasa.gov/images/pia26645-nasas-perseverance-breaks-own-rover-driving-record/)). Rovers reais não têm doca: o Perseverance e o Curiosity geram energia o tempo todo com um gerador nuclear e recarregam as baterias onde estão ([JPL](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/)). Depois de desatolado, ele volta andando do lugar onde atolou até o ponto mais perto da trilha (sem teleporte). Ao andar, o rover anda em volta da base; se um astronauta estiver na rota, ele recalcula e desvia (3 m para dentro ou para fora), também de pedras e prédios; sem rota livre ou com o astronauta colado, para e pisca uma luz âmbar. As rodas giram, ele inclina com o relevo e é sólido: astronautas não o atravessam |
 | Noite | Céu escurece, estrelas aparecem, janelas acendem |
 
 ### O que não usar

@@ -135,6 +135,8 @@ export function showNasaData(source: FlareSource, missions: MissionSource, curre
           ? h('li', {}, h('strong', {}, t('data.horizons.name')), snapshotBadge(missions.generatedAt), h('p', {}, t('data.horizons.use')), link('https://ssd.jpl.nasa.gov/horizons/'))
           : null,
         h('li', {}, h('strong', {}, t('data.osdr.name')), planned(), h('p', {}, t('data.osdr.use')), link('https://osdr.nasa.gov/bio/repo/')),
+        h('li', {}, h('strong', {}, t('data.rad.name')), h('span', { class: 'badge real' }, t('data.rad.badge')), h('p', {}, t('data.rad.use')),
+          link('https://www.nasa.gov/news-release/nasa-rover-results-include-first-age-measurement-on-mars-and-help-for-human-exploration/')),
         h('li', {}, h('strong', {}, t('data.radlab.name')), planned(), h('p', {}, t('data.radlab.use')), link('https://visualization.osdr.nasa.gov/radlab/gui/data-api/')),
         h('li', {}, h('strong', {}, t('data.marstrek.name')), planned(), h('p', {}, t('data.marstrek.use')), link('https://trek.nasa.gov/mars/')),
       ),

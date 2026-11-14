@@ -53,6 +53,15 @@ export const CONFIG = {
     effects: { dust: 20, lifeLeak: 10, shieldBag: 8 },
   },
 
+  /**
+   * Cartas do rover (GDD, "Cartas de decisão"). Números de jogo (INTERPRETADO); os fatos reais
+   * por trás delas têm fonte no GDD (MOXIE, AutoNav do Perseverance, Spirit atolado).
+   */
+  rover: {
+    moxie: { battery: -15, life: 10 },
+    route: { safeScience: 5, shortcutScience: 15, shortcutStuckChance: 0.5 },
+  },
+
   stars: { doseFor3: 50 },
 } as const;
 
