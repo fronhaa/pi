@@ -8,7 +8,7 @@ import { CONFIG as SIM, doseFor3 } from '@/sim/config';
 export type PlanPreview = ReturnType<Mission['previewSol']>;
 import { formatDate, getLang, t, type StringKey } from '@/i18n';
 import type { MarsMessage } from '@/net/protocol';
-import { h, openDialog } from './dom';
+import { h, openDialog, patchChildren } from './dom';
 
 type RoleId = 'commander' | 'engineer' | 'medic' | 'scientist';
 
@@ -163,7 +163,7 @@ export class Hud {
     this.crewChip.hidden = false;
     // Lá fora (EVA), o astronauta escolhido anda com setas ou toque; dentro, só o contador.
     const out = this.placesView.outside > 0;
-    this.crewChip.replaceChildren(
+    patchChildren(this.crewChip, [
       c.status === 'loading'
         ? h('span', {}, places, ` · ${t('scene.loadingPhysics')}`)
         : c.status === 'off' || !out
@@ -174,7 +174,7 @@ export class Hud {
               h('span', { class: 'keys' }, ` · ${t('crew.hint.keys')}`),
               h('span', { class: 'touch' }, ` · ${t('crew.hint.touch')}`),
             ),
-    );
+    ]);
   }
 
   render(): void {
@@ -190,14 +190,14 @@ export class Hud {
 
   private renderTop(): void {
     const s = this.state && this.nightView ? { ...this.state, sol: this.nightView.sol } : this.state;
-    this.top.replaceChildren(
+    patchChildren(this.top, [
       h('div', { class: 'title' }, t('game.title'), h('small', {}, t('game.subtitle'))),
       h('span', { class: 'sol' }, t('top.sol', { sol: s?.sol ?? 1, total: CONFIG.sols })),
       helpButton('help.sol', t('top.sol', { sol: s?.sol ?? 1, total: CONFIG.sols })),
       h('button', { class: 'btn', type: 'button', onclick: () => this.cb.onHowTo() }, t('top.help')),
       h('button', { class: 'btn', type: 'button', onclick: () => this.cb.onNasaData() }, t('top.nasaData')),
       h('button', { class: 'btn', type: 'button', onclick: () => this.cb.onToggleLang(), lang: t('top.lang') === 'English' ? 'en' : 'pt-BR' }, t('top.lang')),
-    );
+    ]);
   }
 
   private renderResources(): void {
@@ -210,19 +210,19 @@ export class Hud {
       const k = invert ? 100 - v : v;
       return k >= 50 ? 'good' : k >= 25 ? 'warn' : 'bad';
     };
-    this.resources.replaceChildren(
+    patchChildren(this.resources, [
       h('h2', { id: 'res-title' }, 'Base'),
       resource('res.battery', 'help.battery', r.battery, CONFIG.battery.max, level(r.battery)),
       resource('res.life', 'help.life', r.life, CONFIG.life.max, level(r.life)),
       resource('res.shield', 'help.shield', r.shield, CONFIG.shield.max, level(r.shield)),
       resource('res.dose', 'help.dose', r.dose, CONFIG.dose.max, r.dose >= doseBad ? 'bad' : r.dose >= doseWarn ? 'warn' : 'good', [doseWarn, doseBad]),
       resource('res.science', 'help.science', r.science, CONFIG.science.goal, 'sci', [], t('res.goal', { n: CONFIG.science.goal })),
-    );
+    ]);
   }
 
   private renderMessages(): void {
     const msgs = (this.state?.messages ?? []) as MarsMessage[];
-    this.messages.replaceChildren(h('h2', { id: 'msg-title' }, t('msg.title')), ...msgs.map(messageEl));
+    patchChildren(this.messages, [h('h2', { id: 'msg-title' }, t('msg.title')), ...msgs.map(messageEl)]);
   }
 
   private renderDay(v: DayView): void {
@@ -267,7 +267,7 @@ export class Hud {
         }, `${placeIcon[c.place]} ${t(`crew.short.${c.role}` as StringKey)}`);
       }),
     );
-    this.planEl.replaceChildren(
+    patchChildren(this.planEl, [
       h('div', { class: 'plan-top' },
         h('strong', { id: 'plan-title' }, v.paused ? t('day.paused') : t('day.title')),
         h('span', { class: 'clock', 'aria-label': t('day.remaining', { s: v.remaining }) }, `☀️ ${t('day.remaining', { s: v.remaining })}`),
@@ -283,7 +283,7 @@ export class Hud {
             h('button', { class: 'btn primary', type: 'button', 'aria-label': t('day.end'), onclick: () => this.cb.onEndDay() }, t('day.end')),
           )
         :'',
-    );
+    ]);
     if (focusedLabel) this.planEl.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focusedLabel)}"]`)?.focus();
   }
 
@@ -344,7 +344,7 @@ export class Hud {
     };
 
     const focusedLabel = (document.activeElement as HTMLElement | null)?.getAttribute?.('aria-label');
-    this.planEl.replaceChildren(
+    patchChildren(this.planEl, [
       h('div', { class: 'plan-top' },
         h('strong', { id: 'plan-title' }, t('plan.today', { n: s.blocks })),
         s.location === 'moon' ? h('span', { class: 'dust' }, t('plan.sunNote', { n: s.sunlight[s.sol - 1] ?? 100 })) : null,
@@ -373,7 +373,7 @@ export class Hud {
           : coop && !coop.canEnd ? t('coop.notYours')
           : s.problems.length > 0 ? t('plan.startDay') : t('plan.endSol')),
       ),
-    );
+    ]);
     // Mantém o foco do teclado no mesmo botão depois de redesenhar.
     if (focusedLabel) this.planEl.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focusedLabel)}"]`)?.focus();
   }
