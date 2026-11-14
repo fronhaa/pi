@@ -442,7 +442,9 @@ export class Game {
 
     const t = this.timer.getElapsed();
     this.controls.update();
-    this.base.update(dt, t);
+    // O rover recebe onde estão os astronautas visíveis (quem está dentro da base não conta).
+    const crewPositions = Object.values(this.crew.members).filter((a) => a.root.visible).map((a) => a.root.position);
+    this.base.update(dt, t, crewPositions);
     if (this.phase === 'day' && !this.paused) {
       this.updateDay(dt);
       this.hudTick += dt;

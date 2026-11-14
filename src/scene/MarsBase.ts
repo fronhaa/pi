@@ -84,6 +84,10 @@ export class MarsBase {
   private roverStuckAt: THREE.Vector3 | null = null;
   private nightAmount = 0;
   private roverAngle = 0;
+  /** Rover parado porque há um astronauta na rota (e quanto tempo a rota está livre de novo). */
+  private roverBlocked = false;
+  private roverClearFor = 0;
+  private roverWarning!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
 
   constructor(private readonly scene: THREE.Scene) {
     scene.add(this.root);
@@ -376,6 +380,10 @@ export class MarsBase {
     const head = toonMesh(new THREE.BoxGeometry(0.35, 0.25, 0.45), PALETTE.light);
     head.position.set(0.7, 2.15, 0);
     this.rover.add(head);
+    // Luz de aviso: pisca em âmbar quando o rover para por causa de um astronauta na rota.
+    this.roverWarning = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshBasicMaterial({ color: 0x5a4a2a }));
+    this.roverWarning.position.set(0.7, 2.36, 0);
+    this.rover.add(this.roverWarning);
     this.rover.position.set(12.5, 0, 9);
     this.root.add(this.rover);
   }
@@ -446,7 +454,36 @@ export class MarsBase {
   }
 
   /** Animações por frame (só visual). */
-  update(dt: number, time: number): void {
+  /** O rover está parado esperando um astronauta sair da rota? (para testes e interface) */
+  get isRoverWaiting(): boolean {
+    return this.roverBlocked;
+  }
+
+  /**
+   * O rover olha o trecho à frente na própria rota (elipse): se um astronauta estiver ali, ou colado nele, ele para.
+   * Volta a andar só depois de a rota ficar livre por um instante (evita "trancos").
+   */
+  private roverPathBlocked(crew: THREE.Vector3[]): boolean {
+    if (crew.length === 0) return false;
+    const LOOKAHEAD = 3.5; // m à frente
+    const SAFE = 1.4; // meia-largura do rover (~0,65) + astronauta (~0,35) + folga
+    const NEAR = 1.7; // colado no rover (inclui a traseira e as laterais)
+    const a = this.roverAngle;
+    const speed = Math.hypot(Math.sin(a) * 26, Math.cos(a) * 15); // m por radiano nesta parte da elipse
+    const pos = this.rover.position;
+    for (const c of crew) {
+      if (Math.hypot(c.x - pos.x, c.z - pos.z) < NEAR) return true;
+      for (let i = 1; i <= 7; i++) {
+        const ai = a + ((i / 7) * LOOKAHEAD) / speed;
+        const x = 2 + Math.cos(ai) * 26;
+        const z = 2 + Math.sin(ai) * 15;
+        if (Math.hypot(c.x - x, c.z - z) < SAFE) return true;
+      }
+    }
+    return false;
+  }
+
+  update(dt: number, time: number, crew: THREE.Vector3[] = []): void {
     const s = this.state;
     if (!s) return;
 
@@ -484,15 +521,26 @@ export class MarsBase {
     } else if (s.scienceBlocks > 0 && !s.night) {
       this.rover.rotation.x = 0;
       this.rover.rotation.z = 0;
+      // Segurança: para se houver astronauta na rota; retoma após 0,6 s de rota livre.
+      if (this.roverPathBlocked(crew)) {
+        this.roverBlocked = true;
+        this.roverClearFor = 0;
+      } else if (this.roverBlocked) {
+        this.roverClearFor += dt;
+        if (this.roverClearFor > 0.6) this.roverBlocked = false;
+      }
       // Elipse por fora da base e dos painéis (painéis vão até x ≈ 22).
-      this.roverAngle += dt * 0.06 * s.scienceBlocks;
+      if (!this.roverBlocked) this.roverAngle += dt * 0.06 * s.scienceBlocks;
       const x = 2 + Math.cos(this.roverAngle) * 26;
       const z = 2 + Math.sin(this.roverAngle) * 15;
       const dx = -Math.sin(this.roverAngle) * 26;
       const dz = Math.cos(this.roverAngle) * 15;
       this.rover.rotation.y = Math.atan2(-dz, dx);
       this.rover.position.set(x, terrainHeight(x, z), z);
+    } else {
+      this.roverBlocked = false;
     }
+    this.roverWarning.material.color.setHex(this.roverBlocked && Math.sin(time * 10) > 0 ? 0xffb020 : 0x5a4a2a);
   }
 }
 

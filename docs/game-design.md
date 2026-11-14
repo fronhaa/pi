@@ -425,7 +425,7 @@ Isso é parte do ensino, não enfeite.
 | Noite | A tripulação anda até a escotilha do habitat e entra para dormir; o relatório do sol espera todos entrarem (no mínimo 2,2 s e no máximo 6 s; quem não chegar entra direto). De manhã, todos saem pela mesma porta e voltam andando aos postos, e o jogador pode assumir qualquer um no caminho |
 | Noite de tempestade | A tripulação corre para o abrigo de regolito, entra e sai por ali de manhã |
 | Mensagem da Terra | A antena pisca |
-| Energia na ciência | O rover anda em volta da base |
+| Energia na ciência | O rover anda em volta da base; se um astronauta estiver na rota, ele para e pisca uma luz âmbar até a rota liberar |
 | Noite | Céu escurece, estrelas aparecem, janelas acendem |
 
 ### O que não usar
