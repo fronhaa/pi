@@ -13,6 +13,8 @@ export const CARDS: Record<CardId, Card> = {
   cargoShip: { id: 'cargoShip', options: [{ id: 'batteries' }, { id: 'shieldKit' }, { id: 'experiment' }] },
   brokenSensor: { id: 'brokenSensor', options: [{ id: 'askEarth' }, { id: 'fixAlone' }] },
   subsurfaceIce: { id: 'subsurfaceIce', options: [{ id: 'drill' }, { id: 'notNow' }] },
+  moxie: { id: 'moxie', options: [{ id: 'run' }, { id: 'save' }] },
+  roverRoute: { id: 'roverRoute', options: [{ id: 'safe' }, { id: 'shortcut' }] },
 };
 
 export const CARD_IDS = Object.keys(CARDS) as CardId[];
@@ -70,6 +72,17 @@ export function applyCardOption(id: CardId, option: string, res: Resources, rng:
     case 'subsurfaceIce:drill':
       add('battery', -20);
       add('life', 20);
+      break;
+    case 'moxie:run':
+      add('battery', CONFIG.rover.moxie.battery);
+      add('life', CONFIG.rover.moxie.life);
+      break;
+    case 'roverRoute:safe':
+      add('science', CONFIG.rover.route.safeScience);
+      break;
+    case 'roverRoute:shortcut':
+      // A chance de atolar é sorteada na Mission (ela cria o problema "Rover atolado" do dia).
+      add('science', CONFIG.rover.route.shortcutScience);
       break;
     default:
       // Opções "esperar / deixar para lá / agora não": nada muda agora (custo de oportunidade).

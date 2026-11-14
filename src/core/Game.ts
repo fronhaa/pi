@@ -14,7 +14,7 @@ import { showCard, showEnd, showNasaData, showReport, showTutorial } from '@/ui/
 import { formatDate, getLang, setLang, t } from '@/i18n';
 import { Lobby, showEarthTurn, showModeChoice } from '@/ui/coop';
 import { CoopClient, coopServerUrl } from '@/net/CoopClient';
-import { BLOCK_ROLE, type CoopState } from '@/net/protocol';
+import { BLOCK_ROLE, type CoopState, type CrewPos } from '@/net/protocol';
 import { Input } from './Input';
 import { CrewTasks } from './CrewTasks';
 import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
@@ -52,7 +52,19 @@ interface CoopSession {
   /** Último envio de progresso por problema (limita a ~4 por segundo). */
   progressSent: Map<number, number>;
   historyToastShown: boolean;
+  /** Posição da tripulação (só visual): o que este jogador mandou por último, por astronauta. */
+  crewSent: Map<Role, { x: number; z: number; tx?: number; tz?: number }>;
+  crewTimer: number;
+  /** Destino já aplicado para cada astronauta de outro jogador (evita recalcular a rota à toa). */
+  remoteDest: Map<Role, string>;
+  crewSynced: boolean;
 }
+
+/** Envio da posição: no máximo ~3 vezes por segundo, e só se andou mais que isto (m). */
+const CREW_SEND_EVERY = 0.33;
+const CREW_MIN_MOVE = 0.15;
+/** Astronauta de outro jogador mais longe que isto do lugar certo: corrige de uma vez. */
+const CREW_SNAP = 6;
 
 
 /**
@@ -134,7 +146,7 @@ export class Game {
       preview: (plan) =>
         this.coop ? (this.coop.state?.mars?.preview ?? null)
         : this.mission && this.mission.isPlanValid(plan) && !this.mission.state.pendingCard ? this.mission.previewSol(plan) : null,
-      onSendProblem: (uid) => this.send(uid),
+      onSendProblem: (uid) => this.assignSelected(uid),
       onEvaReturn: () => this.tasks.returnNow(),
       onPause: () => this.togglePause(),
       onEndDay: () => this.endDay(),
@@ -160,7 +172,7 @@ export class Game {
     this.scene.add(this.targetMarker);
     this.setupPointer();
     this.setupHover();
-    this.offscreen = new OffscreenArrows(this.renderer.domElement, (uid) => this.send(uid));
+    this.offscreen = new OffscreenArrows(this.renderer.domElement, (uid) => this.assignSelected(uid));
     this.scene.add(this.markers.root);
     // No modo em grupo, o CrewTasks conversa com o servidor por um adaptador (coopTaskMission).
     this.tasks = new CrewTasks(() => (this.coop ? this.coopTaskMission() : this.mission), this.crew);
@@ -237,6 +249,8 @@ export class Game {
           this.refreshDayHud();
         },
         onFirstJump: () => this.hud.toast(t('crew.fact.gravity'), t('crew.fact.source')),
+        // Em grupo, cada jogador só controla o astronauta do(s) próprio(s) papel(is).
+        canControl: (role) => this.canControl(role),
       });
       this.input.reset();
       this.motion.enabled = !this.night && !this.paused;
@@ -337,7 +351,7 @@ export class Game {
         if (hitProblem) {
           let o: THREE.Object3D | null = hitProblem.object;
           while (o && o.userData.problemUid === undefined) o = o.parent;
-          if (o) this.send(o.userData.problemUid as number);
+          if (o) this.assignSelected(o.userData.problemUid as number);
           return;
         }
       }
@@ -353,6 +367,10 @@ export class Game {
       const ground = this.scene.getObjectByName('ground');
       const hit = ground && this.raycaster.intersectObject(ground, false)[0];
       if (hit) {
+        if (!this.canControl(this.selected)) {
+          this.hud.toast(t('coop.crew.pickYours'));
+          return;
+        }
         this.motion.moveTo(hit.point);
         this.targetMarker.position.set(hit.point.x, hit.point.y + 0.05, hit.point.z);
         (this.targetMarker.material as THREE.MeshBasicMaterial).opacity = 0.9;
@@ -361,6 +379,10 @@ export class Game {
   }
 
   private select(role: Role): void {
+    if (!this.canControl(role)) {
+      this.hud.toast(this.ownerText(role));
+      return;
+    }
     this.selected = role;
     if (this.motion) this.motion.select(role); // avisa o HUD via onSelect
     else {
@@ -369,13 +391,36 @@ export class Game {
     }
   }
 
+  /** Manda o astronauta selecionado para um problema (em grupo, só se ele for deste jogador). */
+  private assignSelected(uid: number): void {
+    if (!this.canControl(this.selected)) {
+      this.hud.toast(t('coop.crew.pickYours'));
+      return;
+    }
+    const r = this.tasks.assign(this.selected, uid);
+    if (r === 'storm') this.hud.toast(t('eva.banned'));
+    else if (r === 'full') this.hud.toast(t('eva.full'));
+    else if (r === 'nobody') this.hud.toast(t('eva.nobody'));
+  }
+
+  /** Solo: todos os astronautas. Em grupo: só os dos papéis deste jogador. */
+  private canControl(role: Role): boolean {
+    return !this.coop || (this.coop.state?.you.roles ?? []).includes(role);
+  }
+
+  private ownerText(role: Role): string {
+    const owner = this.coop?.state?.players.find((p) => p.roles.includes(role));
+    return owner ? t('coop.crew.ofPlayer', { n: owner.number }) : t('coop.crew.pickYours');
+  }
+
   /** E: consertar o problema mais perto · P: pausar o dia · 1–4 sem física: escolher astronauta. */
   private setupKeys(): void {
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       if (this.phase === 'day' && e.code === 'KeyP') this.togglePause();
       if (this.phase === 'day' && !this.paused && e.code === 'KeyE') {
-        if (!this.tasks.interact(this.selected)) this.hud.toast(t('task.nothingNear'));
+        if (!this.canControl(this.selected)) this.hud.toast(t('coop.crew.pickYours'));
+        else if (!this.tasks.interact(this.selected)) this.hud.toast(t('task.nothingNear'));
       }
       if (!this.motion && /^(Digit|Numpad)[1-4]$/.test(e.code)) {
         this.select((['commander', 'engineer', 'medic', 'scientist'] as Role[])[Number(e.code.slice(-1)) - 1]);
@@ -384,14 +429,6 @@ export class Game {
   }
 
   // ---------- dia em tempo real ----------
-
-  /** Manda resolver um problema; se não der, explica por quê (tempestade, dupla já fora). */
-  private send(uid: number): void {
-    const r = this.tasks.assign(this.selected, uid);
-    if (r === 'storm') this.hud.toast(t('eva.banned'));
-    else if (r === 'full') this.hud.toast(t('eva.full'));
-    else if (r === 'nobody') this.hud.toast(t('eva.nobody'));
-  }
 
   /** "Começar o dia": se não há problemas hoje (sóis 1 e 2), vai direto para a noite. */
   private startDay(plan: EnergyPlan): void {
@@ -636,9 +673,11 @@ export class Game {
       client, lobby, state: null, view: null, shownReportSol: 0, cardSol: 0, earthSol: 0,
       endShown: false, nightBusy: false, pending: null, closeEarth: null,
       marked: new Set(), progressSent: new Map(), historyToastShown: false,
+      crewSent: new Map(), crewTimer: 0, remoteDest: new Map(), crewSynced: false,
     };
     this.coop = c;
     client.onState = (s) => this.onCoopState(s);
+    client.onCrew = (list) => this.applyRemoteCrew(list);
     client.onError = (code) => {
       if (lobby.isOpen()) {
         lobby.showError(code);
@@ -740,6 +779,16 @@ export class Game {
       canEnd: isCommander && (s.phase === 'mars' || s.phase === 'day'),
       note,
     });
+
+    // Tripulação: começa com o astronauta deste jogador selecionado e com os outros onde estão.
+    if (this.motion && !this.canControl(this.selected)) {
+      const mine = (['commander', 'engineer', 'medic', 'scientist'] as Role[]).find((r) => this.canControl(r));
+      if (mine) this.select(mine);
+    }
+    if (!c.crewSynced && s.crew?.length) {
+      c.crewSynced = true;
+      this.applyRemoteCrew(s.crew);
+    }
 
     if (s.mars?.historical && view.sol === 1 && !c.historyToastShown) {
       c.historyToastShown = true;
@@ -868,6 +917,58 @@ export class Game {
     };
   }
 
+  /**
+   * Posição da tripulação (só visual): manda onde estão e para onde vão os astronautas deste
+   * jogador, ~3 vezes por segundo enquanto andam, e na hora quando muda o destino.
+   */
+  private coopCrewTick(dt: number): void {
+    const c = this.coop;
+    const s = c?.state;
+    if (!c || !s || !this.motion || s.phase === 'lobby' || s.phase === 'ended' || this.night) return;
+    c.crewTimer += dt;
+    const round = (v: number) => Math.round(v * 100) / 100;
+    const list: CrewPos[] = [];
+    let newDest = false;
+    for (const role of ['commander', 'engineer', 'medic', 'scientist'] as Role[]) {
+      if (!this.canControl(role) || this.motion.isInside(role)) continue;
+      const p = this.motion.positionOf(role);
+      const d = this.motion.targetOf(role);
+      const entry: CrewPos = { role, x: round(p.x), z: round(p.z), ...(d ? { tx: round(d.x), tz: round(d.z) } : {}) };
+      const last = c.crewSent.get(role);
+      const destChanged = !last || last.tx !== entry.tx || last.tz !== entry.tz;
+      const moved = !last || Math.hypot(entry.x - last.x, entry.z - last.z) > CREW_MIN_MOVE;
+      if (destChanged && last) newDest = true;
+      if (moved || destChanged) list.push(entry);
+    }
+    if (list.length === 0 || (!newDest && c.crewTimer < CREW_SEND_EVERY)) return;
+    c.crewTimer = 0;
+    for (const e of list) c.crewSent.set(e.role as Role, { x: e.x, z: e.z, tx: e.tx, tz: e.tz });
+    c.client.send({ t: 'crew_pos', list });
+  }
+
+  /** Astronautas de outros jogadores: andam até o destino que o dono mandou; longe demais, corrige de uma vez. */
+  private applyRemoteCrew(list: CrewPos[]): void {
+    const c = this.coop;
+    if (!c || !this.motion || this.night) return;
+    for (const e of list) {
+      const role = e.role as Role;
+      if (this.canControl(role) || this.motion.isInside(role)) continue;
+      const cur = this.motion.positionOf(role);
+      const far = Math.hypot(cur.x - e.x, cur.z - e.z);
+      if (far > CREW_SNAP) this.motion.teleport(role, e.x, e.z);
+      if (e.tx !== undefined && e.tz !== undefined) {
+        const key = `${e.tx},${e.tz}`;
+        if (c.remoteDest.get(role) !== key) {
+          c.remoteDest.set(role, key);
+          this.motion.moveRole(role, new THREE.Vector3(e.tx, 0, e.tz));
+        }
+      } else {
+        c.remoteDest.delete(role);
+        if (far > 0.6) this.motion.moveRole(role, new THREE.Vector3(e.x, 0, e.z));
+      }
+    }
+  }
+
   /** O jogador mexeu nos blocos: manda só as partes do papel dele que mudaram. */
   private sendCoopPlan(plan: EnergyPlan): void {
     const c = this.coop;
@@ -933,6 +1034,7 @@ export class Game {
     }
     this.markers.update(t, this.camera);
     this.updateOffscreen();
+    this.coopCrewTick(dt);
     for (const r of ROLES) this.crew.members[r].setWorking(this.phase === 'day' && this.tasks.isRoleWorking(r));
     if (this.motion) {
       this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)

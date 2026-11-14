@@ -55,7 +55,10 @@ const strategies: Strategy[] = [
   {
     name: 'Só ciência, sem guardar bateria',
     plan: (m) => ({ life: 0, shield: 0, science: m.state.blocks }),
-    card: (m) => (m.state.pendingCard!.id === 'cargoShip' ? 'experiment' : firstOption(m)),
+    card: (m) => {
+      const id = m.state.pendingCard!.id;
+      return id === 'cargoShip' ? 'experiment' : id === 'roverRoute' ? 'shortcut' : firstOption(m);
+    },
     fix: () => false,
   },
   {
@@ -68,7 +71,7 @@ const strategies: Strategy[] = [
     },
     card: (m) => {
       const id = m.state.pendingCard!.id;
-      return ({ dustyPanels: 'wait', mysteryRock: 'skip', greenhouseLeak: 'fixNow', cargoShip: 'shieldKit', brokenSensor: 'askEarth', subsurfaceIce: 'drill' } as const)[id];
+      return ({ dustyPanels: 'wait', mysteryRock: 'skip', greenhouseLeak: 'fixNow', cargoShip: 'shieldKit', brokenSensor: 'askEarth', subsurfaceIce: 'drill', moxie: 'run', roverRoute: 'safe' } as const)[id];
     },
     fix: () => true,
   },
@@ -100,6 +103,9 @@ const strategies: Strategy[] = [
       if (id === 'greenhouseLeak') return s.res.battery >= 30 ? 'fixNow' : 'fixLater';
       if (id === 'cargoShip') return s.res.battery < 40 ? 'batteries' : s.res.science < 60 ? 'experiment' : 'shieldKit';
       if (id === 'brokenSensor') return 'askEarth';
+      if (id === 'moxie') return s.res.life < 70 && s.res.battery >= 40 ? 'run' : 'save';
+      // Pega o atalho: se o rover atolar, a tripulação resgata (esta estratégia resolve os problemas).
+      if (id === 'roverRoute') return 'shortcut';
       return s.res.life < 60 && s.res.battery >= 40 ? 'drill' : 'notNow';
     },
     // Resolve todos os problemas (medido: triagem simples perde mais por falta de energia).

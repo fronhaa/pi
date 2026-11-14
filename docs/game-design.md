@@ -82,7 +82,7 @@ Todos esses números são simplificados para o jogo e ficam em um único arquivo
 
 ## Eventos e decisões
 
-Cada partida sorteia 1 das 6 [missões históricas](#calendário-da-missão-janelas-históricas-reais), que traz 3 tempestades solares reais, além de 1 tempestade de poeira e 4 das 6 cartas de decisão. Assim, nenhuma partida é igual à outra, o que incentiva a criança a testar estratégias diferentes.
+Cada partida sorteia 1 das 6 [missões históricas](#calendário-da-missão-janelas-históricas-reais), que traz 3 tempestades solares reais, além de 1 tempestade de poeira e 4 das 8 cartas de decisão. Assim, nenhuma partida é igual à outra, o que incentiva a criança a testar estratégias diferentes.
 
 **Tempestade solar e atraso de comunicação.** O alerta chega pela antena um sol antes do impacto. Ele diz a força da tempestade, a data real do evento e quantos minutos a mensagem levou para chegar: na missão histórica, o atraso real daquele sol (JPL Horizons); sem ela, sorteado entre 3 e 22. No sol do impacto, um segundo aviso lembra que é a última chance de reforçar a blindagem. As tempestades acontecem entre o sol 4 e o sol 14, com pelo menos 2 sóis de distância entre elas.
 
@@ -152,6 +152,23 @@ A missão 3 tem as três tempestades fortes nos sóis 10, 12 e 14: a estratégia
 | Nave de carga | Baterias: bateria +30 | Kit de blindagem: blindagem +30 | Experimento: ciência +15 | Espaço de carga é limitado |
 | Sensor quebrado | Pedir ajuda à Terra: ciência −10 | Consertar sozinhos: 50% de chance de dar errado (bateria −20) | — | Atraso de comunicação força decisões autônomas |
 | Gelo no subsolo | Perfurar: bateria −20, vida +20 | Agora não | — | Recursos locais custam energia para extrair |
+| Fazer oxigênio (MOXIE) | Ligar o MOXIE: bateria −15, vida +10 | Guardar a energia | — | Fazer oxigênio em Marte é possível, mas gasta energia |
+| Caminho do rover | Caminho seguro: ciência +5 | Atalho: ciência +15, mas 50% de chance de o rover atolar hoje (vira o problema "Rover atolado"; sem resgate até a noite, a ciência do dia se perde) | — | Rapidez contra risco; o rover real escolhe o caminho para fugir de areia |
+
+Os números das duas últimas cartas ficam em `CONFIG.rover` (`src/sim/config.ts`). Se o rover já ia atolar no mesmo dia, o atalho não cria um segundo problema.
+
+### Fatos reais dos rovers
+
+Cada fato aparece **uma vez por missão**, ligado ao que a criança acabou de viver. O fato é REAL; o efeito no jogo (números das cartas, chance de atolar) é INTERPRETADO.
+
+| Onde aparece | Fato | Fonte |
+| --- | --- | --- |
+| Lição da carta "Fazer oxigênio" | O MOXIE do Perseverance fez 122 g de oxigênio em Marte (até 12 g por hora) | [NASA, 2023](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/) |
+| Lição da carta "Caminho do rover" | O Perseverance dirige sozinho (AutoNav) em mais de 90% do caminho, desviando de perigos | [NASA](https://science.nasa.gov/missions/mars-2020-perseverance/driving-farther-and-faster-with-autonomous-navigation-and-helicopter-scouting) |
+| Relatório do sol 1 | O Perseverance também usa baterias para os picos de consumo (gera cerca de 110 W) | [JPL, press kit](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/) |
+| Relatório do sol da tempestade de poeira | Em 2018, uma tempestade de poeira global cortou a energia do Opportunity; a missão terminou em 2019 | [NASA](https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/) |
+| Relatório do sol em que o rover atolou | Em 2009, o Spirit atolou em areia fofa; a NASA encerrou a missão em 2011 | [JPL](https://www.jpl.nasa.gov/missions/mars-exploration-rover-spirit-mer-spirit/) |
+| Tela "Dados da NASA" | O RAD do Curiosity mediu cerca de 0,67 mSv por dia na superfície de Marte (cratera Gale, 2012–2013). É a única medição de radiação **em Marte** no jogo; nunca é convertida na dose do jogo | [NASA](https://www.nasa.gov/news-release/nasa-rover-results-include-first-age-measurement-on-mars-and-help-for-human-exploration/) |
 
 ## Vitória, derrota e estrelas
 
@@ -180,6 +197,8 @@ Medição de 2026-11-14 (`npm run balance`, 2.000 partidas por estratégia). Com
 mais difícil, porque o DONKI só registra erupções a partir de M5.0 (não há classe C, a "fraca"). A forma se mantém.
 
 Qualquer mudança nos números deve manter essa forma: as duas estratégias extremas falham e a estratégia atenta vence.
+
+**Com as cartas do rover** (MOXIE e "Caminho do rover", 2026-11-14, 1.000 partidas por estratégia, erupções reais, simuladas e as 6 missões): a forma se mantém em todos os cenários. As estratégias extremas continuam falhando sempre, "ignora a blindagem" não mudou, e a estratégia atenta (que pega o atalho e resgata o rover) termina com 1 estrela um pouco menos vezes (ex.: erupções reais, de 9% para 5%).
 
 ## Modo cooperativo
 
@@ -368,6 +387,167 @@ As três partes somam de 12 a 17 horas, o que aperta o prazo de dois dias. Se o 
 - [ ] Trabalho fora da base soma dose; dentro, não.
 - [ ] O dia pode ser pausado a qualquer momento.
 
+## Atividades dentro da base (especificação)
+
+> **Status:** especificação para implementar (decisão do time em 14/11/2026). Ainda não está no jogo.
+> **Para quem implementa:** cada parte tem regras, textos, passo a passo por arquivo e "pronto quando". Faça na ordem A → C → B.
+> **Pilar:** [público de 7 a 12 anos](publico-e-impacto.md). Nada aqui cria barra nova nem saúde por astronauta.
+
+Uma base real tem mais que consertos: a tripulação **cultiva plantas, faz ciência, se exercita e descansa** ([F11](ciencia-marte.md#f11-a-rotina-de-uma-tripulação-em-marte)).
+O jogo passa a mostrar isso de dois jeitos: **duas tarefas com efeito** (estufa e laboratório) e **uma rotina só visual** (exercício e descanso).
+Junto vem a **faixa da tripulação** no HUD, para a criança ver o que cada astronauta está fazendo.
+
+| Parte | O quê | Muda regra? | Por quê |
+| --- | --- | --- | --- |
+| **A** | 🌱 Colher na estufa e 🔬 analisar amostras no laboratório, durante o dia em tempo real | **Sim, pequena** | Cria a troca mais educativa do dia: consertar lá fora (com dose) ou produzir aqui dentro (seguro)? |
+| **B** | 💪 Exercício e 😴 descanso automáticos de quem está sem ordem | Não (só cena) | Base viva e realista, com fato educativo ([F9](ciencia-marte.md#f9-astronautas-se-exercitam-todo-dia)), sem carga para a criança |
+| **C** | Faixa com os 4 astronautas e o que cada um está fazendo | Não (só HUD) | No modo em grupo, cada criança vê o que os colegas fazem |
+| ~~D~~ | ~~Saúde, cansaço e humor por astronauta~~ | — | **Descartado:** barras novas e microgestão, pesado para 7 a 9 anos |
+
+### A. Tarefas dentro da base: estufa e laboratório
+
+| Tarefa | Onde | Tempo | Efeito ao terminar | Limite | Dose |
+| --- | --- | --- | --- | --- | --- |
+| 🌱 **Colher na estufa** | Dentro da cúpula da estufa | 15 s | Suporte de vida **+3** | 1 vez por dia | Nenhuma (dentro) |
+| 🔬 **Analisar amostras** | Laboratório, no módulo do habitat | 20 s | Ciência **+4** | 1 vez por dia | Nenhuma (dentro) |
+
+Valores **iniciais, a balancear** (ver [Balanceamento](#balanceamento-das-tarefas)).
+
+**Regras:**
+
+1. Só existem nos **dias em tempo real** (a partir do sol 3), e estão disponíveis **desde o começo do dia**. Nos sóis 1 e 2 a criança aprende só a energia ([aprende jogando](publico-e-impacto.md#interface-e-controle)).
+2. São **opcionais**: não fazer não tem consequência, só perde o bônus. É a diferença para os problemas, que cobram a conta à noite.
+3. Mandar um astronauta é **igual aos problemas**: tocar no astronauta e na estação (ícone 🌱 ou 🔬 em vez de "!"), o botão "Enviar" na lista do dia, ou chegar perto e apertar **E**.
+4. **Dentro da base**: não passam pela câmara de descompressão e **não somam dose**. É o contraste de propósito com os consertos lá fora.
+5. Largar no meio (outra ordem, sair do lugar) **perde o progresso**, como nos problemas. Tarefa interna pela metade **não** continua no dia seguinte, mesmo em noite de tempestade (mais simples).
+6. O dia continua terminando sozinho quando **tudo** (problemas e tarefas) está feito, ou aos 75 s. O comandante pode terminar antes, como hoje.
+7. Relatório do sol: "Colheita na estufa: suporte de vida +3." / "Análise no laboratório: ciência +4."
+
+**Textos (PT / EN):**
+
+| Chave | PT | EN |
+| --- | --- | --- |
+| `problem.harvest` | Colher na estufa | Harvest the greenhouse |
+| `problem.harvest.where` | Cúpula da estufa | Greenhouse dome |
+| `problem.analysis` | Analisar amostras | Analyze samples |
+| `problem.analysis.where` | Laboratório | Laboratory |
+| `day.optional` | Se sobrar tempo: | If there is time left: |
+| `report.task.harvest` | Colheita na estufa: suporte de vida +{life}. | Greenhouse harvest: life support +{life}. |
+| `report.task.analysis` | Análise no laboratório: ciência +{science}. | Lab analysis: science +{science}. |
+
+**Como implementar** (reaproveita todo o sistema de problemas; o modo em grupo funciona sem mudar o protocolo):
+
+| # | Arquivo | O que fazer |
+| --- | --- | --- |
+| 1 | `src/sim/config.ts` | `indoorTasks: { harvest: { seconds: 15, life: 3 }, analysis: { seconds: 20, science: 4 } }` |
+| 2 | `src/sim/types.ts` | `ProblemKind` ganha `'harvest' \| 'analysis'` |
+| 3 | `src/sim/problems.ts` | Acrescentar os dois em `PROBLEMS` com `outside: false` e um campo novo `optional: true` (os outros, `optional: false`). **Cuidado:** `PROBLEM_KINDS` é usado no sorteio dos problemas do dia; ele precisa **excluir** os opcionais (`.filter((k) => !PROBLEMS[k].optional)`), senão o sorteio passa a escolher "colher na estufa" como problema e todas as partidas mudam |
+| 4 | `src/sim/problems.ts` (`scheduleProblems`) | Depois de sortear e ordenar os problemas, **acrescentar** as duas tarefas com `spawnAt: 0`, **sem** usar o gerador aleatório (não muda o sorteio do resto) |
+| 5 | `src/sim/mission.ts` (`resolveProblem`) | Se for opcional: aplicar o efeito (vida com `clamp` no máximo; ciência sem teto), linha `report.task.*`, **sem** dose |
+| 6 | `src/sim/mission.ts` (`endSol`) | Opcionais não feitos ficam **fora** de `failed` e de `carried` (nada acontece) |
+| 7 | `src/scene/MarsBase.ts` | `PROBLEM_SPOTS.harvest` (dentro da cúpula) e `PROBLEM_SPOTS.analysis` (no módulo do laboratório). O astronauta precisa conseguir chegar: confira com `crewPath` |
+| 8 | `src/scene/ProblemMarkers.ts` | Ícone por tipo: 🌱 e 🔬 nos opcionais, "!" nos problemas |
+| 9 | `src/ui/Hud.ts` (`renderDay`) | Opcionais numa subseção "Se sobrar tempo:", depois dos problemas |
+| 10 | `src/i18n/strings.ts` | Chaves da tabela acima |
+| 11 | `scripts/balance.ts` | A estratégia "atenta" faz as tarefas quando sobra astronauta livre |
+| 12 | `npm run build` | Regera o `server/internal/sim/simjs/sim.js`: **o modo em grupo já funciona**, porque as tarefas usam `problem_progress`/`problem_resolve`. Não precisa mexer em Go |
+
+**Pronto quando:**
+
+- [ ] A partir do sol 3, a lista do dia mostra "Se sobrar tempo:" com 🌱 e 🔬.
+- [ ] Mandar um astronauta à estufa: ele entra, trabalha 15 s e o suporte de vida sobe 3, sem dose.
+- [ ] Cada estação só pode ser usada uma vez por dia.
+- [ ] Não fazer as tarefas não muda nada à noite.
+- [ ] O sorteio dos problemas continua igual (mesma semente = mesmos problemas que antes).
+- [ ] Em grupo: o médico colhe na estufa e o comandante vê a tarefa ✅ e o efeito no relatório.
+
+#### Balanceamento das tarefas
+
+Hoje (ver "Implementado" em [Tempo da tripulação](#tempo-da-tripulação-e-movimentação)), com os problemas, a estratégia atenta chega a 3★ em só **~19%** das partidas com erupções reais (eram ~69% antes). As tarefas internas são uma alavanca natural para recuperar isso **sem** facilitar demais:
+
+| Estratégia (`npm run balance`) | Meta depois das tarefas |
+| --- | --- |
+| Só ciência, sem guardar bateria | Continua perdendo sempre |
+| Só segurança, sem ciência | Continua em 1★ (o laboratório sozinho não chega a 100 de ciência) |
+| Ignora a blindagem | Continua perdendo parte das vezes por radiação |
+| Atenta (resolve problemas e faz as tarefas) | **3★ em 40 a 60%** (nem tão difícil quanto hoje, nem garantido) |
+
+Se a atenta passar de 60%, reduza o efeito (ex.: ciência +3). Se ficar abaixo de 40%, aumente o laboratório ou reveja a dose +1 por conserto lá fora.
+
+### B. Rotina visual: exercício e descanso
+
+**Regras (só cena, nenhuma regra muda):**
+
+1. Astronauta **sem ordem há 8 s**, de dia ou de manhã, anda sozinho até a **esteira** (dentro do habitat) e faz uma animação de exercício.
+2. Depois de um tempo (ex.: 20 s), vai ao **beliche** e "descansa" (fica dentro, como à noite), e depois volta ao posto.
+3. Qualquer ordem do jogador (tocar, setas, tarefa) interrompe na hora.
+4. Não acontece à noite (a tripulação já entra) nem com alerta de tempestade aberto.
+5. Na **primeira** vez por partida que alguém se exercita: cartão "Você sabia?" com o fato [F9](ciencia-marte.md#f9-astronautas-se-exercitam-todo-dia).
+6. **Modo em grupo:** só o **dono** do astronauta decide a rotina (piloto automático na tela dele); os outros veem pela posição sincronizada (`crew_pos`). Nunca rode a rotina para o astronauta de outro jogador.
+
+**Como implementar:**
+
+| Arquivo | O que fazer |
+| --- | --- |
+| `src/scene/MarsBase.ts` | Pontos `ROUTINE_SPOTS.treadmill` (dentro do habitat) e `ROUTINE_SPOTS.bunk` |
+| `src/scene/crewMotion.ts` | Reaproveitar o piloto automático (`walkPath`/`auto`, o mesmo de ir dormir). Expor algo como `startRoutine(role, spot, onArrive)` e cancelar em `moveRole`/setas |
+| `src/scene/Crew.ts` | Animação simples de exercício (balanço no lugar) e de descanso (escondido, como dentro) |
+| `src/core/Game.ts` | Relógio de "sem ordem" por astronauta; só para `canControl(role)` no modo em grupo |
+| `src/i18n/strings.ts` | `fact.exercise` (texto PT/EN do F9) |
+
+**Pronto quando:**
+
+- [ ] Astronauta parado 8 s vai para a esteira; uma ordem tira ele de lá na hora.
+- [ ] O cartão do F9 aparece só uma vez por partida.
+- [ ] Em grupo, o astronauta de outro jogador só se mexe pelo que o dono manda.
+
+### C. Faixa da tripulação no HUD
+
+Uma faixa com os 4 astronautas. Cada ícone tem **no máximo 3 informações**; o detalhe aparece **só no selecionado**.
+
+```
+ [👨‍🚀 Comandante ▸ você]  [🔧 Engenheiro 60%]  [🌱 Médico · J2]  [💪 Cientista]
+  ─ selecionado: "Comandante · parado · toque num ⚠️ para consertar" ─
+```
+
+| Status | Quando |
+| --- | --- |
+| 🧍 parado · 🚶 andando · 🔧 consertando % | Problemas (hoje) |
+| 🌱 colhendo % · 🔬 analisando % | Parte A |
+| 💪 exercício · 😴 descansando | Parte B |
+| 🏠 dentro | À noite ou no abrigo |
+| Borda laranja 🌡️ **fora da base** | Fora da câmara: lembra que sair custa dose |
+| ⚠️ piscando | **Alerta de tempestade e astronauta lá fora**: "volte para dentro" ([F7](ciencia-marte.md#f7-quem-está-fora-volta-para-dentro)). Único alerta da faixa |
+| "J2" | Só no modo em grupo: quem controla (Jogador 2) |
+
+**Regras para não poluir:** nada de barra de saúde individual; nenhum som ou janela a mais; no celular em pé, só ícones (o nome aparece no selecionado); tocar num ícone seleciona o astronauta (se for seu, no modo em grupo).
+
+**Como implementar:** `src/ui/Hud.ts` (novo `renderCrew`, no lugar do chip atual); o status sai de `CrewTasks` (`workerOf`, `isWorking`), `crewMotion` (`targetOf`, `isInside`, posição) e da rotina da parte B. No modo em grupo, os astronautas dos outros usam a posição sincronizada. **Não precisa de servidor.**
+
+**Pronto quando:**
+
+- [ ] Os 4 ícones aparecem com o status certo, também no celular em pé.
+- [ ] O ⚠️ pisca só com alerta de tempestade **e** astronauta fora.
+- [ ] Em grupo, cada ícone mostra "J*n*" e tocar no de outro jogador mostra o aviso que já existe.
+
+### Cartões "Você sabia?" desta parte
+
+Uma vez por partida cada um ([regras dos fatos](ciencia-marte.md#regras-deste-documento)):
+
+| Momento | Fato | Chave sugerida |
+| --- | --- | --- |
+| Primeira colheita na estufa | [F10](ciencia-marte.md#f10-a-estufa-dá-comida-fresca) | `fact.greenhouse` |
+| Primeira vez que alguém se exercita | [F9](ciencia-marte.md#f9-astronautas-se-exercitam-todo-dia) | `fact.exercise` |
+| Primeiro dia em tempo real (dica) | [F11](ciencia-marte.md#f11-a-rotina-de-uma-tripulação-em-marte) | `fact.routine` |
+
+### Ordem e esforço
+
+| Ordem | Parte | Esforço | Depende de |
+| --- | --- | --- | --- |
+| 1 | A (estufa e laboratório) + balanceamento | 4 a 6 h | — |
+| 2 | C (faixa da tripulação) | 3 a 4 h | A (para os status 🌱 e 🔬) |
+| 3 | B (rotina visual) | 2 h | C (para os status 💪 e 😴) |
+
 ## Dados reais da NASA
 
 As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros conjuntos de dados entram aos poucos, e cada um mostra no jogo um selo honesto do seu estado.
@@ -456,7 +636,7 @@ Isso é parte do ensino, não enfeite.
 | Noite | Quem ainda está lá fora anda até a escotilha do habitat e entra; o relatório do sol espera todos entrarem (no mínimo 2,2 s e no máximo 6 s; quem não chegar entra direto). De manhã, todos continuam dentro |
 | Noite de tempestade | Quem está lá fora corre para o abrigo de regolito |
 | Mensagem da Terra | A antena pisca |
-| Energia na ciência | O rover anda em volta da base; se um astronauta estiver na rota, ele recalcula e desvia (3 m para dentro ou para fora), também de pedras e prédios; sem rota livre ou com o astronauta colado, para e pisca uma luz âmbar. As rodas giram, ele inclina com o relevo e é sólido: astronautas não o atravessam |
+| Energia na ciência | O rover anda um trecho (8 s), **para e estuda** (5 s: o braço desce até o chão, a ponta do instrumento pisca e a câmera vira para a pedra mais perto) e segue, como os rovers reais, que passam a maior parte do sol parados fazendo ciência: no recorde do Perseverance, foram cerca de 4 h 24 min dirigindo num sol de 24 h 39 min ([JPL](https://www.jpl.nasa.gov/images/pia26645-nasas-perseverance-breaks-own-rover-driving-record/)). Rovers reais não têm doca: o Perseverance e o Curiosity geram energia o tempo todo com um gerador nuclear e recarregam as baterias onde estão ([JPL](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/)). Depois de desatolado, ele volta andando do lugar onde atolou até o ponto mais perto da trilha (sem teleporte). Ao andar, o rover anda em volta da base; se um astronauta estiver na rota, ele recalcula e desvia (3 m para dentro ou para fora), também de pedras e prédios; sem rota livre ou com o astronauta colado, para e pisca uma luz âmbar. As rodas giram, ele inclina com o relevo e é sólido: astronautas não o atravessam |
 | Noite | Céu escurece, estrelas aparecem, janelas acendem |
 
 ### O que não usar
@@ -651,6 +831,9 @@ A prioridade máxima é trocar as erupções simuladas por dados reais. O resto 
 | 13 | Missão na Lua, com a noite lunar de cerca de 14 dias terrestres | Segunda missão, mais rejogabilidade | 4 h ou mais |
 | 14 | Migrar o protótipo para a Art Bible: paleta oficial, 4 faixas de sombra, contorno mais fino, modelos mais detalhados, astronauta de 1,85 m com traje completo e pôr do sol com halo azul | Arte e jogo coerentes, como pede o alinhamento | 4 a 6 h |
 | 15 | ~~Missões históricas no jogo~~ **Feito em 2026-11-14.** Próximo passo: posição real do Sol em Jezero (Horizons) para a luz da cena | Datas reais coerentes entre tempestade, atraso e Sol | 2 h |
+| 16 | Atividades dentro da base: estufa e laboratório (com balanceamento) | Troca dentro × fora; recupera as 3★ da estratégia atenta ([especificação](#a-tarefas-dentro-da-base-estufa-e-laboratório)) | 4 a 6 h |
+| 17 | Faixa da tripulação no HUD | Em grupo, cada criança vê o que os colegas fazem ([especificação](#c-faixa-da-tripulação-no-hud)) | 3 a 4 h |
+| 18 | Rotina visual: exercício e descanso | Base viva e fato educativo, sem regra nova ([especificação](#b-rotina-visual-exercício-e-descanso)) | 2 h |
 
 ### Entregas do envio
 

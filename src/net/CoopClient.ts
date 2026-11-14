@@ -1,4 +1,4 @@
-import type { ClientAction, CoopState, ServerMsg } from './protocol';
+import type { ClientAction, CoopState, CrewPos, ServerMsg } from './protocol';
 
 /**
  * Endereço do servidor coop, nesta ordem:
@@ -31,6 +31,8 @@ export class CoopClient {
   onState: (s: CoopState) => void = () => {};
   onError: (code: string) => void = () => {};
   onStatus: (s: ConnStatus) => void = () => {};
+  /** Posição dos astronautas dos outros jogadores (só visual). */
+  onCrew: (list: CrewPos[]) => void = () => {};
 
   private ws: WebSocket | null = null;
   private session: { code: string; token: string } | null = null;
@@ -105,6 +107,8 @@ export class CoopClient {
         }
       } else if (msg.t === 'state') {
         this.onState(msg);
+      } else if (msg.t === 'crew') {
+        this.onCrew(msg.list);
       } else if (msg.t === 'error') {
         if (msg.code === 'bad_token' || (msg.code === 'room_not_found' && first.t === 'rejoin')) this.leave();
         this.onError(msg.code);

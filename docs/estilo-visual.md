@@ -61,7 +61,14 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
 ## Escala e modelos
 
 - 1 unidade = 1 metro. Astronauta com ~1,85 m (Art Bible).
-- Hoje tudo é feito com primitivas (leve). Modelos `.glb` futuros: exportar do Blender em glTF Binary,
+- Tripulação: o astronauta chibi (`public/assets/models/astronaut-chibi.glb`, ver [astronauta-chibi.md](astronauta-chibi.md)).
+  `Crew.loadChibi()` baixa o `.glb` uma vez, clona para os 4 papéis e troca o laranja do traje pela cor do papel
+  (`ROLE_COLORS`). Animações: `walk` ao andar, `jump` no Espaço, `interact` ao consertar. Até carregar (ou se falhar),
+  fica o boneco simples de cápsulas.
+- Dentro da base: os módulos do habitat são translúcidos (como a cúpula), com piso. Quem está dentro aparece no seu
+  módulo (`HABITAT_SPOTS`) ou na estufa consertando o vazamento (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de
+  descompressão, some.
+- O resto é feito com primitivas (leve). Modelos `.glb` novos: exportar do Blender em glTF Binary,
   eixo Y para cima, em metros, com cores sólidas; ao carregar, trocar os materiais por `toonMaterial(cor)`.
   Coloque em `public/assets/models/` com nome em `kebab-case`.
 

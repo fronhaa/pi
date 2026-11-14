@@ -115,6 +115,18 @@ export class MarsBase {
   /** Pedras que o rover precisa evitar (posição e raio no chão). */
   private readonly roverRocks: { x: number; z: number; r: number }[] = [];
   private roverWarning!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  /**
+   * Ciclo do rover real: anda um trecho, para e estuda, segue. Rovers passam a maior parte do sol
+   * parados fazendo ciência (o recorde do Perseverance foi ~4 h 24 min de direção num sol de 24 h 39 min).
+   */
+  private roverPhase: 'drive' | 'study' = 'drive';
+  /** Depois de desatolar: volta andando do lugar onde atolou até a trilha (sem teleporte). */
+  private roverReturn: { from: THREE.Vector3; elapsed: number; duration: number } | null = null;
+  private roverPhaseLeft = ROVER_DRIVE_SECONDS;
+  /** Cabeça da câmera (gira para olhar a rocha), braço robótico (desce para estudar) e luz do instrumento. */
+  private roverHead!: THREE.Group;
+  private roverArm!: THREE.Group;
+  private roverProbe!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
 
   constructor(private readonly scene: THREE.Scene) {
     scene.add(this.root);
@@ -424,9 +436,22 @@ export class MarsBase {
     const mast = toonMesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 6), PALETTE.tech, 0);
     mast.position.set(0.7, 1.6, 0);
     this.rover.add(mast);
-    const head = toonMesh(new THREE.BoxGeometry(0.35, 0.25, 0.45), PALETTE.light);
-    head.position.set(0.7, 2.15, 0);
-    this.rover.add(head);
+    // Cabeça num pivô próprio, para girar e "olhar" a rocha ao estudar.
+    this.roverHead = new THREE.Group();
+    this.roverHead.position.set(0.7, 2.15, 0);
+    this.roverHead.add(toonMesh(new THREE.BoxGeometry(0.35, 0.25, 0.45), PALETTE.light));
+    this.rover.add(this.roverHead);
+    // Braço robótico na frente: guardado em pé ao andar, desce até o chão ao estudar.
+    this.roverArm = new THREE.Group();
+    this.roverArm.position.set(1.0, 0.95, 0.5);
+    const armGeo = new THREE.BoxGeometry(1.0, 0.14, 0.14);
+    armGeo.translate(0.5, 0, 0);
+    this.roverArm.add(toonMesh(armGeo, PALETTE.light, 0.03));
+    this.roverProbe = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), new THREE.MeshBasicMaterial({ color: PALETTE.tech }));
+    this.roverProbe.position.set(1.05, 0, 0);
+    this.roverArm.add(this.roverProbe);
+    this.roverArm.rotation.z = ARM_STOWED;
+    this.rover.add(this.roverArm);
     // Luz de aviso: pisca em âmbar quando o rover para por causa de um astronauta na rota.
     this.roverWarning = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshBasicMaterial({ color: 0x5a4a2a }));
     this.roverWarning.position.set(0.7, 2.36, 0);
@@ -481,9 +506,24 @@ export class MarsBase {
   // ---------- estado ----------
 
   setRoverStuck(at: THREE.Vector3 | null): void {
+    const wasStuck = this.roverStuckAt !== null;
     this.roverStuckAt = at;
     this.roverHeading = null; // ao voltar a andar, o nariz recomeça da direção do movimento
     if (!at) this.rover.rotation.set(0, this.rover.rotation.y, 0);
+    if (!at && wasStuck) {
+      // Desatolou: continua a volta a partir do ponto da trilha mais perto e anda até lá (antes ele "teleportava"
+      // para onde a trilha estava quando atolou).
+      const p = this.rover.position;
+      this.roverAngle = nearestTrackAngle(p.x, p.z);
+      this.roverOffset = 0;
+      this.roverOffsetTarget = 0;
+      this.roverSteer = 0;
+      const target = this.roverPoint(this.roverAngle, 0);
+      const dist = Math.hypot(target.x - p.x, target.z - p.z);
+      this.roverReturn = { from: p.clone(), elapsed: 0, duration: Math.max(1, dist / ROVER_RETURN_SPEED) };
+      this.roverPhase = 'drive';
+      this.roverPhaseLeft = ROVER_DRIVE_SECONDS;
+    }
   }
 
   setState(state: SceneState): void {
@@ -510,6 +550,11 @@ export class MarsBase {
   /** Desvio lateral atual do rover (m). */
   get roverDetour(): number {
     return this.roverOffset;
+  }
+
+  /** O rover está parado estudando uma rocha? (para testes) */
+  get isRoverStudying(): boolean {
+    return this.roverPhase === 'study';
   }
 
   /** O rover está parado esperando um astronauta sair da rota? (para testes e interface) */
@@ -571,6 +616,31 @@ export class MarsBase {
     return true; // nenhuma rota livre: espera
   }
 
+  /**
+   * Estudando: o braço desce, a cabeça olha para a pedra mais perto (se houver) e a ponta do
+   * instrumento pisca. Andando ou parado: tudo volta ao lugar.
+   */
+  private animateRoverTools(studying: boolean, dt: number, time: number): void {
+    this.roverArm.rotation.z = THREE.MathUtils.damp(this.roverArm.rotation.z, studying ? ARM_DEPLOYED : ARM_STOWED, 4, dt);
+    let yaw = 0;
+    if (studying) {
+      const p = this.rover.position;
+      let best: { x: number; z: number } | null = null;
+      for (const k of this.roverRocks) {
+        if (Math.hypot(k.x - p.x, k.z - p.z) < 9 && (!best || Math.hypot(k.x - p.x, k.z - p.z) < Math.hypot(best.x - p.x, best.z - p.z))) best = k;
+      }
+      if (best) {
+        // Ângulo da pedra no referencial do rover (frente = +x local), limitado ao giro da cabeça.
+        const world = Math.atan2(-(best.z - p.z), best.x - p.x);
+        yaw = THREE.MathUtils.clamp(Math.atan2(Math.sin(world - this.rover.rotation.y), Math.cos(world - this.rover.rotation.y)), -1.4, 1.4);
+      } else {
+        yaw = Math.sin(time * 0.8) * 0.8; // sem pedra perto: olha em volta
+      }
+    }
+    this.roverHead.rotation.y = THREE.MathUtils.damp(this.roverHead.rotation.y, yaw, 3, dt);
+    this.roverProbe.material.color.setHex(studying && Math.sin(time * 8) > 0 ? 0x9fe3ff : PALETTE.tech);
+  }
+
   update(dt: number, time: number, crew: THREE.Vector3[] = []): void {
     const s = this.state;
     if (!s) return;
@@ -606,6 +676,7 @@ export class MarsBase {
     if (this.roverStuckAt) {
       this.rover.position.set(this.roverStuckAt.x + 1.6, terrainHeight(this.roverStuckAt.x, this.roverStuckAt.z) - 0.25, this.roverStuckAt.z + 0.6);
       this.rover.rotation.set(0.18, 0.7, 0.12);
+      this.animateRoverTools(false, dt, time);
     } else if (s.scienceBlocks > 0 && !s.night) {
       this.rover.rotation.x = 0;
       this.rover.rotation.z = 0;
@@ -617,8 +688,19 @@ export class MarsBase {
         this.roverClearFor += dt;
         if (this.roverClearFor > 0.6) this.roverBlocked = false;
       }
-      // Elipse por fora da base e dos painéis (painéis vão até x ≈ 22).
+      // Anda um trecho, para e estuda, segue (como o rover real). O tempo só corre fora do bloqueio.
       if (!this.roverBlocked) {
+        this.roverPhaseLeft -= dt;
+        if (this.roverPhaseLeft <= 0) {
+          this.roverPhase = this.roverPhase === 'drive' ? 'study' : 'drive';
+          this.roverPhaseLeft = this.roverPhase === 'drive' ? ROVER_DRIVE_SECONDS : ROVER_STUDY_SECONDS;
+        }
+      }
+      const studying = this.roverPhase === 'study' && !this.roverBlocked;
+      this.animateRoverTools(studying, dt, time);
+      // Elipse por fora da base e dos painéis (painéis vão até x ≈ 22).
+      // Durante a volta para a trilha, o ponto-alvo fica parado (senão o rover acelera para alcançá-lo).
+      if (!this.roverBlocked && !studying && !this.roverReturn) {
         const a0 = this.roverAngle;
         this.roverAngle += dt * 0.06 * s.scienceBlocks;
         const forward = (this.roverAngle - a0) * Math.hypot(Math.sin(a0) * (26 + this.roverOffset), Math.cos(a0) * (15 + this.roverOffset));
@@ -630,10 +712,28 @@ export class MarsBase {
         // Não passa da faixa-alvo.
         this.roverOffset = Math.abs(lateral) > Math.abs(remaining) && Math.sign(lateral) === Math.sign(remaining) ? this.roverOffsetTarget : this.roverOffset + lateral;
       }
-      const { x, z } = this.roverPoint(this.roverAngle, this.roverOffset);
+      let { x, z } = this.roverPoint(this.roverAngle, this.roverOffset);
+      const ret = this.roverReturn;
+      if (ret && !this.roverBlocked && !studying) {
+        // Voltando para a trilha: mistura suave do lugar onde atolou até o ponto atual da trilha.
+        ret.elapsed += dt;
+        const k = THREE.MathUtils.smoothstep(ret.elapsed / ret.duration, 0, 1);
+        x = THREE.MathUtils.lerp(ret.from.x, x, k);
+        z = THREE.MathUtils.lerp(ret.from.z, z, k);
+        if (ret.elapsed >= ret.duration) this.roverReturn = null;
+      } else if (ret) {
+        // Parado (estudando ou esperando): fica onde está, no meio do caminho de volta.
+        const k = THREE.MathUtils.smoothstep(ret.elapsed / ret.duration, 0, 1);
+        x = THREE.MathUtils.lerp(ret.from.x, x, k);
+        z = THREE.MathUtils.lerp(ret.from.z, z, k);
+      }
       const y = terrainHeight(x, z);
       const moved = Math.hypot(x - this.rover.position.x, z - this.rover.position.z);
-      if (moved > 1e-4 && moved < 2) {
+      if (moved > 1e-4 && moved < 2 && this.roverReturn) {
+        // Voltando para a trilha: o nariz aponta para onde ele está indo.
+        this.roverHeading = Math.atan2(-(z - this.rover.position.z), x - this.rover.position.x);
+        for (const w of this.roverWheels) w.rotation.z -= moved / 0.3;
+      } else if (moved > 1e-4 && moved < 2) {
         // Nariz = direção exata do movimento: tangente da elipse + componente lateral do volante (sem "drift").
         const a = this.roverAngle;
         const tx = -Math.sin(a) * (26 + this.roverOffset);
@@ -658,9 +758,34 @@ export class MarsBase {
       this.rover.position.set(x, y, z);
     } else {
       this.roverBlocked = false;
+      this.animateRoverTools(false, dt, time);
     }
     this.roverWarning.material.color.setHex(this.roverBlocked && Math.sin(time * 10) > 0 ? 0xffb020 : 0x5a4a2a);
   }
+}
+
+/** Ciclo do rover: segundos andando e segundos parado estudando (valores de cena, não de regra). */
+const ROVER_DRIVE_SECONDS = 8;
+const ROVER_STUDY_SECONDS = 5;
+/** Velocidade da volta para a trilha depois de desatolar (m/s), parecida com a do rover andando. */
+const ROVER_RETURN_SPEED = 2.5;
+/** Ângulo do braço: guardado (em pé) e estudando (apontado para o chão à frente). */
+const ARM_STOWED = 1.35;
+const ARM_DEPLOYED = -0.75;
+
+/** Ângulo da trilha do rover (elipse centro (2,2), semi-eixos 26 e 15) mais perto de um ponto. */
+function nearestTrackAngle(x: number, z: number): number {
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < 360; i++) {
+    const a = (i / 360) * Math.PI * 2;
+    const d = Math.hypot(x - (2 + Math.cos(a) * 26), z - (2 + Math.sin(a) * 15));
+    if (d < bestD) {
+      bestD = d;
+      best = a;
+    }
+  }
+  return best;
 }
 
 /** Distância (m) de um ponto até a trilha principal do rover (elipse centro (2,2), semi-eixos 26 e 15). */
