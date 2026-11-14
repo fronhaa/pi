@@ -131,6 +131,13 @@ var JezeroSim = (function(exports) {
 			windCleanPerSol: 0,
 			/** Um astronauta limpando os painéis (problema resolvido) tira esta poeira. */
 			crewCleanDust: 20,
+			/**
+			* Sem noite a cada 24 h: no alto de uma borda de cratera do polo sul o Sol não se põe todo dia. O fim do turno é o
+			* descanso da tripulação (a base segue gastando com ar, água e computadores). Só nos dias de sombra há noite de
+			* verdade, muito fria (cerca de −170 °C), e os aquecedores gastam mais.
+			*/
+			restCost: 15,
+			shadowNightCost: 30,
 			/** Sombra das montanhas do polo sul: dias seguidos com pouca luz (substitui a tempestade de poeira). */
 			shadow: {
 				firstSol: 4,
@@ -393,7 +400,7 @@ var JezeroSim = (function(exports) {
 	}
 	// src/sim/day.ts
 	function simulateDay(input) {
-		var _input$location;
+		var _input$location, _input$nightCost;
 		const { plan, blocks, stormClass, dustHold, failed } = input;
 		const location = (_input$location = input.location) !== null && _input$location !== void 0 ? _input$location : "mars";
 		const moon = location === "moon";
@@ -407,7 +414,8 @@ var JezeroSim = (function(exports) {
 		const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (stormClass ? CONFIG.science.stormFactor : 1);
 		r.science += sciGain;
 		r.battery = Math.min(CONFIG.battery.max, r.battery + leftover * CONFIG.battery.perLeftoverBlock);
-		r.battery -= CONFIG.battery.nightCost;
+		const nightCost = (_input$nightCost = input.nightCost) !== null && _input$nightCost !== void 0 ? _input$nightCost : CONFIG.battery.nightCost;
+		r.battery -= nightCost;
 		let missing = 0;
 		let lifeLost = 0;
 		if (r.battery < 0) {
@@ -438,7 +446,8 @@ var JezeroSim = (function(exports) {
 			roverStuck,
 			missing,
 			lifeLost,
-			stormDose: sd
+			stormDose: sd,
+			nightCost
 		};
 	}
 	/**
@@ -573,6 +582,11 @@ var JezeroSim = (function(exports) {
 		}
 		get stormToday() {
 			return this.state.storms.find((s) => s.sol === this.state.sol);
+		}
+		/** Bateria gasta até amanhã: noite de Marte; na Lua, descanso da tripulação ou noite fria da sombra. */
+		nightCost() {
+			if (this.state.location !== "moon") return CONFIG.battery.nightCost;
+			return this.shadowLeft() > 0 ? CONFIG.moon.shadowNightCost : CONFIG.moon.restCost;
 		}
 		/** Dias de sombra que faltam, contando hoje (0 = sem sombra hoje). Só na Lua. */
 		shadowLeft(sol = this.state.sol) {
@@ -757,7 +771,8 @@ var JezeroSim = (function(exports) {
 				blocks: s.blocks,
 				stormClass: storm ? storm.flare.cls : null,
 				dustHold: s.dustHold > 0,
-				failed: failed.map((p) => p.kind)
+				failed: failed.map((p) => p.kind),
+				nightCost: this.nightCost()
 			});
 			const r = day.after;
 			s.res = r;
@@ -805,9 +820,13 @@ var JezeroSim = (function(exports) {
 				},
 				tone: "bad"
 			});
+			else if (s.location === "moon" && this.shadowLeft() > 0) lines.push({
+				key: "report.night.shadow",
+				params: { cost: day.nightCost }
+			});
 			else lines.push({
 				key: "report.night.ok",
-				params: { cost: CONFIG.battery.nightCost }
+				params: { cost: day.nightCost }
 			});
 			let stormResult = null;
 			if (storm) {
@@ -870,6 +889,7 @@ var JezeroSim = (function(exports) {
 				if (s.sol === 1) lines.push(...this.factOnce("fact.moon.radiation"));
 				if (s.sol === s.shadowSol) lines.push(...this.factOnce("fact.moon.shadow"));
 				if (roverStuckToday) lines.push(...this.factOnce("fact.moon.lunokhod"));
+				if (s.problems.some((p) => p.kind === "antenna" && p.status !== "pending")) lines.push(...this.factOnce("fact.moon.relay"));
 			} else {
 				if (s.sol === 1) lines.push(...this.factOnce("fact.battery"));
 				if (s.sol === s.dustStormSol) lines.push(...this.factOnce("fact.opportunity"));
@@ -908,7 +928,8 @@ var JezeroSim = (function(exports) {
 				blocks: s.blocks,
 				stormClass: storm ? storm.flare.cls : null,
 				dustHold: s.dustHold > 0,
-				failed: []
+				failed: [],
+				nightCost: this.nightCost()
 			});
 			const tomorrow = s.messages.some((m) => m.kind === "stormAlert") ? s.storms.find((x) => x.sol === s.sol + 1) : void 0;
 			return _objectSpread2(_objectSpread2({}, day), {}, {

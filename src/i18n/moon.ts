@@ -15,6 +15,25 @@ const pt = {
   'help.dose': 'Dose é quanta radiação a tripulação já recebeu. Na Lua não há ar para proteger: ela sobe o dobro de Marte todo dia. Em 100, a tripulação precisa voltar para a Terra. Este número é uma escala do jogo, não uma medição real.',
   'help.sol': 'Na base lunar contamos os dias da Terra (24 horas). Um dia inteiro da Lua dura 29 dias e meio da Terra!',
   'help.dust': 'Poeira cobre os painéis solares e diminui a energia. Na Lua não há vento: a poeira só sai se um astronauta limpar.',
+  'help.battery': 'A bateria guarda a energia que sobra. Enquanto a tripulação dorme, a base gasta 15. Na sombra faz muito frio, e os aquecedores gastam 30.',
+
+  'plan.hint.battery': '+10 por bloco; até amanhã a base gasta {cost}',
+  'preview.tonight': 'até amanhã:',
+  'preview.afterNight': 'amanhã cedo:',
+  'preview.batteryShort': '⚠️ A bateria vai acabar antes de amanhã: suporte de vida −{life}. Guarde mais blocos!',
+  'preview.stormTonight': '🌩️ Tempestade solar (classe {label}) hoje: com blindagem {shield}, a dose sobe +{dose}.',
+  'preview.stormTomorrow': '📡 Amanhã vem tempestade classe {label}: com a blindagem de hoje ({shield}), a dose seria +{dose}.',
+  'preview.allGood': '✅ Com este plano, a base chega bem até amanhã.',
+  'day.remaining': '{s} s até a hora de dormir',
+  'msg.stormToday': 'A tempestade solar (classe {label}) chega hoje. Última chance de reforçar a blindagem!',
+  'report.night.ok': 'A tripulação dormiu, e a base gastou {cost} de bateria com ar, água e computadores.',
+  'report.night.short': 'A bateria acabou antes de amanhã! Faltaram {missing} e o suporte de vida caiu {lifeLost}.',
+  'end.lesson.energy': 'Energia é limitada e a sombra cobra a conta: guardar bateria é tão importante quanto usar.',
+
+  'problem.antenna': 'Terra escondida',
+  'problem.antenna.where': 'Torre da antena: apontar para o satélite',
+  'report.problem.failed.antenna': 'A Terra sumiu atrás das montanhas, e ninguém apontou a antena para o satélite: amanhã as mensagens não chegam.',
+  'msg.noSignal': 'Sem sinal! A Terra está atrás das montanhas, e a antena não foi apontada para o satélite.',
 
   'plan.hint.shield': '+8 por bloco; perde 4 por dia',
   'plan.endSol': 'Terminar o dia',
@@ -48,7 +67,7 @@ const pt = {
   'end.lesson.delay': 'A Terra está perto: da Lua, as mensagens chegam em cerca de 1 segundo. Em Marte, levam de 3 a 22 minutos!',
 
   'tutorial.1.text': 'Sua tripulação vive no polo sul da Lua, perto da cratera Shackleton, por 15 dias.',
-  'tutorial.2.text': 'Todo dia os painéis dão alguns blocos de energia. Você divide entre suporte de vida, blindagem e ciência. O que sobrar vai para a bateria, que a noite gasta.',
+  'tutorial.2.text': 'Todo dia os painéis dão alguns blocos de energia. Você divide entre suporte de vida, blindagem e ciência. O que sobrar vai para a bateria, que a base gasta enquanto todos dormem.',
   'tutorial.3.text': 'A Terra avisa quando vem uma tempestade solar. Reforce a blindagem antes! Às vezes as montanhas fazem sombra por dias: guarde bateria. Durante o dia, problemas aparecem pela base: mande um astronauta consertar.',
 
   'data.donki.use': 'Cada tempestade solar do jogo usa uma erupção solar real registrada pela NASA, com a data e a classe (M = média, X = forte). A dose no jogo é uma escala nossa, não uma medição na Lua.',
@@ -76,6 +95,25 @@ const en: Record<keyof typeof pt, string> = {
   'help.dose': 'Dose is how much radiation the crew has received. The Moon has no air to protect you: it goes up twice as much as on Mars every day. At 100, the crew must go back to Earth. This number is a game scale, not a real measurement.',
   'help.sol': 'At the Moon base we count Earth days (24 hours). A whole Moon day lasts 29 and a half Earth days!',
   'help.dust': 'Dust covers the solar panels and lowers the energy. There is no wind on the Moon: dust only comes off if an astronaut cleans it.',
+  'help.battery': 'The battery stores leftover energy. While the crew sleeps, the base uses 15. In the shadow it is very cold, and the heaters use 30.',
+
+  'plan.hint.battery': '+10 per block; until tomorrow the base uses {cost}',
+  'preview.tonight': 'until tomorrow:',
+  'preview.afterNight': 'tomorrow morning:',
+  'preview.batteryShort': '⚠️ The battery will run out before tomorrow: life support −{life}. Save more blocks!',
+  'preview.stormTonight': '🌩️ Solar storm (class {label}) today: with shielding {shield}, the dose goes up +{dose}.',
+  'preview.stormTomorrow': '📡 A class {label} storm comes tomorrow: with today’s shielding ({shield}), the dose would be +{dose}.',
+  'preview.allGood': '✅ With this plan, the base gets to tomorrow fine.',
+  'day.remaining': '{s} s until bedtime',
+  'msg.stormToday': 'The solar storm (class {label}) arrives today. Last chance to reinforce the shielding!',
+  'report.night.ok': 'The crew slept, and the base used {cost} battery for air, water and computers.',
+  'report.night.short': 'The battery ran out before tomorrow! {missing} was missing and life support dropped {lifeLost}.',
+  'end.lesson.energy': 'Energy is limited and the shadow comes to collect: saving battery matters as much as using it.',
+
+  'problem.antenna': 'Earth out of sight',
+  'problem.antenna.where': 'Antenna tower: point it at the satellite',
+  'report.problem.failed.antenna': 'Earth went behind the mountains, and nobody pointed the antenna at the satellite: tomorrow no messages arrive.',
+  'msg.noSignal': 'No signal! Earth is behind the mountains, and the antenna was not pointed at the satellite.',
 
   'plan.hint.shield': '+8 per block; loses 4 per day',
   'plan.endSol': 'End the day',
@@ -109,7 +147,7 @@ const en: Record<keyof typeof pt, string> = {
   'end.lesson.delay': 'Earth is close: from the Moon, messages arrive in about 1 second. On Mars, they take 3 to 22 minutes!',
 
   'tutorial.1.text': 'Your crew lives at the Moon’s south pole, near Shackleton Crater, for 15 days.',
-  'tutorial.2.text': 'Every day the panels give some energy blocks. You split them between life support, shielding and science. What is left goes to the battery, which the night uses up.',
+  'tutorial.2.text': 'Every day the panels give some energy blocks. You split them between life support, shielding and science. What is left goes to the battery, which the base uses while everyone sleeps.',
   'tutorial.3.text': 'Earth warns you when a solar storm is coming. Reinforce the shielding first! Sometimes the mountains cast shadows for days: save battery. During the day, problems appear around the base: send an astronaut to fix them.',
 
   'data.donki.use': 'Each solar storm in the game uses a real solar flare recorded by NASA, with its date and class (M = medium, X = strong). The dose in the game is our own scale, not a measurement on the Moon.',

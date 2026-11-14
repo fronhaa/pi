@@ -86,6 +86,8 @@ export class Game {
   private plan: EnergyPlan = { life: 3, shield: 1, science: 3 };
   private night = false;
   private stormNight = false;
+  /** Lua: a noite que está passando é a noite fria da sombra (só ela escurece a cena). */
+  private shadowNight = false;
   private nightRes: Resources | null = null;
   private coop: CoopSession | null = null;
 
@@ -158,6 +160,7 @@ export class Game {
         this.hud.render();
       },
       onHowTo: () => showTutorial(() => {}),
+      nightCost: () => (this.coop || !this.mission ? CONFIG.battery.nightCost : this.mission.nightCost()),
     });
 
     this.targetMarker = new THREE.Mesh(
@@ -581,6 +584,7 @@ export class Game {
     const m = this.mission;
     if (!m.isPlanValid(plan) || m.state.pendingCard) return;
     const stormTonight = m.stormToday !== undefined;
+    this.shadowNight = m.shadowLeft() > 0;
     const report = m.endSol(plan);
     this.playNight(report, stormTonight, m.state, () => {
       if (m.state.outcome.status === 'playing') this.beginSol();
@@ -658,7 +662,8 @@ export class Game {
       stormNight: this.stormNight,
       earthMessage: !this.night && s.messages.some((m) => m.kind !== 'dustNow' && m.kind !== 'shadowNow'),
       scienceBlocks: this.plan.science,
-      shadow: s.messages.some((m) => m.kind === 'shadowNow'),
+      // De noite, o estado já é o do dia seguinte: a sombra que vale é a da noite que está passando.
+      shadow: this.night ? this.shadowNight : s.messages.some((m) => m.kind === 'shadowNow'),
     });
   }
 

@@ -210,12 +210,14 @@ A ideia é a criança **comparar os dois lugares**: o mesmo plano que funciona e
 | Regra | Marte | Lua | Fato real por trás |
 | --- | --- | --- | --- |
 | Turno | sol (24 h 39 min) | dia da Terra (24 h) | Um dia inteiro da Lua dura ~29,5 dias da Terra (mês sinódico) [L1] |
+| Fim do dia | noite: aquecedores gastam 20 de bateria; a cena escurece | **descanso da tripulação**: a base gasta 15 (ar, água, computadores) e a cena não escurece. Só nos dias de sombra há noite de verdade: fria e escura, os aquecedores gastam **30** | No alto de uma borda de cratera do polo sul o Sol não se põe a cada 24 h [L3]; na sombra a superfície chega a cerca de −170 °C [L1] |
 | Dose de todo dia | +1 | **+2** | Sem atmosfera: a Chang'e 4 mediu ~1,37 mSv/dia no chão da Lua [L2], cerca de 2× o que o Curiosity mediu em Marte (~0,67 mSv/dia) |
 | Tempestade solar | intensidade normal | **× 1,2** | Sem ar para frear as partículas. O multiplicador é do jogo (INTERPRETADO) |
 | Atraso das mensagens | 3 a 22 min (real, JPL Horizons nas missões históricas) | **~1,3 s** (chega na hora) | A luz cruza os 384.400 km Terra-Lua em ~1,3 s [L1] |
 | Carta "Sensor quebrado": pedir ajuda à Terra | ciência −10 | **ciência −3** | Mesma razão: a resposta chega em segundos |
 | Poeira | o vento limpa 6%/sol; tempestade de poeira | **sem vento**: a poeira só sai quando um astronauta resolve "Poeira nos painéis" (−20%) | A Lua não tem atmosfera nem vento |
 | Evento de energia | tempestade de poeira (painéis cobertos) | **sombra das montanhas**: 3 dias seguidos com só 4 blocos, avisados 1 dia antes | No polo sul o Sol fica sempre baixo no horizonte; montanhas e crateras fazem sombra por dias [L3] |
+| Problema da antena | "Antena desalinhada" | **"Terra escondida"**: a Terra sumiu atrás das montanhas e é preciso apontar a antena para o satélite de retransmissão (mesmo efeito: sem mensagens amanhã) | No polo sul a Terra fica baixa no horizonte e o relevo bloqueia o sinal; a NASA planeja satélites de retransmissão (LunaNet) [L7] |
 | Cartas | todas | sem "Fazer oxigênio" (MOXIE) | O MOXIE tira oxigênio do CO₂ do ar de Marte; a Lua não tem ar |
 | 3ª estrela | dose abaixo de 50 | dose abaixo de **70** | A dose de todo dia já é o dobro |
 | Tempestades | missões históricas (CMEs + atraso real) | erupções reais do DONKI sorteadas | O atraso das missões históricas é Terra-Marte; não vale para a Lua |
@@ -227,6 +229,7 @@ tutorial, ajuda, lições do fim) ficam em `src/i18n/moon.ts`. Fatos reais mostr
 - **Dia 1:** a Chang'e 4 mediu que a radiação de todo dia na Lua é ~2× a de Marte [L2].
 - **Primeiro dia de sombra:** no polo sul, o Sol fica baixo e montanhas fazem sombra por dias [L3].
 - **Rover atolado:** em 1973, o Lunokhod 2 se cobriu de poeira na borda de uma cratera, esquentou e parou [L5].
+- **Problema "Terra escondida":** no polo sul a Terra some atrás das montanhas; por isso a NASA planeja satélites para as mensagens [L7].
 - **Carta do gelo:** em 2009, a LCROSS achou gelo de água numa cratera escura do polo sul (Cabeus) [L6].
 
 Fontes:
@@ -237,8 +240,9 @@ Fontes:
 - [L4] NASA NSSDCA, Moon Fact Sheet: <https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html>
 - [L5] NASA NSSDCA, Luna 21/Lunokhod 2: <https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1973-001A>
 - [L6] NASA, LCROSS: <https://science.nasa.gov/mission/lcross/>
+- [L7] NASA, LunaNet (comunicação e navegação na Lua): <https://www.nasa.gov/communicating-with-missions/lunanet/>
 
-Números de jogo (dose diária 2, tempestade × 1,2, 4 blocos na sombra, 3ª estrela em 70) estão em `CONFIG.moon`
+Números de jogo (dose diária 2, tempestade × 1,2, 4 blocos na sombra, descanso 15, noite fria 30, 3ª estrela em 70) estão em `CONFIG.moon`
 (`src/sim/config.ts`) e são INTERPRETADOS: o que é real é a diferença entre os lugares, não a escala.
 
 **Equilíbrio na Lua** (`npm run balance`, 2.000 partidas por estratégia, 2026-11-14):
@@ -248,7 +252,7 @@ Números de jogo (dose diária 2, tempestade × 1,2, 4 blocos na sombra, 3ª est
 | Só ciência, sem guardar bateria | Perde sempre (suporte de vida) | Perde sempre |
 | Só segurança, sem ciência | Sobrevive sempre, 1 estrela | Sobrevive sempre, 1 estrela |
 | Ignora a blindagem | Perde 100% por radiação | Perde 87% por radiação |
-| Reage aos alertas e guarda reserva | Perde 4% por radiação; 83% 2★, 13% 3★ | Perde 2%; 55% 2★, 43% 3★ |
+| Reage aos alertas e guarda reserva | Perde 4% por radiação; 83% 2★, 14% 3★ | Perde 2%; 55% 2★, 43% 3★ |
 
 A forma se mantém (extremos falham, a estratégia atenta vence), e a Lua é um pouco mais difícil que Marte por causa da
 radiação, como na vida real. Os números de Marte não mudaram com a base lunar (mesma saída do `npm run balance`).

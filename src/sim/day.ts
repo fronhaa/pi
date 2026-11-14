@@ -19,6 +19,8 @@ export interface DayInput {
   dustHold: boolean;
   /** Problemas que ficaram sem conserto e cobram a conta hoje. */
   failed: ProblemKind[];
+  /** Bateria gasta até amanhã (padrão: a noite de Marte). Na Lua: descanso ou noite fria da sombra (Mission). */
+  nightCost?: number;
 }
 
 export interface DayResult {
@@ -33,6 +35,8 @@ export interface DayResult {
   lifeLost: number;
   /** Dose da tempestade desta noite (0 se não houver). */
   stormDose: number;
+  /** Bateria que a base gastou até amanhã. */
+  nightCost: number;
 }
 
 export function simulateDay(input: DayInput): DayResult {
@@ -57,7 +61,8 @@ export function simulateDay(input: DayInput): DayResult {
 
   // Bateria: guarda o que sobrou, a noite cobra; se faltar, o suporte de vida sofre.
   r.battery = Math.min(CONFIG.battery.max, r.battery + leftover * CONFIG.battery.perLeftoverBlock);
-  r.battery -= CONFIG.battery.nightCost;
+  const nightCost = input.nightCost ?? CONFIG.battery.nightCost;
+  r.battery -= nightCost;
   let missing = 0;
   let lifeLost = 0;
   if (r.battery < 0) {
@@ -87,7 +92,7 @@ export function simulateDay(input: DayInput): DayResult {
 
   r.life = round1(r.life);
   r.dose = round1(r.dose);
-  return { after: r, leftover, lifeDelta, shieldDelta, sciGain, roverStuck, missing, lifeLost, stormDose: sd };
+  return { after: r, leftover, lifeDelta, shieldDelta, sciGain, roverStuck, missing, lifeLost, stormDose: sd, nightCost };
 }
 
 /**

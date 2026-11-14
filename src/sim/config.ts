@@ -77,6 +77,13 @@ export const CONFIG = {
     windCleanPerSol: 0,
     /** Um astronauta limpando os painéis (problema resolvido) tira esta poeira. */
     crewCleanDust: 20,
+    /**
+     * Sem noite a cada 24 h: no alto de uma borda de cratera do polo sul o Sol não se põe todo dia. O fim do turno é o
+     * descanso da tripulação (a base segue gastando com ar, água e computadores). Só nos dias de sombra há noite de
+     * verdade, muito fria (cerca de −170 °C), e os aquecedores gastam mais.
+     */
+    restCost: 15,
+    shadowNightCost: 30,
     /** Sombra das montanhas do polo sul: dias seguidos com pouca luz (substitui a tempestade de poeira). */
     shadow: { firstSol: 4, lastSol: 11, sols: 3, blocks: 4 },
     /** A luz leva ~1,3 s da Terra à Lua (384.400 km). Só para mostrar; as mensagens chegam na hora. */

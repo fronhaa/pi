@@ -121,6 +121,12 @@ export class Mission {
     return this.state.storms.find((s) => s.sol === this.state.sol);
   }
 
+  /** Bateria gasta até amanhã: noite de Marte; na Lua, descanso da tripulação ou noite fria da sombra. */
+  nightCost(): number {
+    if (this.state.location !== 'moon') return CONFIG.battery.nightCost;
+    return this.shadowLeft() > 0 ? CONFIG.moon.shadowNightCost : CONFIG.moon.restCost;
+  }
+
   /** Dias de sombra que faltam, contando hoje (0 = sem sombra hoje). Só na Lua. */
   shadowLeft(sol = this.state.sol): number {
     const start = this.state.shadowSol;
@@ -288,6 +294,7 @@ export class Mission {
       stormClass: storm ? storm.flare.cls : null,
       dustHold: s.dustHold > 0,
       failed: failed.map((p) => p.kind),
+      nightCost: this.nightCost(),
     });
     const r = day.after;
     s.res = r;
@@ -309,7 +316,8 @@ export class Mission {
     }
     if (day.leftover > 0) lines.push({ key: 'report.battery.saved', params: { blocks: day.leftover, gain: day.leftover * CONFIG.battery.perLeftoverBlock } });
     if (day.missing > 0) lines.push({ key: 'report.night.short', params: { missing: day.missing, lifeLost: day.lifeLost }, tone: 'bad' });
-    else lines.push({ key: 'report.night.ok', params: { cost: CONFIG.battery.nightCost } });
+    else if (s.location === 'moon' && this.shadowLeft() > 0) lines.push({ key: 'report.night.shadow', params: { cost: day.nightCost } });
+    else lines.push({ key: 'report.night.ok', params: { cost: day.nightCost } });
 
     let stormResult: SolReport['storm'] = null;
     if (storm) {
@@ -343,6 +351,7 @@ export class Mission {
       if (s.sol === 1) lines.push(...this.factOnce('fact.moon.radiation'));
       if (s.sol === s.shadowSol) lines.push(...this.factOnce('fact.moon.shadow'));
       if (roverStuckToday) lines.push(...this.factOnce('fact.moon.lunokhod'));
+      if (s.problems.some((p) => p.kind === 'antenna' && p.status !== 'pending')) lines.push(...this.factOnce('fact.moon.relay'));
     } else {
       if (s.sol === 1) lines.push(...this.factOnce('fact.battery'));
       if (s.sol === s.dustStormSol) lines.push(...this.factOnce('fact.opportunity'));
@@ -375,6 +384,7 @@ export class Mission {
       stormClass: storm ? storm.flare.cls : null,
       dustHold: s.dustHold > 0,
       failed: [],
+      nightCost: this.nightCost(),
     });
     // Aviso que a criança já recebeu: tempestade amanhã. Quanto ela daria com a blindagem desta noite?
     const tomorrow = s.messages.some((m) => m.kind === 'stormAlert') ? s.storms.find((x) => x.sol === s.sol + 1) : undefined;

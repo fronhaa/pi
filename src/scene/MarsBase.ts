@@ -711,10 +711,12 @@ export class MarsBase {
     if (!s) return;
 
     this.nightAmount = THREE.MathUtils.damp(this.nightAmount, s.night ? 1 : 0, 2.5, dt);
-    const n = this.nightAmount;
+    const moon = this.location === 'moon';
+    // Na Lua (polo sul) o Sol não se põe a cada 24 h: o descanso da tripulação quase não escurece a cena.
+    // Só a noite fria da sombra das montanhas fica escura de verdade.
+    const n = moon && !s.shadow ? this.nightAmount * 0.12 : this.nightAmount;
     const dustK = s.res.dust / CONFIG.dust.max;
 
-    const moon = this.location === 'moon';
     const skies = SKIES[this.location];
     const sky = skies.day.clone().lerp(skies.dust, dustK);
     if (s.alert) sky.lerp(skies.alert, 0.45);

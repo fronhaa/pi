@@ -30,6 +30,8 @@ export interface HudCallbacks {
   onNasaData(): void;
   onToggleLang(): void;
   onHowTo(): void;
+  /** Bateria que a base gasta até amanhã (Marte: a noite; Lua: descanso ou noite fria da sombra). */
+  nightCost?(): number;
 }
 
 type PlanKey = keyof EnergyPlan;
@@ -307,7 +309,7 @@ export class Hud {
       ),
       ...PLAN_KEYS.map(row),
       h('div', { class: 'plan-row battery' },
-        h('div', { class: 'name' }, t('plan.battery'), pv ? arrow(s.res.battery, pv.after.battery, t('preview.afterNight')) : null, h('small', {}, t('plan.hint.battery'))),
+        h('div', { class: 'name' }, t('plan.battery'), pv ? arrow(s.res.battery, pv.after.battery, t('preview.afterNight')) : null, h('small', {}, t('plan.hint.battery', { cost: pv?.nightCost ?? this.cb.nightCost?.() ?? SIM.battery.nightCost }))),
         h('span'), h('div', { class: 'count' }, String(leftover)), h('span'),
       ),
       ...(pv ? [h('div', { class: 'preview', 'aria-live': 'polite' },
