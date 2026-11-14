@@ -12,9 +12,13 @@ import { Hud } from '@/ui/Hud';
 import { showCard, showEnd, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
 import { formatDate, getLang, setLang, t } from '@/i18n';
 import { Input } from './Input';
+import { CrewTasks } from './CrewTasks';
 import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
-import { ENTRANCES, type Role } from '@/scene/MarsBase';
+import { ENTRANCES, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
+import { ProblemMarkers } from '@/scene/ProblemMarkers';
+import { CONFIG } from '@/sim/config';
+import type { StringKey } from '@/i18n';
 
 /** Duração mínima da noite antes do relatório (ms). */
 const NIGHT_MS = 2200;
@@ -49,6 +53,16 @@ export class Game {
   private readonly targetMarker: THREE.Mesh;
   private pointerDown: { x: number; y: number; t: number } | null = null;
 
+  // Dia em tempo real: problemas pela base e tempo da tripulação (GDD).
+  private phase: 'morning' | 'day' | 'night' = 'morning';
+  private dayElapsed = 0;
+  private paused = false;
+  private selected: Role = 'commander';
+  private readonly tasks: CrewTasks;
+  private readonly markers = new ProblemMarkers();
+  private hudTick = 0;
+  private problemTipShown = false;
+
   private constructor(
     container: HTMLElement,
     private readonly flares: FlareSource,
@@ -77,7 +91,11 @@ export class Game {
     uiRoot.id = 'ui';
     container.appendChild(uiRoot);
     this.hud = new Hud(uiRoot, {
-      onEndSol: (plan) => this.endSol(plan),
+      onEndSol: (plan) => this.startDay(plan),
+      onSendProblem: (uid) => this.tasks.assign(this.selected, uid),
+      onPause: () => this.togglePause(),
+      onEndDay: () => this.endDay(),
+      onSelect: (role) => this.select(role),
       onPlanChange: (plan) => {
         this.plan = plan;
         this.updateScene();
@@ -97,6 +115,17 @@ export class Game {
     this.targetMarker.rotation.x = -Math.PI / 2;
     this.scene.add(this.targetMarker);
     this.setupPointer();
+    this.scene.add(this.markers.root);
+    this.tasks = new CrewTasks(() => this.mission, this.crew);
+    this.tasks.onChange = () => this.refreshDayHud();
+    this.tasks.onResolved = (p) => {
+      this.markers.remove(p.uid);
+      if (p.kind === 'roverStuck') this.base.setRoverStuck(null);
+      this.hud.render();
+      this.updateScene();
+      if (this.mission.state.outcome.status !== 'playing') this.endDay();
+    };
+    this.setupKeys();
 
     this.newMission();
     this.resize();
@@ -128,14 +157,19 @@ export class Game {
         obstacles: this.base.obstacles,
         input: this.input,
         camera: this.camera,
-        onSelect: (role) => this.hud.setCrew('ready', role),
+        onSelect: (role) => {
+          this.selected = role;
+          this.hud.setCrew('ready', role);
+          this.refreshDayHud();
+        },
         onFirstJump: () => this.hud.toast(t('crew.fact.gravity'), t('crew.fact.source')),
       });
       this.input.reset();
-      this.motion.enabled = !this.night;
+      this.motion.enabled = !this.night && !this.paused;
+      this.tasks.motion = this.motion;
       // Física chegou no meio da noite: a tripulação já está "dentro" (escondida); de manhã sai pela porta.
       if (this.night) this.motion.forceInside();
-      this.hud.setCrew('ready', this.motion.selected);
+      this.motion.select(this.selected); // avisa o HUD via onSelect
     } catch (err) {
       console.warn('Física indisponível; o jogo segue só com a interface.', err);
       this.hud.setCrew('off');
@@ -149,18 +183,31 @@ export class Game {
     el.addEventListener('pointerup', (e) => {
       const d = this.pointerDown;
       this.pointerDown = null;
-      if (!d || !this.motion || !this.motion.enabled) return;
+      if (!d || this.night || this.paused) return;
       if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6 || performance.now() - d.t > 500) return;
       const rect = el.getBoundingClientRect();
       const ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
       this.raycaster.setFromCamera(ndc, this.camera);
+      // 1) Clique num problema: manda o astronauta selecionado (GDD: "toca no astronauta e depois no problema").
+      if (this.phase === 'day') {
+        const hitProblem = this.raycaster.intersectObjects(this.markers.pickables, true)[0];
+        if (hitProblem) {
+          let o: THREE.Object3D | null = hitProblem.object;
+          while (o && o.userData.problemUid === undefined) o = o.parent;
+          if (o) this.tasks.assign(this.selected, o.userData.problemUid as number);
+          return;
+        }
+      }
+      // 2) Clique num astronauta: seleciona.
       const hitCrew = this.raycaster.intersectObject(this.crew.root, true)[0];
       if (hitCrew) {
         let o: THREE.Object3D | null = hitCrew.object;
         while (o && !o.userData.role) o = o.parent;
-        if (o) this.motion.select(o.userData.role as Role);
+        if (o) this.select(o.userData.role as Role);
         return;
       }
+      // 3) Clique no chão: anda até lá (precisa da física).
+      if (!this.motion || !this.motion.enabled) return;
       const ground = this.scene.getObjectByName('ground');
       const hit = ground && this.raycaster.intersectObject(ground, false)[0];
       if (hit) {
@@ -168,6 +215,103 @@ export class Game {
         this.targetMarker.position.set(hit.point.x, hit.point.y + 0.05, hit.point.z);
         (this.targetMarker.material as THREE.MeshBasicMaterial).opacity = 0.9;
       }
+    });
+  }
+
+  private select(role: Role): void {
+    this.selected = role;
+    if (this.motion) this.motion.select(role); // avisa o HUD via onSelect
+    else {
+      for (const [r, a] of Object.entries(this.crew.members)) a.setSelected(r === role);
+      this.refreshDayHud();
+    }
+  }
+
+  /** E: consertar o problema mais perto · P: pausar o dia · 1–4 sem física: escolher astronauta. */
+  private setupKeys(): void {
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      if (this.phase === 'day' && e.code === 'KeyP') this.togglePause();
+      if (this.phase === 'day' && !this.paused && e.code === 'KeyE') {
+        if (!this.tasks.interact(this.selected)) this.hud.toast(t('task.nothingNear'));
+      }
+      if (!this.motion && /^(Digit|Numpad)[1-4]$/.test(e.code)) {
+        this.select((['commander', 'engineer', 'medic', 'scientist'] as Role[])[Number(e.code.slice(-1)) - 1]);
+      }
+    });
+  }
+
+  // ---------- dia em tempo real ----------
+
+  /** "Começar o dia": se não há problemas hoje (sóis 1 e 2), vai direto para a noite. */
+  private startDay(plan: EnergyPlan): void {
+    const m = this.mission;
+    if (!m.isPlanValid(plan) || m.state.pendingCard) return;
+    this.plan = plan;
+    if (m.state.problems.length === 0) {
+      this.endSol(plan);
+      return;
+    }
+    this.phase = 'day';
+    this.dayElapsed = 0;
+    this.paused = false;
+    this.hud.setBusy(true);
+    this.refreshDayHud();
+  }
+
+  private togglePause(): void {
+    if (this.phase !== 'day') return;
+    this.paused = !this.paused;
+    if (this.motion) this.motion.enabled = !this.paused;
+    this.refreshDayHud();
+  }
+
+  private updateDay(dt: number): void {
+    const m = this.mission;
+    this.dayElapsed += dt;
+    for (const p of m.state.problems) {
+      if (p.status === 'pending' && this.dayElapsed >= p.spawnAt) {
+        m.openProblem(p.uid);
+        this.markers.add(p.uid, p.kind);
+        if (p.kind === 'roverStuck') this.base.setRoverStuck(PROBLEM_SPOTS.roverStuck);
+        this.hud.toast(t('problem.new', { problem: t(`problem.${p.kind}` as StringKey) }), this.problemTipShown ? undefined : t('day.hint'));
+        this.problemTipShown = true;
+        this.refreshDayHud();
+      }
+    }
+    this.tasks.update(dt);
+    for (const p of m.state.problems) {
+      if (p.status === 'open') this.markers.setProgress(p.uid, p.progress, this.tasks.isWorking(p.uid));
+    }
+    const allDone = m.state.problems.every((p) => p.status === 'done');
+    if (this.dayElapsed >= CONFIG.problems.daySeconds || allDone) this.endDay();
+  }
+
+  private endDay(): void {
+    if (this.phase !== 'day') return;
+    this.phase = 'night';
+    this.paused = false;
+    this.tasks.clear();
+    this.markers.clear();
+    this.base.setRoverStuck(null);
+    this.hud.setDay(null);
+    if (this.mission.state.outcome.status !== 'playing') {
+      this.finish();
+      return;
+    }
+    this.endSol(this.plan);
+  }
+
+  private refreshDayHud(): void {
+    if (this.phase !== 'day') return;
+    const s = this.mission.state;
+    this.hud.setDay({
+      remaining: Math.max(0, Math.ceil(CONFIG.problems.daySeconds - this.dayElapsed)),
+      paused: this.paused,
+      selected: this.selected,
+      problems: s.problems
+        .filter((p) => p.status !== 'pending')
+        .map((p) => ({ uid: p.uid, kind: p.kind, status: p.status, progress: p.progress, worker: this.tasks.workerOf(p.uid), working: this.tasks.isWorking(p.uid) })),
     });
   }
 
@@ -184,6 +328,7 @@ export class Game {
 
   /** Começo de um sol: mostra o estado e, se houver, a carta do dia. */
   private beginSol(): void {
+    this.phase = 'morning';
     const s = this.mission.state;
     this.hud.setState(s);
     this.hud.newSol();
@@ -204,6 +349,7 @@ export class Game {
   private endSol(plan: EnergyPlan): void {
     const m = this.mission;
     if (!m.isPlanValid(plan) || m.state.pendingCard) return;
+    this.phase = 'night';
     const stormTonight = m.stormToday !== undefined;
     const report = m.endSol(plan);
 
@@ -297,6 +443,15 @@ export class Game {
     const t = this.timer.getElapsed();
     this.controls.update();
     this.base.update(dt, t);
+    if (this.phase === 'day' && !this.paused) {
+      this.updateDay(dt);
+      this.hudTick += dt;
+      if (this.hudTick > 0.25) {
+        this.hudTick = 0;
+        this.refreshDayHud();
+      }
+    }
+    this.markers.update(t, this.camera);
     if (this.motion) this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)
     else this.crew.update(dt);
     const marker = this.targetMarker.material as THREE.MeshBasicMaterial;

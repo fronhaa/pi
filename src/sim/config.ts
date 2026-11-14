@@ -39,6 +39,20 @@ export const CONFIG = {
 
   cards: { perGame: 4, firstSol: 2, lastSol: 14 },
 
+  /** Problemas pela base (GDD, "Tempo da tripulação"). Dia em tempo real com duração fixa. */
+  problems: {
+    firstSol: 3,
+    minPerDay: 1,
+    maxPerDay: 2,
+    /** Segundos do dia em que o problema pode aparecer. */
+    spawnWindow: { min: 3, max: 35 },
+    daySeconds: 75,
+    airlockSeconds: 3,
+    /** Dose ao terminar uma tarefa fora da base (escala do jogo, INTERPRETADO). */
+    outsideDose: 1,
+    effects: { dust: 20, lifeLeak: 10, shieldBag: 8 },
+  },
+
   stars: { doseFor3: 50 },
 } as const;
 

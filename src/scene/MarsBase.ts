@@ -35,6 +35,18 @@ export const ENTRANCES = {
   shelter: new THREE.Vector3(-11.9, 0, 7.9),
 } as const;
 
+/**
+ * Onde cada problema acontece (GDD, "Problemas pela base"). Pontos alcançáveis: FORA das caixas de `obstacles`.
+ * O rover atolado fica longe da base, para a caminhada longa custar tempo.
+ */
+export const PROBLEM_SPOTS = {
+  dustyPanels: new THREE.Vector3(17, 0, 6.6),
+  greenhouseLeak: new THREE.Vector3(2.3, 0, -4.6),
+  antenna: new THREE.Vector3(9.7, 0, -0.6),
+  roverStuck: new THREE.Vector3(22, 0, 13),
+  tornBag: new THREE.Vector3(-12.5, 0, 8.4),
+} as const;
+
 const SKY_DAY = new THREE.Color(0xe8b98c);
 const SKY_DUST = new THREE.Color(0xc99a6e);
 const SKY_ALERT = new THREE.Color(0xd9866a);
@@ -68,6 +80,8 @@ export class MarsBase {
   private readonly dustParticles: THREE.Points;
 
   private state: SceneState | null = null;
+  /** Rover atolado: fica parado e inclinado neste ponto até alguém resolver. */
+  private roverStuckAt: THREE.Vector3 | null = null;
   private nightAmount = 0;
   private roverAngle = 0;
 
@@ -411,6 +425,11 @@ export class MarsBase {
 
   // ---------- estado ----------
 
+  setRoverStuck(at: THREE.Vector3 | null): void {
+    this.roverStuckAt = at;
+    if (!at) this.rover.rotation.set(0, this.rover.rotation.y, 0);
+  }
+
   setState(state: SceneState): void {
     this.state = state;
     const r = state.res;
@@ -459,7 +478,12 @@ export class MarsBase {
     (dp.material as THREE.PointsMaterial).opacity = THREE.MathUtils.lerp(0, 0.7, Math.min(1, dustK * 1.5)) * (1 - n * 0.6);
     dp.position.x = ((time * 3) % 20) - 10;
 
-    if (s.scienceBlocks > 0 && !s.night) {
+    if (this.roverStuckAt) {
+      this.rover.position.set(this.roverStuckAt.x + 1.6, terrainHeight(this.roverStuckAt.x, this.roverStuckAt.z) - 0.25, this.roverStuckAt.z + 0.6);
+      this.rover.rotation.set(0.18, 0.7, 0.12);
+    } else if (s.scienceBlocks > 0 && !s.night) {
+      this.rover.rotation.x = 0;
+      this.rover.rotation.z = 0;
       // Elipse por fora da base e dos painéis (painéis vão até x ≈ 22).
       this.roverAngle += dt * 0.06 * s.scienceBlocks;
       const x = 2 + Math.cos(this.roverAngle) * 26;

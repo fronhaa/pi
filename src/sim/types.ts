@@ -61,7 +61,8 @@ export type Message =
   | { kind: 'stormToday'; flare: Flare; delayMin: number }
   | { kind: 'dustAlert'; delayMin: number; sol: number }
   | { kind: 'dustNow' }
-  | { kind: 'allClear'; delayMin: number };
+  | { kind: 'allClear'; delayMin: number }
+  | { kind: 'noSignal' };
 
 /** Uma linha do relatório: chave de texto + parâmetros (o texto vem do i18n). */
 export interface ReportLine {
@@ -83,6 +84,18 @@ export type Outcome =
   | { status: 'playing' }
   | { status: 'lost'; reason: 'life' | 'dose'; sol: number }
   | { status: 'won'; stars: 1 | 2 | 3 };
+
+export type ProblemKind = 'dustyPanels' | 'greenhouseLeak' | 'antenna' | 'roverStuck' | 'tornBag';
+
+export interface Problem {
+  uid: number;
+  kind: ProblemKind;
+  /** Segundo do dia em que aparece. */
+  spawnAt: number;
+  status: 'pending' | 'open' | 'done';
+  /** 0–1: trabalho feito (pode continuar no dia seguinte depois de noite de tempestade). */
+  progress: number;
+}
 
 export interface ScheduledStorm {
   sol: number;
@@ -106,6 +119,10 @@ export interface GameState {
   /** Carta do sol atual, ainda sem resposta. */
   pendingCard: Card | null;
   messages: Message[];
+  /** Problemas do dia (tempo da tripulação). */
+  problems: Problem[];
+  /** A antena ficou desalinhada: as mensagens da Terra não chegam neste sol. */
+  commsDown: boolean;
   reports: SolReport[];
   outcome: Outcome;
 }

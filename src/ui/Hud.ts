@@ -1,10 +1,23 @@
 import { CONFIG } from '@/sim/config';
-import type { EnergyPlan, Flare, GameState, Message, Resources } from '@/sim/types';
+import type { EnergyPlan, Flare, GameState, Message, ProblemKind, Resources } from '@/sim/types';
+import { PROBLEMS } from '@/sim/problems';
 import { formatDate, getLang, t, type StringKey } from '@/i18n';
 import { h, openDialog } from './dom';
 
+export interface DayView {
+  remaining: number;
+  paused: boolean;
+  selected: string;
+  problems: { uid: number; kind: ProblemKind; status: 'open' | 'done' | 'pending'; progress: number; worker?: string; working: boolean }[];
+}
+
 export interface HudCallbacks {
+  /** "Terminar o sol" ou "Começar o dia" (quando há problemas hoje). */
   onEndSol(plan: EnergyPlan): void;
+  onSendProblem(uid: number): void;
+  onPause(): void;
+  onEndDay(): void;
+  onSelect(role: 'commander' | 'engineer' | 'medic' | 'scientist'): void;
   onPlanChange(plan: EnergyPlan): void;
   onNasaData(): void;
   onToggleLang(): void;
@@ -31,6 +44,7 @@ export class Hud {
   private readonly planEl = h('section', { class: 'plan panel', 'aria-labelledby': 'plan-title' });
   private readonly crewChip = h('div', { class: 'crew-chip', 'aria-live': 'polite' });
   private crewView: { status: 'loading' | 'ready' | 'off'; role?: string } = { status: 'loading' };
+  private dayView: DayView | null = null;
 
   constructor(
     root: HTMLElement,
@@ -65,6 +79,12 @@ export class Hud {
 
   getPlan(): EnergyPlan {
     return { ...this.plan };
+  }
+
+  /** Dia em tempo real: troca o plano de energia pela lista de problemas. null = volta ao plano. */
+  setDay(view: DayView | null): void {
+    this.dayView = view;
+    this.renderPlan();
   }
 
   /** Estado da movimentação da tripulação (física carregada sob demanda). */
@@ -143,9 +163,51 @@ export class Hud {
     this.messages.replaceChildren(h('h2', { id: 'msg-title' }, t('msg.title')), ...msgs.map(messageEl));
   }
 
+  private renderDay(v: DayView): void {
+    const name = (role?: string) => (role ? t(`crew.${role}` as StringKey) : '');
+    const focusedLabel = (document.activeElement as HTMLElement | null)?.getAttribute?.('aria-label');
+    const items = v.problems.map((p) => {
+      const def = PROBLEMS[p.kind];
+      const status =
+        p.status === 'done' ? t('day.done')
+        : p.working ? t('day.working', { name: name(p.worker), pct: Math.round(p.progress * 100) })
+        : p.worker ? t('day.walking', { name: name(p.worker) })
+        : t('day.waiting');
+      const sendLabel = t('day.send', { name: name(v.selected), problem: t(`problem.${p.kind}` as StringKey) });
+      return h('div', { class: `problem ${p.status === 'done' ? 'done' : ''}` },
+        h('div', { class: 'name' },
+          `${p.status === 'done' ? '✅' : '⚠️'} ${t(`problem.${p.kind}` as StringKey)}`,
+          h('small', {}, `${t(`problem.${p.kind}.where` as StringKey)} · ${def.outside ? t('problem.outside') : t('problem.inside')}`),
+          h('small', { class: 'status' }, status),
+          p.progress > 0 && p.status !== 'done' ? h('div', { class: 'bar good' }, h('i', { style: `width:${Math.round(p.progress * 100)}%` })) : null,
+        ),
+        p.status === 'open' && p.worker !== v.selected
+          ? h('button', { class: 'btn', type: 'button', 'aria-label': sendLabel, disabled: v.paused, onclick: () => this.cb.onSendProblem(p.uid) }, t('day.sendShort', { name: name(v.selected) }))
+          : null,
+      );
+    });
+    this.planEl.replaceChildren(
+      h('div', { class: 'plan-top' },
+        h('strong', { id: 'plan-title' }, v.paused ? t('day.paused') : t('day.title')),
+        h('span', { class: 'clock', 'aria-label': t('day.remaining', { s: v.remaining }) }, `☀️ ${t('day.remaining', { s: v.remaining })}`),
+      ),
+      h('p', { class: 'day-hint' }, t('day.hint')),
+      ...(items.length ? items : [h('p', { class: 'day-hint' }, t('day.none'))]),
+      h('div', { class: 'plan-actions' },
+        h('button', { class: 'btn', type: 'button', 'aria-label': v.paused ? t('day.resume') : t('day.pause'), onclick: () => this.cb.onPause() }, v.paused ? t('day.resume') : t('day.pause')),
+        h('button', { class: 'btn primary', type: 'button', 'aria-label': t('day.end'), onclick: () => this.cb.onEndDay() }, t('day.end')),
+      ),
+    );
+    if (focusedLabel) this.planEl.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focusedLabel)}"]`)?.focus();
+  }
+
   private renderPlan(): void {
     const s = this.state;
     if (!s) return;
+    if (this.dayView) {
+      this.renderDay(this.dayView);
+      return;
+    }
     const used = this.plan.life + this.plan.shield + this.plan.science;
     const leftover = s.blocks - used;
     const blocked = this.busy || s.pendingCard !== null || s.outcome.status !== 'playing';
@@ -182,7 +244,7 @@ export class Hud {
         h('button', {
           class: 'btn primary', type: 'button', disabled: blocked,
           onclick: () => this.cb.onEndSol(this.getPlan()),
-        }, s.pendingCard ? t('plan.answerCardFirst') : t('plan.endSol')),
+        }, s.pendingCard ? t('plan.answerCardFirst') : s.problems.length > 0 ? t('plan.startDay') : t('plan.endSol')),
       ),
     );
     // Mantém o foco do teclado no mesmo botão depois de redesenhar.
@@ -263,5 +325,7 @@ function messageEl(m: Message): HTMLElement {
       return h('div', { class: 'msg dust' }, t('msg.dustNow'));
     case 'allClear':
       return h('div', { class: 'msg' }, t('msg.allClear'), delay);
+    case 'noSignal':
+      return h('div', { class: 'msg storm' }, t('msg.noSignal'));
   }
 }

@@ -32,12 +32,18 @@ export function showReport(report: SolReport, state: GameState, onNext: () => vo
   openDialog({
     title: t('report.title', { sol: report.sol }),
     body: [
-      h('ul', { class: 'report-lines' }, ...report.lines.map((l) => h('li', { class: l.tone ?? '' }, t(l.key, l.params)))),
+      h('ul', { class: 'report-lines' }, ...report.lines.map((l) => h('li', { class: l.tone ?? '' }, t(l.key, translateParams(l.params))))),
       cardId ? h('p', { class: 'lesson' }, `💡 ${t(`card.${cardId}.lesson` as StringKey)}`) : null,
     ],
     actions: [{ label: playing ? t('report.next', { sol: report.sol + 1 }) : t('a11y.close'), primary: true, onClick: onNext }],
     row: true,
   });
+}
+
+/** Parâmetros que são chaves de texto (ex.: "problem.antenna") viram o nome traduzido. */
+function translateParams(params?: Record<string, string | number>): Record<string, string | number> | undefined {
+  if (!params) return params;
+  return Object.fromEntries(Object.entries(params).map(([k, v]) => [k, typeof v === 'string' && v.startsWith('problem.') ? t(v) : v]));
 }
 
 /** Fim da missão: explica o porquê, sem parecer castigo, e convida a tentar outra estratégia. */

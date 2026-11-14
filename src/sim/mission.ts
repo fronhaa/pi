@@ -1,7 +1,11 @@
 import { CONFIG, type FlareClass } from './config.ts';
 import { CARDS, CARD_IDS, applyCardOption, clamp, onCardDrawn } from './cards.ts';
 import { createRng, type Rng } from './rng.ts';
-import type { EnergyPlan, Flare, GameState, HistoricalMission, Message, ReportLine, Resources, ScheduledStorm, SolReport } from './types.ts';
+import { PROBLEMS, scheduleProblems } from './problems.ts';
+import type { EnergyPlan, Flare, GameState, HistoricalMission, Message, Problem, ReportLine, Resources, ScheduledStorm, SolReport } from './types.ts';
+
+/** Cartas substituídas pelos problemas da tripulação (GDD: "Eles substituem as cartas..."). */
+const CARD_POOL = CARD_IDS.filter((id) => id !== 'dustyPanels' && id !== 'greenhouseLeak');
 
 /**
  * Simulação pura da missão (docs/game-design.md). Sem DOM, sem Three.js:
@@ -10,8 +14,13 @@ import type { EnergyPlan, Flare, GameState, HistoricalMission, Message, ReportLi
 export class Mission {
   readonly state: GameState;
   private readonly rng: Rng;
-  /** Linhas geradas pela carta do sol, entram no relatório do mesmo sol. */
+  /** Linhas geradas durante o sol (carta, problemas resolvidos), entram no relatório do mesmo sol. */
   private cardLines: ReportLine[] = [];
+  private uid = 0;
+  /** Antena desalinhada na noite anterior: sem mensagens no próximo sol. */
+  private nextCommsDown = false;
+  /** Problemas que continuam no próximo sol (trabalho pela metade em noite de tempestade). */
+  private carryOver: Problem[] = [];
 
   /**
    * @param realFlares erupções reais para sortear (usadas quando não há missão histórica)
@@ -30,7 +39,7 @@ export class Mission {
     const sols = this.rng
       .shuffle(range(CONFIG.cards.firstSol, CONFIG.cards.lastSol).filter((s) => s !== dustStormSol))
       .slice(0, CONFIG.cards.perGame);
-    const ids = this.rng.shuffle(CARD_IDS).slice(0, CONFIG.cards.perGame);
+    const ids = this.rng.shuffle(CARD_POOL).slice(0, CONFIG.cards.perGame);
     sols.forEach((s, i) => cardSols.set(s, ids[i]));
 
     this.state = {
@@ -52,6 +61,8 @@ export class Mission {
       cardSols,
       pendingCard: null,
       messages: [],
+      problems: [],
+      commsDown: false,
       reports: [],
       outcome: { status: 'playing' },
     };
@@ -102,7 +113,12 @@ export class Mission {
       s.dustHold = CONFIG.dust.stormHoldSols;
     }
 
-    s.messages = this.buildMessages(sol);
+    s.commsDown = this.nextCommsDown;
+    this.nextCommsDown = false;
+    // Antena desalinhada: os avisos da Terra deste sol se perdem (a tempestade vem do mesmo jeito).
+    s.messages = s.commsDown ? [{ kind: 'noSignal' }] : this.buildMessages(sol);
+    s.problems = [...this.carryOver, ...scheduleProblems(sol, this.rng, () => ++this.uid)];
+    this.carryOver = [];
 
     const cardId = s.cardSols.get(sol);
     if (cardId) {
@@ -149,6 +165,42 @@ export class Mission {
     return lines;
   }
 
+  // ---------- problemas pela base (tempo da tripulação) ----------
+
+  private problem(uid: number): Problem {
+    const p = this.state.problems.find((x) => x.uid === uid);
+    if (!p) throw new Error(`Problema inexistente: ${uid}`);
+    return p;
+  }
+
+  /** O relógio do dia chegou ao `spawnAt`: o problema aparece na base. */
+  openProblem(uid: number): void {
+    const p = this.problem(uid);
+    if (p.status === 'pending') p.status = 'open';
+  }
+
+  /** Progresso do trabalho (0–1), informado pela cena enquanto um astronauta trabalha. */
+  setProblemProgress(uid: number, progress: number): void {
+    const p = this.problem(uid);
+    if (p.status !== 'done') p.progress = clamp(progress, 0, 1);
+  }
+
+  /** Um astronauta terminou o trabalho. Fora da base, soma dose (GDD). */
+  resolveProblem(uid: number): void {
+    const p = this.problem(uid);
+    if (p.status === 'done') return;
+    p.status = 'done';
+    p.progress = 1;
+    const outside = PROBLEMS[p.kind].outside;
+    if (outside) this.state.res.dose = round1(this.state.res.dose + CONFIG.problems.outsideDose);
+    this.cardLines.push({
+      key: outside ? 'report.problem.fixedOutside' : 'report.problem.fixed',
+      params: { problem: `problem.${p.kind}`, dose: CONFIG.problems.outsideDose },
+      tone: 'good',
+    });
+    this.checkLoss();
+  }
+
   isPlanValid(plan: EnergyPlan): boolean {
     const total = plan.life + plan.shield + plan.science;
     return [plan.life, plan.shield, plan.science].every((n) => Number.isInteger(n) && n >= 0) && total <= this.state.blocks;
@@ -186,9 +238,17 @@ export class Mission {
     });
 
     // Ciência: metade no sol de tempestade.
-    const sciGain = plan.science * CONFIG.science.perBlock * (storm ? CONFIG.science.stormFactor : 1);
+    const unresolved = s.problems.filter((p) => p.status !== 'done');
+    // Em noite de tempestade, trabalho pela metade continua amanhã (GDD); o resto cobra a conta hoje.
+    const carried = storm ? unresolved.filter((p) => p.progress > 0) : [];
+    const failed = unresolved.filter((p) => !carried.includes(p));
+    const roverStuck = failed.some((p) => p.kind === 'roverStuck');
+
+    const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (storm ? CONFIG.science.stormFactor : 1);
     r.science += sciGain;
-    if (plan.science > 0) {
+    if (roverStuck && plan.science > 0) {
+      lines.push({ key: 'report.problem.roverStuck', params: { blocks: plan.science }, tone: 'bad' });
+    } else if (plan.science > 0) {
       lines.push({ key: storm ? 'report.science.storm' : 'report.science', params: { blocks: plan.science, gain: sciGain }, tone: 'good' });
     }
 
@@ -225,6 +285,18 @@ export class Mission {
       r.dust = Math.max(0, r.dust - CONFIG.dust.windCleanPerSol);
       lines.push({ key: 'report.dust.wind', params: { dust: Math.round(r.dust) } });
     }
+
+    // Problemas sem atendimento: a consequência chega à noite (GDD, tabela "Problemas pela base").
+    const fx = CONFIG.problems.effects;
+    for (const p of failed) {
+      if (p.kind === 'dustyPanels') r.dust = Math.min(CONFIG.dust.max, r.dust + fx.dust);
+      if (p.kind === 'greenhouseLeak') r.life = clamp(r.life - fx.lifeLeak, 0, CONFIG.life.max);
+      if (p.kind === 'tornBag') r.shield = clamp(r.shield - fx.shieldBag, 0, CONFIG.shield.max);
+      if (p.kind === 'antenna') this.nextCommsDown = true;
+      if (p.kind !== 'roverStuck') lines.push({ key: `report.problem.failed.${p.kind}`, params: fx, tone: 'bad' });
+    }
+    for (const p of carried) lines.push({ key: 'report.problem.carried', params: { problem: `problem.${p.kind}` } });
+    this.carryOver = carried.map((p) => ({ ...p, status: 'open' as const, spawnAt: 0 }));
 
     r.life = round1(r.life);
     r.dose = round1(r.dose);

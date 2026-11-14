@@ -45,6 +45,8 @@ export class CrewMotion {
   /** Astronautas andando sozinhos (piloto automático: ir dormir, voltar ao posto). */
   private readonly auto = new Map<Role, { speed: number; onArrive?: () => void }>();
   private readonly insideRoles = new Set<Role>();
+  /** Destino final de uma ordem do jogador/tarefa (identidade usada por CrewTasks para saber se a ordem mudou). */
+  private readonly dests: Partial<Record<Role, THREE.Vector3>> = {};
   private readonly ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
   private accumulator = 0;
   private jumped = false;
@@ -76,14 +78,39 @@ export class CrewMotion {
     this.opts.onSelect?.(role);
   }
 
-  /** Clique/toque no chão: o astronauta selecionado anda até lá sozinho. */
+  /** Clique/toque no chão: o astronauta selecionado anda até lá, contornando os prédios. */
   moveTo(point: THREE.Vector3): void {
+    this.moveRole(this.selected, point);
+  }
+
+  /**
+   * Manda um astronauta andar até um ponto, desviando das construções (crewPath).
+   * Retorna o destino: CrewTasks compara com `targetOf` para saber se o jogador deu outra ordem.
+   */
+  moveRole(role: Role, point: THREE.Vector3): THREE.Vector3 {
     const p = point.clone();
     p.y = 0;
     if (p.length() > BOUNDS) p.setLength(BOUNDS);
-    this.cancelAuto(this.selected);
-    this.targets[this.selected] = p;
-    this.stuckTime[this.selected] = 0;
+    this.cancelAuto(role);
+    const t = this.bodies[role].translation();
+    const path = findPath({ x: t.x, z: t.z }, { x: p.x, z: p.z }, this.opts.obstacles, RADIUS).map((q) => new THREE.Vector3(q.x, 0, q.z));
+    this.targets[role] = path.shift();
+    this.routes[role] = path;
+    this.stuckTime[role] = 0;
+    this.dests[role] = p;
+    return p;
+  }
+
+  /** Destino da ordem atual (undefined = parado, teclado ou piloto automático). */
+  targetOf(role: Role): THREE.Vector3 | undefined {
+    return this.targets[role] ? this.dests[role] : undefined;
+  }
+
+  /** Para no lugar (ex.: começou a trabalhar). */
+  stop(role: Role): void {
+    this.cancelAuto(role);
+    delete this.targets[role];
+    delete this.dests[role];
   }
 
   /** Quantos astronautas estão dentro (habitat ou abrigo). */
@@ -141,6 +168,7 @@ export class CrewMotion {
   private cancelAuto(role: Role): void {
     this.auto.delete(role);
     delete this.routes[role];
+    delete this.dests[role];
   }
 
   /** Entra: some da cena e o corpo deixa de colidir, para não bloquear a porta. */
@@ -163,6 +191,7 @@ export class CrewMotion {
       return;
     }
     delete this.targets[role];
+    delete this.dests[role];
     const auto = this.auto.get(role);
     this.cancelAuto(role);
     auto?.onArrive?.();
@@ -225,7 +254,7 @@ export class CrewMotion {
         } else {
           vx = (dx / dist) * speed;
           vz = (dz / dist) * speed;
-          // Clique do jogador vai em linha reta; se ficar preso 1,5 s, desiste.
+          // Ordem do jogador segue o caminho calculado; se mesmo assim ficar preso 1,5 s, desiste.
           // No piloto automático, preso conta como "chegou" (ex.: entra mesmo assim).
           const moving = Math.hypot(vel.x, vel.z) > 0.3;
           this.stuckTime[role] = moving ? 0 : (this.stuckTime[role] ?? 0) + FIXED_DT;
@@ -233,7 +262,11 @@ export class CrewMotion {
             if (auto) {
               delete this.routes[role];
               this.arrive(role);
-            } else delete this.targets[role];
+            } else {
+              delete this.targets[role];
+              delete this.routes[role];
+              delete this.dests[role];
+            }
           }
         }
       }
