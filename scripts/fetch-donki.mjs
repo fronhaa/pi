@@ -11,11 +11,18 @@
  *   DONKI_END      data final AAAA-MM-DD (padrão: hoje)
  *   DONKI_BASE_URL base da API (padrão https://api.nasa.gov/DONKI;
  *                  alternativa sem chave: https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get)
+ *   DONKI_REFRESH_DAYS  dias até um período ser considerado "fechado" (padrão 30)
+ *   DONKI_FORCE=1  ignora o cache e baixa tudo de novo (~200 requisições)
+ *
+ * CACHE (a API tem limite: 1.000 req/h com chave própria, ~10/h com DEMO_KEY):
+ *   Cada bloco de 60 dias é guardado em data/cache/donki/<tipo>/<início>.json, já enxuto.
+ *   Blocos antigos e "assentados" são reaproveitados para sempre; só os recentes são buscados de novo.
+ *   Se o limite estourar no meio, o que já veio fica salvo: rode de novo depois e ele continua dali.
  *
  * Tipos coletados: SEP (partículas), FLR (erupções X, via notificações) e CME-MARS (impacto previsto em Marte).
  * Detalhes e critérios de curadoria: docs/dados.md
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +33,10 @@ const END = process.env.DONKI_END || new Date().toISOString().slice(0, 10);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_FULL = join(ROOT, 'data', 'donki-solar-events.json');
 const OUT_GAME = join(ROOT, 'public', 'data', 'donki-flares.json');
+const CACHE_DIR = join(ROOT, 'data', 'cache', 'donki');
+const REFRESH_DAYS = Number(process.env.DONKI_REFRESH_DAYS || 30);
+const FORCE = process.env.DONKI_FORCE === '1';
+const stats = { requests: 0, cached: 0, rateLimitRemaining: null };
 
 /** Erupções a partir desta classe entram na lista. O GDD usa M (média) e X (forte). */
 const MIN_FLARE_CLASS = 'M1.0';
@@ -49,12 +60,44 @@ function dateRanges() {
   return ranges;
 }
 
-async function fetchType(type, extraParams = {}) {
+/**
+ * Um bloco pode ser reaproveitado se foi baixado quando já estava "assentado":
+ * pelo menos REFRESH_DAYS depois do fim do bloco (o DONKI ainda corrige eventos recentes).
+ */
+function readCache(type, start, end) {
+  if (FORCE) return null;
+  const file = join(CACHE_DIR, type, `${start}.json`);
+  if (!existsSync(file)) return null;
+  const c = JSON.parse(readFileSync(file, 'utf8'));
+  const settledAt = new Date(`${end}T00:00:00Z`).getTime() + REFRESH_DAYS * DAY_MS;
+  if (c.end !== end || new Date(c.fetchedAt).getTime() < settledAt) return null;
+  return c.items;
+}
+
+function writeCache(type, start, end, items) {
+  const dir = join(CACHE_DIR, type);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `${start}.json`), JSON.stringify({ start, end, fetchedAt: new Date().toISOString(), items }) + '\n');
+}
+
+/**
+ * Busca um tipo em blocos de 60 dias, usando o cache. `normalize` reduz a resposta crua ao que
+ * a curadoria usa (o cache guarda só isso, para ficar pequeno no git).
+ */
+async function fetchType(type, normalize, extraParams = {}) {
   const path = type === 'FLR-notifications' ? 'notifications' : type;
   const all = [];
   const ranges = dateRanges();
-  let count = 0;
+  let fetched = 0;
+  let reused = 0;
   for (const [start, end] of ranges) {
+    const cached = readCache(type, start, end);
+    if (cached) {
+      all.push(...cached);
+      reused++;
+      stats.cached++;
+      continue;
+    }
     const url = new URL(`${BASE}/${path}`);
     url.searchParams.set('startDate', start);
     url.searchParams.set('endDate', end);
@@ -62,21 +105,57 @@ async function fetchType(type, extraParams = {}) {
     if (BASE.includes('api.nasa.gov')) url.searchParams.set('api_key', API_KEY);
 
     const res = await fetch(url);
+    stats.requests++;
+    const remaining = res.headers.get('x-ratelimit-remaining');
+    if (remaining !== null) stats.rateLimitRemaining = Number(remaining);
     if (res.status === 429) {
       throw new Error(
-        `Limite de requisições atingido (429) em ${type} ${start}. ` +
-          (API_KEY === 'DEMO_KEY' ? 'Use sua própria chave: NASA_API_KEY no .env (https://api.nasa.gov/).' : 'Tente mais tarde.'),
+        `Limite de requisições atingido (429) em ${type} ${start}. O que já veio está salvo no cache; rode de novo mais tarde e ele continua dali. ` +
+          (API_KEY === 'DEMO_KEY' ? 'Use sua própria chave: NASA_API_KEY no .env (https://api.nasa.gov/).' : ''),
       );
     }
     if (!res.ok) throw new Error(`${type} ${start}..${end}: HTTP ${res.status} ${await res.text()}`);
 
     const text = await res.text();
     const data = text.trim() ? JSON.parse(text) : [];
-    all.push(...(Array.isArray(data) ? data : []));
-    count++;
+    const items = normalize(Array.isArray(data) ? data : []);
+    writeCache(type, start, end, items);
+    all.push(...items);
+    fetched++;
   }
-  console.log(`  ${type}: ${all.length} eventos em ${count} requisições`);
+  console.log(`  ${type}: ${all.length} itens | ${fetched} blocos baixados, ${reused} do cache`);
   return all;
+}
+
+// ---------- normalização (o que fica no cache) ----------
+
+const normalizeSEP = (raw) =>
+  raw.map((s) => ({
+    sepID: s.sepID,
+    eventTime: s.eventTime,
+    instruments: (s.instruments || []).map((i) => ({ displayName: i.displayName })),
+    linkedEvents: (s.linkedEvents || []).map((e) => ({ activityID: e.activityID })),
+    link: s.link,
+  }));
+
+/** Junta erupções vindas de blocos diferentes: mesma atividade fica com a maior intensidade. */
+function dedupeFlares(flares) {
+  const byId = new Map();
+  for (const f of flares) {
+    const prev = byId.get(f.flrID);
+    if (!prev || flareFlux(f.classType) > flareFlux(prev.classType)) byId.set(f.flrID, f);
+  }
+  return [...byId.values()];
+}
+
+/** Junta CMEs de blocos diferentes: fica a simulação mais recente. */
+function dedupeMarsCMEs(events) {
+  const byId = new Map();
+  for (const e of events) {
+    const prev = byId.get(e.id);
+    if (!prev || e.modelCompletionTime > prev.modelCompletionTime) byId.set(e.id, e);
+  }
+  return [...byId.values()];
 }
 
 /**
@@ -189,10 +268,10 @@ export function curateMarsCMEs(sims) {
 
 async function main() {
   console.log(`DONKI ${BASE} | ${START_YEAR}..${END} | chave: ${API_KEY === 'DEMO_KEY' ? 'DEMO_KEY' : 'própria'}`);
-  const seps = await fetchType('SEP');
-  const flares = flaresFromNotifications(await fetchType('FLR-notifications', { type: 'FLR' }));
+  const seps = await fetchType('SEP', normalizeSEP);
+  const flares = dedupeFlares(await fetchType('FLR-notifications', flaresFromNotifications, { type: 'FLR' }));
   console.log(`  FLR: ${flares.length} erupções extraídas das notificações`);
-  const marsCMEs = curateMarsCMEs(await fetchType('WSAEnlilSimulations'));
+  const marsCMEs = dedupeMarsCMEs(await fetchType('WSAEnlilSimulations', curateMarsCMEs));
   console.log(`  CME-MARS: ${marsCMEs.length} CMEs com impacto previsto em Marte`);
   const events = curate(seps, flares, marsCMEs);
 
@@ -234,6 +313,10 @@ async function main() {
 
   console.log('\nGerado data/donki-solar-events.json', out.counts);
   console.log(`Gerado public/data/donki-flares.json (${game.flares.length} erupções M/X)`);
+  console.log(
+    `\nRequisições à API: ${stats.requests} | blocos do cache: ${stats.cached}` +
+      (stats.rateLimitRemaining !== null ? ` | limite restante nesta hora: ${stats.rateLimitRemaining}` : ''),
+  );
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
