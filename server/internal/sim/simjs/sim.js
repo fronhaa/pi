@@ -963,6 +963,16 @@ var JezeroSim = (function(exports) {
 		if (m.state.pendingCard || !m.isPlanValid(plan)) return "null";
 		return JSON.stringify(m.previewSol(plan));
 	}
+	/** EVA proibida hoje (tempestade avisada)? Regra em Mission.evaBanned. */
+	function evaBanned() {
+		return current().evaBanned;
+	}
+	/** O problema pode ser consertado agora? Com a EVA proibida, os de fora não (ninguém pode sair). */
+	function canResolve(uid) {
+		const m = current();
+		const p = m.state.problems.find((x) => x.uid === uid);
+		return !!p && !(m.evaBanned && PROBLEMS[p.kind].outside);
+	}
 	function openProblem(uid) {
 		current().openProblem(uid);
 	}
@@ -984,8 +994,10 @@ var JezeroSim = (function(exports) {
 		return JSON.stringify(CONFIG);
 	}
 	exports.answerCard = answerCard;
+	exports.canResolve = canResolve;
 	exports.config = config;
 	exports.endSol = endSol;
+	exports.evaBanned = evaBanned;
 	exports.isPlanValid = isPlanValid;
 	exports.newMission = newMission;
 	exports.openProblem = openProblem;

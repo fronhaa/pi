@@ -41,7 +41,7 @@ type errorMsg struct {
 
 var knownErrors = []error{
 	errRoomFull, errRoomNotFound, errRoleTaken, errNeedCommander, errBadToken, errTooManyRooms,
-	ErrNotYourRole, ErrWrongPhase, ErrInvalidInput, ErrCardPending,
+	ErrNotYourRole, ErrWrongPhase, ErrInvalidInput, ErrCardPending, errEvaBusy, errEvaBanned,
 }
 
 func errorCode(err error) string {
