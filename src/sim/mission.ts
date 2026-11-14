@@ -2,6 +2,7 @@ import { CONFIG, type FlareClass } from './config.ts';
 import { CARDS, CARD_IDS, applyCardOption, clamp, onCardDrawn } from './cards.ts';
 import { createRng, type Rng } from './rng.ts';
 import { PROBLEMS, scheduleProblems } from './problems.ts';
+import { simulateDay, stormDose, type DayResult } from './day.ts';
 import type { EnergyPlan, Flare, GameState, HistoricalMission, Message, Problem, ReportLine, Resources, ScheduledStorm, SolReport } from './types.ts';
 
 /** Cartas substituídas pelos problemas da tripulação (GDD: "Eles substituem as cartas..."). */
@@ -213,93 +214,68 @@ export class Mission {
     if (s.pendingCard) throw new Error('Responda a carta antes de terminar o sol');
     if (!this.isPlanValid(plan)) throw new Error('Plano de energia inválido');
 
-    const r = s.res;
-    const before: Resources = { ...r };
+    const before: Resources = { ...s.res };
     const lines: ReportLine[] = [...this.cardLines];
     const storm = this.stormToday;
-    const leftover = s.blocks - plan.life - plan.shield - plan.science;
 
-    // Suporte de vida: 3 blocos = estável; cada bloco a mais ou a menos muda 6.
-    const lifeDelta = (plan.life - CONFIG.life.stableBlocks) * CONFIG.life.perBlock;
-    r.life = clamp(r.life + lifeDelta, 0, CONFIG.life.max);
-    lines.push({
-      key: lifeDelta === 0 ? 'report.life.stable' : lifeDelta > 0 ? 'report.life.up' : 'report.life.down',
-      params: { blocks: plan.life, delta: Math.abs(lifeDelta) },
-      tone: lifeDelta < 0 ? 'bad' : lifeDelta > 0 ? 'good' : 'neutral',
-    });
-
-    // Blindagem: desgaste diário, reforço por bloco.
-    const shieldDelta = plan.shield * CONFIG.shield.perBlock - CONFIG.shield.decay;
-    r.shield = clamp(r.shield + shieldDelta, 0, CONFIG.shield.max);
-    lines.push({
-      key: 'report.shield',
-      params: { blocks: plan.shield, value: Math.round(r.shield) },
-      tone: shieldDelta < 0 ? 'bad' : 'good',
-    });
-
-    // Ciência: metade no sol de tempestade.
+    // Problemas: em noite de tempestade, trabalho pela metade continua amanhã (GDD); o resto cobra a conta hoje.
     const unresolved = s.problems.filter((p) => p.status !== 'done');
-    // Em noite de tempestade, trabalho pela metade continua amanhã (GDD); o resto cobra a conta hoje.
     const carried = storm ? unresolved.filter((p) => p.progress > 0) : [];
     const failed = unresolved.filter((p) => !carried.includes(p));
-    const roverStuck = failed.some((p) => p.kind === 'roverStuck');
 
-    const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (storm ? CONFIG.science.stormFactor : 1);
-    r.science += sciGain;
-    if (roverStuck && plan.science > 0) {
+    // O cálculo é o mesmo da prévia (src/sim/day.ts); aqui só montamos o relatório.
+    const day = simulateDay({
+      res: s.res,
+      plan,
+      blocks: s.blocks,
+      stormClass: storm ? storm.flare.cls : null,
+      dustHold: s.dustHold > 0,
+      failed: failed.map((p) => p.kind),
+    });
+    const r = day.after;
+    s.res = r;
+
+    lines.push({
+      key: day.lifeDelta === 0 ? 'report.life.stable' : day.lifeDelta > 0 ? 'report.life.up' : 'report.life.down',
+      params: { blocks: plan.life, delta: Math.abs(day.lifeDelta) },
+      tone: day.lifeDelta < 0 ? 'bad' : day.lifeDelta > 0 ? 'good' : 'neutral',
+    });
+    lines.push({
+      key: 'report.shield',
+      params: { blocks: plan.shield, value: Math.round(clamp(before.shield + day.shieldDelta, 0, CONFIG.shield.max)) },
+      tone: day.shieldDelta < 0 ? 'bad' : 'good',
+    });
+    if (day.roverStuck && plan.science > 0) {
       lines.push({ key: 'report.problem.roverStuck', params: { blocks: plan.science }, tone: 'bad' });
     } else if (plan.science > 0) {
-      lines.push({ key: storm ? 'report.science.storm' : 'report.science', params: { blocks: plan.science, gain: sciGain }, tone: 'good' });
+      lines.push({ key: storm ? 'report.science.storm' : 'report.science', params: { blocks: plan.science, gain: day.sciGain }, tone: 'good' });
     }
+    if (day.leftover > 0) lines.push({ key: 'report.battery.saved', params: { blocks: day.leftover, gain: day.leftover * CONFIG.battery.perLeftoverBlock } });
+    if (day.missing > 0) lines.push({ key: 'report.night.short', params: { missing: day.missing, lifeLost: day.lifeLost }, tone: 'bad' });
+    else lines.push({ key: 'report.night.ok', params: { cost: CONFIG.battery.nightCost } });
 
-    // Bateria: guarda o que sobrou, a noite cobra.
-    r.battery = Math.min(CONFIG.battery.max, r.battery + leftover * CONFIG.battery.perLeftoverBlock);
-    if (leftover > 0) lines.push({ key: 'report.battery.saved', params: { blocks: leftover, gain: leftover * CONFIG.battery.perLeftoverBlock } });
-    r.battery -= CONFIG.battery.nightCost;
-    if (r.battery < 0) {
-      const missing = -r.battery;
-      const lifeLost = round1(missing * CONFIG.battery.lifePerMissingPoint);
-      r.life = clamp(r.life - lifeLost, 0, CONFIG.life.max);
-      r.battery = 0;
-      lines.push({ key: 'report.night.short', params: { missing, lifeLost }, tone: 'bad' });
-    } else {
-      lines.push({ key: 'report.night.ok', params: { cost: CONFIG.battery.nightCost } });
-    }
-
-    // Tempestade solar: dose depende da blindagem.
     let stormResult: SolReport['storm'] = null;
     if (storm) {
-      const dose = stormDose(storm.flare.cls, r.shield);
-      r.dose += dose;
-      stormResult = { flare: storm.flare, dose };
+      stormResult = { flare: storm.flare, dose: day.stormDose };
       const key = storm.flare.source === 'cme' ? 'report.storm.cme' : 'report.storm';
-      lines.push({ key, params: { label: storm.flare.label, dose, shield: Math.round(r.shield) }, tone: 'bad' });
+      const shieldAtStorm = clamp(before.shield + day.shieldDelta, 0, CONFIG.shield.max);
+      lines.push({ key, params: { label: storm.flare.label, dose: day.stormDose, shield: Math.round(shieldAtStorm) }, tone: 'bad' });
     }
-    r.dose += CONFIG.dose.perSol;
 
-    // Poeira: vento limpa, exceto durante a tempestade de poeira.
     if (s.dustHold > 0) {
       s.dustHold--;
-      if (r.dust > 0) lines.push({ key: 'report.dust.hold', params: { dust: Math.round(r.dust) }, tone: 'bad' });
-    } else if (r.dust > 0) {
-      r.dust = Math.max(0, r.dust - CONFIG.dust.windCleanPerSol);
-      lines.push({ key: 'report.dust.wind', params: { dust: Math.round(r.dust) } });
+      if (before.dust > 0) lines.push({ key: 'report.dust.hold', params: { dust: Math.round(before.dust) }, tone: 'bad' });
+    } else if (before.dust > 0) {
+      lines.push({ key: 'report.dust.wind', params: { dust: Math.round(Math.max(0, before.dust - CONFIG.dust.windCleanPerSol)) } });
     }
 
-    // Problemas sem atendimento: a consequência chega à noite (GDD, tabela "Problemas pela base").
     const fx = CONFIG.problems.effects;
     for (const p of failed) {
-      if (p.kind === 'dustyPanels') r.dust = Math.min(CONFIG.dust.max, r.dust + fx.dust);
-      if (p.kind === 'greenhouseLeak') r.life = clamp(r.life - fx.lifeLeak, 0, CONFIG.life.max);
-      if (p.kind === 'tornBag') r.shield = clamp(r.shield - fx.shieldBag, 0, CONFIG.shield.max);
       if (p.kind === 'antenna') this.nextCommsDown = true;
       if (p.kind !== 'roverStuck') lines.push({ key: `report.problem.failed.${p.kind}`, params: fx, tone: 'bad' });
     }
     for (const p of carried) lines.push({ key: 'report.problem.carried', params: { problem: `problem.${p.kind}` } });
     this.carryOver = carried.map((p) => ({ ...p, status: 'open' as const, spawnAt: 0 }));
-
-    r.life = round1(r.life);
-    r.dose = round1(r.dose);
 
     const report: SolReport = { sol: s.sol, plan: { ...plan }, before, after: { ...r }, storm: stormResult, lines };
     s.reports.push(report);
@@ -310,6 +286,31 @@ export class Mission {
       else this.startSol(s.sol + 1);
     }
     return report;
+  }
+
+  /**
+   * Prévia do plano de energia: o que acontece se o sol terminar com este plano, SEM contar os
+   * problemas do dia (ainda não apareceram). Usa o mesmo cálculo do fim do sol; não muda nada.
+   */
+  previewSol(plan: EnergyPlan): DayResult & { stormTonight: Flare | null; stormTomorrow: Flare | null; doseTomorrowIfNow: number } {
+    const s = this.state;
+    const storm = this.stormToday;
+    const day = simulateDay({
+      res: s.res,
+      plan,
+      blocks: s.blocks,
+      stormClass: storm ? storm.flare.cls : null,
+      dustHold: s.dustHold > 0,
+      failed: [],
+    });
+    // Aviso que a criança já recebeu: tempestade amanhã. Quanto ela daria com a blindagem desta noite?
+    const tomorrow = s.messages.some((m) => m.kind === 'stormAlert') ? s.storms.find((x) => x.sol === s.sol + 1) : undefined;
+    return {
+      ...day,
+      stormTonight: storm ? storm.flare : null,
+      stormTomorrow: tomorrow ? tomorrow.flare : null,
+      doseTomorrowIfNow: tomorrow ? stormDose(tomorrow.flare.cls, day.after.shield) : 0,
+    };
   }
 
   private checkLoss(): void {
@@ -327,11 +328,7 @@ export class Mission {
   }
 }
 
-/** dose = max(1, round(intensidade × (1 − blindagem/100 × 0,85))). Escala do jogo (INTERPRETADO). */
-export function stormDose(cls: FlareClass, shield: number): number {
-  const intensity = CONFIG.solarStorms.intensity[cls];
-  return Math.max(1, Math.round(intensity * (1 - (shield / 100) * CONFIG.dose.shieldFactor)));
-}
+export { stormDose } from './day.ts';
 
 function range(a: number, b: number): number[] {
   return Array.from({ length: b - a + 1 }, (_, i) => a + i);

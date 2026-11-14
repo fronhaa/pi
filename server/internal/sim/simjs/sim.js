@@ -326,6 +326,60 @@ var JezeroSim = (function(exports) {
 		}
 		return e;
 	}
+	// src/sim/day.ts
+	function simulateDay(input) {
+		const { plan, blocks, stormClass, dustHold, failed } = input;
+		const r = _objectSpread2({}, input.res);
+		const leftover = blocks - plan.life - plan.shield - plan.science;
+		const lifeDelta = (plan.life - CONFIG.life.stableBlocks) * CONFIG.life.perBlock;
+		r.life = clamp(r.life + lifeDelta, 0, CONFIG.life.max);
+		const shieldDelta = plan.shield * CONFIG.shield.perBlock - CONFIG.shield.decay;
+		r.shield = clamp(r.shield + shieldDelta, 0, CONFIG.shield.max);
+		const roverStuck = failed.includes("roverStuck");
+		const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (stormClass ? CONFIG.science.stormFactor : 1);
+		r.science += sciGain;
+		r.battery = Math.min(CONFIG.battery.max, r.battery + leftover * CONFIG.battery.perLeftoverBlock);
+		r.battery -= CONFIG.battery.nightCost;
+		let missing = 0;
+		let lifeLost = 0;
+		if (r.battery < 0) {
+			missing = -r.battery;
+			lifeLost = round1$1(missing * CONFIG.battery.lifePerMissingPoint);
+			r.life = clamp(r.life - lifeLost, 0, CONFIG.life.max);
+			r.battery = 0;
+		}
+		const sd = stormClass ? stormDose(stormClass, r.shield) : 0;
+		r.dose += sd;
+		r.dose += CONFIG.dose.perSol;
+		if (!dustHold && r.dust > 0) r.dust = Math.max(0, r.dust - CONFIG.dust.windCleanPerSol);
+		const fx = CONFIG.problems.effects;
+		for (const kind of failed) {
+			if (kind === "dustyPanels") r.dust = Math.min(CONFIG.dust.max, r.dust + fx.dust);
+			if (kind === "greenhouseLeak") r.life = clamp(r.life - fx.lifeLeak, 0, CONFIG.life.max);
+			if (kind === "tornBag") r.shield = clamp(r.shield - fx.shieldBag, 0, CONFIG.shield.max);
+		}
+		r.life = round1$1(r.life);
+		r.dose = round1$1(r.dose);
+		return {
+			after: r,
+			leftover,
+			lifeDelta,
+			shieldDelta,
+			sciGain,
+			roverStuck,
+			missing,
+			lifeLost,
+			stormDose: sd
+		};
+	}
+	/** dose = max(1, round(intensidade × (1 − blindagem/100 × 0,85))). Escala do jogo (INTERPRETADO). */
+	function stormDose(cls, shield) {
+		const intensity = CONFIG.solarStorms.intensity[cls];
+		return Math.max(1, Math.round(intensity * (1 - shield / 100 * CONFIG.dose.shieldFactor)));
+	}
+	function round1$1(n) {
+		return Math.round(n * 10) / 10;
+	}
 	// src/sim/mission.ts
 	/** Cartas substituídas pelos problemas da tripulação (GDD: "Eles substituem as cartas..."). */
 	var CARD_POOL = CARD_IDS.filter((id) => id !== "dustyPanels" && id !== "greenhouseLeak");
@@ -544,38 +598,39 @@ var JezeroSim = (function(exports) {
 			if (s.outcome.status !== "playing") throw new Error("Missão já terminou");
 			if (s.pendingCard) throw new Error("Responda a carta antes de terminar o sol");
 			if (!this.isPlanValid(plan)) throw new Error("Plano de energia inválido");
-			const r = s.res;
-			const before = _objectSpread2({}, r);
+			const before = _objectSpread2({}, s.res);
 			const lines = [...this.cardLines];
 			const storm = this.stormToday;
-			const leftover = s.blocks - plan.life - plan.shield - plan.science;
-			const lifeDelta = (plan.life - CONFIG.life.stableBlocks) * CONFIG.life.perBlock;
-			r.life = clamp(r.life + lifeDelta, 0, CONFIG.life.max);
+			const unresolved = s.problems.filter((p) => p.status !== "done");
+			const carried = storm ? unresolved.filter((p) => p.progress > 0) : [];
+			const failed = unresolved.filter((p) => !carried.includes(p));
+			const day = simulateDay({
+				res: s.res,
+				plan,
+				blocks: s.blocks,
+				stormClass: storm ? storm.flare.cls : null,
+				dustHold: s.dustHold > 0,
+				failed: failed.map((p) => p.kind)
+			});
+			const r = day.after;
+			s.res = r;
 			lines.push({
-				key: lifeDelta === 0 ? "report.life.stable" : lifeDelta > 0 ? "report.life.up" : "report.life.down",
+				key: day.lifeDelta === 0 ? "report.life.stable" : day.lifeDelta > 0 ? "report.life.up" : "report.life.down",
 				params: {
 					blocks: plan.life,
-					delta: Math.abs(lifeDelta)
+					delta: Math.abs(day.lifeDelta)
 				},
-				tone: lifeDelta < 0 ? "bad" : lifeDelta > 0 ? "good" : "neutral"
+				tone: day.lifeDelta < 0 ? "bad" : day.lifeDelta > 0 ? "good" : "neutral"
 			});
-			const shieldDelta = plan.shield * CONFIG.shield.perBlock - CONFIG.shield.decay;
-			r.shield = clamp(r.shield + shieldDelta, 0, CONFIG.shield.max);
 			lines.push({
 				key: "report.shield",
 				params: {
 					blocks: plan.shield,
-					value: Math.round(r.shield)
+					value: Math.round(clamp(before.shield + day.shieldDelta, 0, CONFIG.shield.max))
 				},
-				tone: shieldDelta < 0 ? "bad" : "good"
+				tone: day.shieldDelta < 0 ? "bad" : "good"
 			});
-			const unresolved = s.problems.filter((p) => p.status !== "done");
-			const carried = storm ? unresolved.filter((p) => p.progress > 0) : [];
-			const failed = unresolved.filter((p) => !carried.includes(p));
-			const roverStuck = failed.some((p) => p.kind === "roverStuck");
-			const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (storm ? CONFIG.science.stormFactor : 1);
-			r.science += sciGain;
-			if (roverStuck && plan.science > 0) lines.push({
+			if (day.roverStuck && plan.science > 0) lines.push({
 				key: "report.problem.roverStuck",
 				params: { blocks: plan.science },
 				tone: "bad"
@@ -584,75 +639,60 @@ var JezeroSim = (function(exports) {
 				key: storm ? "report.science.storm" : "report.science",
 				params: {
 					blocks: plan.science,
-					gain: sciGain
+					gain: day.sciGain
 				},
 				tone: "good"
 			});
-			r.battery = Math.min(CONFIG.battery.max, r.battery + leftover * CONFIG.battery.perLeftoverBlock);
-			if (leftover > 0) lines.push({
+			if (day.leftover > 0) lines.push({
 				key: "report.battery.saved",
 				params: {
-					blocks: leftover,
-					gain: leftover * CONFIG.battery.perLeftoverBlock
+					blocks: day.leftover,
+					gain: day.leftover * CONFIG.battery.perLeftoverBlock
 				}
 			});
-			r.battery -= CONFIG.battery.nightCost;
-			if (r.battery < 0) {
-				const missing = -r.battery;
-				const lifeLost = round1(missing * CONFIG.battery.lifePerMissingPoint);
-				r.life = clamp(r.life - lifeLost, 0, CONFIG.life.max);
-				r.battery = 0;
-				lines.push({
-					key: "report.night.short",
-					params: {
-						missing,
-						lifeLost
-					},
-					tone: "bad"
-				});
-			} else lines.push({
+			if (day.missing > 0) lines.push({
+				key: "report.night.short",
+				params: {
+					missing: day.missing,
+					lifeLost: day.lifeLost
+				},
+				tone: "bad"
+			});
+			else lines.push({
 				key: "report.night.ok",
 				params: { cost: CONFIG.battery.nightCost }
 			});
 			let stormResult = null;
 			if (storm) {
-				const dose = stormDose(storm.flare.cls, r.shield);
-				r.dose += dose;
 				stormResult = {
 					flare: storm.flare,
-					dose
+					dose: day.stormDose
 				};
 				const key = storm.flare.source === "cme" ? "report.storm.cme" : "report.storm";
+				const shieldAtStorm = clamp(before.shield + day.shieldDelta, 0, CONFIG.shield.max);
 				lines.push({
 					key,
 					params: {
 						label: storm.flare.label,
-						dose,
-						shield: Math.round(r.shield)
+						dose: day.stormDose,
+						shield: Math.round(shieldAtStorm)
 					},
 					tone: "bad"
 				});
 			}
-			r.dose += CONFIG.dose.perSol;
 			if (s.dustHold > 0) {
 				s.dustHold--;
-				if (r.dust > 0) lines.push({
+				if (before.dust > 0) lines.push({
 					key: "report.dust.hold",
-					params: { dust: Math.round(r.dust) },
+					params: { dust: Math.round(before.dust) },
 					tone: "bad"
 				});
-			} else if (r.dust > 0) {
-				r.dust = Math.max(0, r.dust - CONFIG.dust.windCleanPerSol);
-				lines.push({
-					key: "report.dust.wind",
-					params: { dust: Math.round(r.dust) }
-				});
-			}
+			} else if (before.dust > 0) lines.push({
+				key: "report.dust.wind",
+				params: { dust: Math.round(Math.max(0, before.dust - CONFIG.dust.windCleanPerSol)) }
+			});
 			const fx = CONFIG.problems.effects;
 			for (const p of failed) {
-				if (p.kind === "dustyPanels") r.dust = Math.min(CONFIG.dust.max, r.dust + fx.dust);
-				if (p.kind === "greenhouseLeak") r.life = clamp(r.life - fx.lifeLeak, 0, CONFIG.life.max);
-				if (p.kind === "tornBag") r.shield = clamp(r.shield - fx.shieldBag, 0, CONFIG.shield.max);
 				if (p.kind === "antenna") this.nextCommsDown = true;
 				if (p.kind !== "roverStuck") lines.push({
 					key: `report.problem.failed.${p.kind}`,
@@ -668,8 +708,6 @@ var JezeroSim = (function(exports) {
 				status: "open",
 				spawnAt: 0
 			}));
-			r.life = round1(r.life);
-			r.dose = round1(r.dose);
 			const report = {
 				sol: s.sol,
 				plan: _objectSpread2({}, plan),
@@ -688,6 +726,28 @@ var JezeroSim = (function(exports) {
 				else this.startSol(s.sol + 1);
 			}
 			return report;
+		}
+		/**
+		* Prévia do plano de energia: o que acontece se o sol terminar com este plano, SEM contar os
+		* problemas do dia (ainda não apareceram). Usa o mesmo cálculo do fim do sol; não muda nada.
+		*/
+		previewSol(plan) {
+			const s = this.state;
+			const storm = this.stormToday;
+			const day = simulateDay({
+				res: s.res,
+				plan,
+				blocks: s.blocks,
+				stormClass: storm ? storm.flare.cls : null,
+				dustHold: s.dustHold > 0,
+				failed: []
+			});
+			const tomorrow = s.messages.some((m) => m.kind === "stormAlert") ? s.storms.find((x) => x.sol === s.sol + 1) : void 0;
+			return _objectSpread2(_objectSpread2({}, day), {}, {
+				stormTonight: storm ? storm.flare : null,
+				stormTomorrow: tomorrow ? tomorrow.flare : null,
+				doseTomorrowIfNow: tomorrow ? stormDose(tomorrow.flare.cls, day.after.shield) : 0
+			});
 		}
 		checkLoss() {
 			const s = this.state;
@@ -710,11 +770,6 @@ var JezeroSim = (function(exports) {
 			return 3;
 		}
 	};
-	/** dose = max(1, round(intensidade × (1 − blindagem/100 × 0,85))). Escala do jogo (INTERPRETADO). */
-	function stormDose(cls, shield) {
-		const intensity = CONFIG.solarStorms.intensity[cls];
-		return Math.max(1, Math.round(intensity * (1 - shield / 100 * CONFIG.dose.shieldFactor)));
-	}
 	function range(a, b) {
 		return Array.from({ length: b - a + 1 }, (_, i) => a + i);
 	}
@@ -798,6 +853,13 @@ var JezeroSim = (function(exports) {
 	function endSol(planJson) {
 		return JSON.stringify(current().endSol(JSON.parse(planJson)));
 	}
+	/** Prévia do plano (a mesma conta do fim do sol). "null" se a carta ainda não foi respondida ou o plano é inválido. */
+	function previewSol(planJson) {
+		const m = current();
+		const plan = JSON.parse(planJson);
+		if (m.state.pendingCard || !m.isPlanValid(plan)) return "null";
+		return JSON.stringify(m.previewSol(plan));
+	}
 	function openProblem(uid) {
 		current().openProblem(uid);
 	}
@@ -826,6 +888,7 @@ var JezeroSim = (function(exports) {
 	exports.openProblem = openProblem;
 	exports.parseMissionsJson = parseMissionsJson;
 	exports.pickHistoricalJson = pickHistoricalJson;
+	exports.previewSol = previewSol;
 	exports.resolveProblem = resolveProblem;
 	exports.setProblemProgress = setProblemProgress;
 	exports.state = state;

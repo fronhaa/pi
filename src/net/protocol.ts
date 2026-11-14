@@ -1,4 +1,8 @@
 import type { Card, EnergyPlan, Flare, Message, Outcome, Problem, Resources, ScheduledStorm, SolReport } from '@/sim/types';
+import type { Mission } from '@/sim/mission';
+
+/** Prévia do plano: o servidor calcula com as mesmas regras (Mission.previewSol). */
+export type PlanPreview = ReturnType<Mission['previewSol']>;
 
 /**
  * Protocolo do servidor coop (server/internal/coop). Guia: docs/servidor-coop.md.
@@ -52,6 +56,8 @@ export interface MarsView {
   day?: { remaining: number; paused: boolean };
   commsDown: boolean;
   historical?: { id: number; difficulty: string; startUtc: string };
+  /** Prévia do plano atual (só na fase "mars", sem carta pendente). */
+  preview?: PlanPreview;
 }
 
 export interface ForecastItem {

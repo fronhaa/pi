@@ -318,6 +318,9 @@ type MarsView struct {
 	Day         *DayView             `json:"day,omitempty"`        // só na fase "day"
 	CommsDown   bool                 `json:"commsDown"`
 	Historical  *HistoricalView      `json:"historical,omitempty"`
+	// Prévia do plano atual (mesma conta do fim do sol). Com jogador na Terra, sem a tempestade
+	// de amanhã: avisar é papel da Terra.
+	Preview json.RawMessage `json:"preview,omitempty"`
 }
 
 type EarthView struct {
@@ -398,6 +401,9 @@ func (r *Room) viewFor(id string) StateMsg {
 		}
 		if h := s.Historical; h != nil {
 			mv.Historical = &HistoricalView{ID: h.ID, Difficulty: h.Difficulty, StartUtc: h.StartUtc}
+		}
+		if g.Phase == PhaseMars {
+			mv.Preview = g.preview()
 		}
 		msg.Mars = mv
 	}

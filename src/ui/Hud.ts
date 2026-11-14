@@ -1,6 +1,11 @@
 import { CONFIG } from '@/sim/config';
 import type { EnergyPlan, Flare, GameState, ProblemKind, Resources } from '@/sim/types';
 import { PROBLEMS } from '@/sim/problems';
+import type { Mission } from '@/sim/mission';
+import { CONFIG as SIM } from '@/sim/config';
+
+/** Prévia calculada pela simulação (Mission.previewSol). */
+export type PlanPreview = ReturnType<Mission['previewSol']>;
 import { formatDate, getLang, t, type StringKey } from '@/i18n';
 import type { MarsMessage } from '@/net/protocol';
 import { h, openDialog } from './dom';
@@ -13,6 +18,8 @@ export interface DayView {
 }
 
 export interface HudCallbacks {
+  /** Prévia do plano: o que acontece se o sol terminar com este plano (mesmo cálculo do jogo). */
+  preview?(plan: EnergyPlan): PlanPreview | null;
   /** "Terminar o sol" ou "Começar o dia" (quando há problemas hoje). */
   onEndSol(plan: EnergyPlan): void;
   onSendProblem(uid: number): void;
@@ -245,12 +252,37 @@ export class Hud {
     for (const k of PLAN_KEYS) for (let i = 0; i < this.plan[k]; i++) blocks.append(h('span', { class: k }));
     for (let i = 0; i < leftover; i++) blocks.append(h('span', { class: 'battery' }));
 
+    // Prévia: o resultado previsto de cada linha, recalculado a cada + ou −.
+    const pv = blocked ? null : this.cb.preview?.(this.getPlan()) ?? null;
+    const fmt = (n: number) => (Math.round(n * 10) / 10).toLocaleString(getLang() === 'pt' ? 'pt-BR' : 'en');
+    const arrow = (from: number, to: number, label?: string) => {
+      const d = Math.round((to - from) * 10) / 10;
+      const cls = d > 0 ? 'up' : d < 0 ? 'down' : 'same';
+      return h('span', { class: `forecast ${cls}` }, `${label ? label + ' ' : ''}${fmt(from)} → ${fmt(to)}`);
+    };
+    const forecastFor = (k: PlanKey) => {
+      if (!pv) return null;
+      if (k === 'life') return arrow(s.res.life, pv.after.life, t('preview.tonight'));
+      if (k === 'shield') return arrow(s.res.shield, pv.after.shield, t('preview.tonight'));
+      return h('span', { class: `forecast ${pv.sciGain > 0 ? 'up' : 'same'}` }, pv.stormTonight && pv.sciGain > 0 ? t('preview.scienceStorm', { n: fmt(pv.sciGain) }) : `+${fmt(pv.sciGain)}`);
+    };
+    const warnings: { text: string; tone: 'bad' | 'warn' | 'info' }[] = [];
+    if (pv) {
+      if (pv.missing > 0) warnings.push({ text: t('preview.batteryShort', { life: fmt(pv.lifeLost) }), tone: 'bad' });
+      if (pv.stormTonight) warnings.push({ text: t('preview.stormTonight', { label: pv.stormTonight.label, dose: pv.stormDose, shield: Math.round(Math.min(SIM.shield.max, Math.max(0, s.res.shield + pv.shieldDelta))) }), tone: 'bad' });
+      if (pv.stormTomorrow) warnings.push({ text: t('preview.stormTomorrow', { label: pv.stormTomorrow.label, dose: pv.doseTomorrowIfNow, shield: Math.round(pv.after.shield) }), tone: 'warn' });
+      if (pv.after.life <= 0) warnings.push({ text: t('preview.lifeZero'), tone: 'bad' });
+      else if (pv.after.life <= 25) warnings.push({ text: t('preview.lifeLow', { v: fmt(pv.after.life) }), tone: 'bad' });
+      if (pv.after.dose >= SIM.dose.max) warnings.push({ text: t('preview.doseMax'), tone: 'bad' });
+      else if (s.res.dose < SIM.stars.doseFor3 && pv.after.dose >= SIM.stars.doseFor3) warnings.push({ text: t('preview.doseStar', { v: fmt(pv.after.dose) }), tone: 'warn' });
+    }
+
     const row = (k: PlanKey) => {
       const name = t(`plan.${k}` as StringKey);
       return h(
         'div',
         { class: 'plan-row' },
-        h('div', { class: 'name' }, name, h('small', {}, t(`plan.hint.${k}` as StringKey))),
+        h('div', { class: 'name' }, name, forecastFor(k), h('small', {}, t(`plan.hint.${k}` as StringKey))),
         h('button', { type: 'button', 'aria-label': t('plan.minus', { name }), disabled: blocked || !canEdit(k) || this.plan[k] === 0, onclick: () => this.change(k, -1) }, '−'),
         h('div', { class: 'count', 'aria-live': 'polite' }, String(this.plan[k])),
         h('button', { type: 'button', 'aria-label': t('plan.plus', { name }), disabled: blocked || !canEdit(k) || leftover === 0, onclick: () => this.change(k, +1) }, '+'),
@@ -270,9 +302,14 @@ export class Hud {
       ),
       ...PLAN_KEYS.map(row),
       h('div', { class: 'plan-row battery' },
-        h('div', { class: 'name' }, t('plan.battery'), h('small', {}, t('plan.hint.battery'))),
+        h('div', { class: 'name' }, t('plan.battery'), pv ? arrow(s.res.battery, pv.after.battery, t('preview.afterNight')) : null, h('small', {}, t('plan.hint.battery'))),
         h('span'), h('div', { class: 'count' }, String(leftover)), h('span'),
       ),
+      ...(pv ? [h('div', { class: 'preview', 'aria-live': 'polite' },
+        ...warnings.map((w) => h('p', { class: `warn tone-${w.tone}` }, w.text)),
+        warnings.length === 0 ? h('p', { class: 'warn tone-ok' }, t('preview.allGood')) : null,
+        s.problems.length > 0 ? h('p', { class: 'note' }, t('preview.noProblems')) : null,
+      )] : []),
       h('div', { class: 'plan-actions' },
         h('button', {
           class: 'btn primary', type: 'button', disabled: blocked || (coop !== null && !coop.canEnd),

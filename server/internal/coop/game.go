@@ -4,6 +4,7 @@
 package coop
 
 import (
+	"encoding/json"
 	"errors"
 	"slices"
 
@@ -330,6 +331,24 @@ func (g *Game) nextStorm() *sim.ScheduledStorm {
 		}
 	}
 	return nil
+}
+
+// preview: prévia do plano atual. Com jogador na Terra, esconde a tempestade de amanhã.
+func (g *Game) preview() json.RawMessage {
+	raw, err := g.Mission.PreviewSol(g.Plan)
+	if err != nil || string(raw) == "null" {
+		return nil
+	}
+	if g.AutoEarth {
+		return raw
+	}
+	var p map[string]any
+	if json.Unmarshal(raw, &p) != nil {
+		return nil
+	}
+	p["stormTomorrow"], p["doseTomorrowIfNow"] = nil, 0
+	out, _ := json.Marshal(p)
+	return out
 }
 
 // MarsMessage é o que aparece em "Mensagens da Terra" para Marte.

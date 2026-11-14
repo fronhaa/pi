@@ -45,6 +45,14 @@ export function endSol(planJson: string): string {
   return JSON.stringify(current().endSol(JSON.parse(planJson) as EnergyPlan));
 }
 
+/** Prévia do plano (a mesma conta do fim do sol). "null" se a carta ainda não foi respondida ou o plano é inválido. */
+export function previewSol(planJson: string): string {
+  const m = current();
+  const plan = JSON.parse(planJson) as EnergyPlan;
+  if (m.state.pendingCard || !m.isPlanValid(plan)) return 'null';
+  return JSON.stringify(m.previewSol(plan));
+}
+
 export function openProblem(uid: number): void {
   current().openProblem(uid);
 }

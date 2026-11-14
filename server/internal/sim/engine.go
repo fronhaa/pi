@@ -179,6 +179,17 @@ func (m *Mission) EndSol(plan EnergyPlan) (SolReport, error) {
 	return r, err
 }
 
+// PreviewSol: prévia do plano calculada pelas regras (Mission.previewSol). JSON pronto para o
+// cliente; null se ainda há carta ou o plano é inválido.
+func (m *Mission) PreviewSol(plan EnergyPlan) (json.RawMessage, error) {
+	pj, _ := json.Marshal(plan)
+	v, err := m.e.call("previewSol", string(pj))
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(v.String()), nil
+}
+
 func (m *Mission) OpenProblem(uid int) error {
 	_, err := m.do("openProblem", uid)
 	return err

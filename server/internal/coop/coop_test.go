@@ -489,3 +489,38 @@ func TestFirstRoomGameUsesMediumHistoricalMission(t *testing.T) {
 		}
 	}
 }
+
+// Com jogador na Terra, a prévia não pode contar da tempestade de amanhã (avisar é papel da Terra).
+func TestPreviewHidesTomorrowStormWithEarthPlayer(t *testing.T) {
+	type pv struct {
+		StormTomorrow any `json:"stormTomorrow"`
+	}
+	seen := 0
+	for seed := uint32(1); seed < 60 && seen < 3; seed++ {
+		auto := NewGame(seed, seed, nil, nil, true)
+		earth := NewGame(seed, seed, nil, nil, false)
+		for auto.Mission.State.Outcome.Status == "playing" && earth.Mission.State.Outcome.Status == "playing" {
+			_ = earth.SendEarth("none")
+			answerAnyCard(t, auto)
+			answerAnyCard(t, earth)
+			if auto.Phase != PhaseMars || earth.Phase != PhaseMars {
+				break
+			}
+			var a, e pv
+			_ = json.Unmarshal(auto.preview(), &a)
+			_ = json.Unmarshal(earth.preview(), &e)
+			if a.StormTomorrow != nil {
+				seen++
+				if e.StormTomorrow != nil {
+					t.Fatalf("seed %d sol %d: a prévia revelou a tempestade de amanhã com jogador na Terra", seed, earth.Mission.State.Sol)
+				}
+			}
+			for _, g := range []*Game{auto, earth} {
+				_, _ = g.EndSol()
+			}
+		}
+	}
+	if seen == 0 {
+		t.Fatal("nenhuma prévia com tempestade amanhã para comparar")
+	}
+}

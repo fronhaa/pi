@@ -281,6 +281,7 @@ Este modo e o modo Terra e Marte funcionam juntos: os dois fazem parte do jogo.
 | Ação | Clique / toque | Teclado |
 | --- | --- | --- |
 | Escolher astronauta | Tocar nele | Teclas **1 a 4** (comandante, engenheiro de voo, oficial médico, cientista) |
+| Ver quem é (mouse) | Passar o mouse: destaque, cursor de mãozinha e o nome do papel; sobre um “!”, o problema e quem será enviado | — |
 | Andar | Tocar no chão; ele anda sozinho até lá | **Setas** ou **WASD**, relativas à câmera |
 | Pular | — | **Espaço** (mostra que a gravidade de Marte é 38% da Terra) |
 | Plano de energia e janelas | Botões | **Tab** e **Enter** |
@@ -427,7 +428,7 @@ Isso é parte do ensino, não enfeite.
 | Noite | A tripulação anda até a escotilha do habitat e entra para dormir; o relatório do sol espera todos entrarem (no mínimo 2,2 s e no máximo 6 s; quem não chegar entra direto). De manhã, todos saem pela mesma porta e voltam andando aos postos, e o jogador pode assumir qualquer um no caminho |
 | Noite de tempestade | A tripulação corre para o abrigo de regolito, entra e sai por ali de manhã |
 | Mensagem da Terra | A antena pisca |
-| Energia na ciência | O rover anda em volta da base |
+| Energia na ciência | O rover anda em volta da base; se um astronauta estiver na rota, ele recalcula e desvia (3 m para dentro ou para fora), também de pedras e prédios; sem rota livre ou com o astronauta colado, para e pisca uma luz âmbar. As rodas giram, ele inclina com o relevo e é sólido: astronautas não o atravessam |
 | Noite | Céu escurece, estrelas aparecem, janelas acendem |
 
 ### O que não usar
@@ -499,6 +500,10 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | Blocos de energia distribuídos com + e −, dicas como "precisa de 3 para não cair", e o botão "Terminar o sol" |
 | Janelas | Tutorial (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
+
+### Prévia do plano de energia
+
+Ao lado de cada linha do plano aparece o resultado previsto para esta noite ("Vida: 70 → 76"), em verde quando sobe e vermelho quando cai, e acima do botão os avisos: bateria acabando, tempestade esta noite (com a dose), tempestade de amanhã (com a dose que daria com a blindagem desta noite), suporte de vida em perigo e dose passando de 50 (perde a 3ª estrela). A criança vê a troca **antes** de decidir. A prévia usa o mesmo cálculo do fim do sol (`src/sim/day.ts`), então nunca mostra um número diferente do que acontece; ela não conta os problemas do dia, que ainda não apareceram, e diz isso.
 
 ### Linguagem
 
