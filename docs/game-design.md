@@ -30,10 +30,10 @@ Ao fim de uma partida, a criança deve conseguir explicar com as próprias palav
 
 1. **Energia é limitada e a noite cobra a conta.** Os painéis só geram energia de dia; o que não for guardado na bateria falta à noite.
 2. **Proteção custa caro, mas a falta de proteção custa a missão.** Reforçar a blindagem tira energia da ciência, mas uma tempestade solar sem blindagem pode encerrar a missão.
-3. **A Terra está longe.** Mensagens levam de 3 a 22 minutos entre a Terra e Marte, conforme a posição dos planetas (nas missões do jogo, de 8 a 20 minutos, valores reais), e às vezes a equipe precisa decidir sozinha.
+3. **A Terra está longe.** Mensagens levam de 3 a 22 minutos entre a Terra e Marte, e às vezes a equipe precisa decidir sozinha.
 4. **Jogar só no seguro também falha.** A missão existe para fazer ciência; sobreviver sem descobrir nada dá só 1 estrela.
 
-Termos científicos que o jogo explica no contexto, nunca de antemão: sol (dia marciano), dose de radiação, blindagem, regolito, tempestade solar.
+Termos científicos que o jogo explica no contexto, nunca de antemão: sol (dia marciano), dose de radiação, blindagem, regolito, erupção solar.
 
 ## Loop de jogo
 
@@ -70,7 +70,7 @@ São três recursos centrais (energia, suporte de vida e blindagem), seguindo o 
 | Ciência | 0 | +3 por bloco; metade disso no sol de tempestade | Meta: 100 |
 | Poeira nos painéis | 0% | Cai 6 pontos percentuais por sol com vento | Máximo 80%; reduz os blocos gerados na mesma proporção |
 
-**Tempestade solar.** Uma ejeção de massa coronal (CME) real do DONKI dispara o evento e define a intensidade dele no jogo pelo tipo de velocidade que o DONKI atribui: S e C = fraca (10), O = média (25), R e ER = forte (45). A troca de erupção (classe C, M, X) por CME aconteceu porque o endpoint de erupções do DONKI (`FLR`) está fora do ar desde pelo menos 2026-11-14 ([apis-nasa.md](apis-nasa.md#donki-clima-espacial)). A dose recebida é calculada assim:
+**Tempestade solar.** Uma erupção real do DONKI dispara o evento e define a intensidade dele no jogo: classe C = fraca (10), M = média (25), X = forte (45). A dose recebida é calculada assim:
 
 ```
 dose = max(1, round(intensidade × (1 − blindagem / 100 × 0,85)))
@@ -78,17 +78,21 @@ dose = max(1, round(intensidade × (1 − blindagem / 100 × 0,85)))
 
 Essa é uma escala do jogo, classificada como INTERPRETADO, e não a dose real na superfície de Marte. O jogo informa isso ao jogador.
 
-Todos esses números são simplificados para o jogo e ficam em um único arquivo de configuração (no protótipo, `src/sim/config.js`). O que é real é a tempestade (a CME), não a escala da dose ([Art Bible, seção 7.5](art-bible.md#75-donki)).
+Todos esses números são simplificados para o jogo e ficam em um único arquivo de configuração (`src/sim/config.ts`). O que é real é a erupção, não a escala da dose ([Art Bible, seção 7.5](art-bible.md#75-donki)).
 
 ## Eventos e decisões
 
-Cada partida sorteia 1 das 6 [missões históricas](#calendário-da-missão-janelas-históricas-reais), que traz 3 tempestades solares reais, além de 1 tempestade de poeira e 4 das 6 cartas de decisão. Assim, nenhuma partida é igual à outra, o que incentiva a criança a testar estratégias diferentes.
+Cada partida sorteia 3 tempestades solares, 1 tempestade de poeira e 4 das 6 cartas de decisão. Assim, nenhuma partida é igual à outra, o que incentiva a criança a testar estratégias diferentes.
 
-**Tempestade solar e atraso de comunicação.** O alerta chega pela antena um sol antes do impacto. Ele diz a força da tempestade, a data real do evento e quantos minutos a mensagem levou para chegar (o atraso real da missão sorteada, calculado pelo JPL Horizons). No sol do impacto, um segundo aviso lembra que é a última chance de reforçar a blindagem. As tempestades acontecem entre o sol 4 e o sol 14, com pelo menos 2 sóis de distância entre elas.
+**Tempestade solar e atraso de comunicação.** O alerta chega pela antena um sol antes do impacto. Ele diz a classe da erupção e quantos minutos a mensagem levou para chegar (sorteado entre 3 e 22). No sol do impacto, um segundo aviso lembra que é a última chance de reforçar a blindagem. As tempestades acontecem entre o sol 4 e o sol 14, com pelo menos 2 sóis de distância entre elas.
 
 ### Calendário da missão: janelas históricas reais
 
+> **Estado: planejado** (aprovado em 2026-11-14). O jogo ainda usa as erupções reais sorteadas de `donki-flares.json` descritas acima. Os dados das missões já estão prontos em [`public/data/missions.json`](../public/data/missions.json); falta a simulação ler o arquivo (backlog #15). Até lá, as regras abaixo são a especificação, não o comportamento atual.
+
 Cada partida acontece numa janela real de 15 sóis do passado. O sol 1 é uma data de verdade, e tudo o que o jogo chama de real vem desses mesmos dias: as tempestades (DONKI), o atraso das mensagens e a posição do Sol (JPL Horizons). Na tela final, o jogo conta: "Sua missão foi de 6 a 21 de maio de 2024. As tempestades aconteceram de verdade."
+
+**Força das tempestades.** As missões usam ejeções de massa coronal (CME) do DONKI, pelo tipo de velocidade: S e C = fraca (10), O = média (25), R e ER = forte (45). Foram escolhidas porque o endpoint de CMEs responde direto, com tipo e velocidade; as erupções do jogo atual vêm de notificações do DONKI ([dados.md](dados.md)). Ao implementar, decidir se a missão usa a CME ou a erupção ligada a ela, e manter uma só regra.
 
 **Como o tempo corre.** Um sol dura 24 h 39 min 35 s ([NASA](https://science.nasa.gov/mars/facts/)). O sol *k* da partida começa em `data inicial + (k − 1) × 1,0275 dia`. Uma tempestade cai no sol que contém o horário de início da CME.
 
@@ -120,7 +124,7 @@ A missão 4 é a melhor para contar a história: a CME do sol 14 (20 de maio de 
 - As janelas são dados baixados. O selo é "dados reais baixados em 2026-11-14", nunca "ao vivo".
 - Sem os dados das missões, o jogo usa tempestades simuladas, marcadas como tal.
 
-**Equilíbrio a refazer.** As janelas reais têm mais tempestades fortes do que o sorteio anterior. Rode `npm run balance` com as 6 missões e confira se a forma da tabela de [equilíbrio esperado](#vitória-derrota-e-estrelas) se mantém, principalmente nas missões 3, 4 e 5. Se uma missão difícil quebrar a estratégia atenta, troque-a por outra janela com a mesma regra de escolha.
+**Equilíbrio a conferir.** As janelas reais têm mais tempestades fortes do que o sorteio atual. Ao implementar, rode `npm run balance` com as 6 missões e confira se a forma da tabela de [equilíbrio esperado](#vitória-derrota-e-estrelas) se mantém, principalmente nas missões 3, 4 e 5. Se uma missão difícil quebrar a estratégia atenta, troque-a por outra janela com a mesma regra de escolha.
 
 **Tempestade de poeira.** Soma 40 pontos percentuais de poeira nos painéis. A poeira fica assim por 3 sóis antes de o vento começar a limpar.
 
@@ -151,12 +155,15 @@ A derrota não pode parecer castigo. A tela final explica o que aconteceu, lista
 
 **Equilíbrio esperado.** Testado com 2.000 partidas simuladas por estratégia (`npm run balance`):
 
-| Estratégia | Resultado |
-| --- | --- |
-| Só ciência, sem guardar bateria | Perde sempre: a bateria acaba à noite |
-| Só segurança, sem ciência | Sempre sobrevive, sempre 1 estrela |
-| Ignora a blindagem | Perde 31% das vezes por radiação |
-| Reage aos alertas e guarda reserva | Sempre sobrevive, 80% das vezes com 3 estrelas |
+| Estratégia | Protótipo original | Este repositório, erupções reais (M5+ e X) | Este repositório, erupções simuladas (C, M, X) |
+| --- | --- | --- | --- |
+| Só ciência, sem guardar bateria | Perde sempre | Perde sempre (suporte de vida) | Perde sempre |
+| Só segurança, sem ciência | Sempre sobrevive, 1 estrela | Sempre sobrevive, 1 estrela | Sempre sobrevive, 1 estrela |
+| Ignora a blindagem | Perde 31% por radiação | **Perde 73% por radiação** | Perde 35% por radiação |
+| Reage aos alertas e guarda reserva | Sobrevive, 80% com 3 estrelas | Sobrevive sempre, ~69% com 3 estrelas | Sobrevive sempre, ~73% com 3 estrelas |
+
+Medição de 2026-11-14 (`npm run balance`, 2.000 partidas por estratégia). Com erupções reais o jogo fica
+mais difícil, porque o DONKI só registra erupções a partir de M5.0 (não há classe C, a "fraca"). A forma se mantém.
 
 Qualquer mudança nos números deve manter essa forma: as duas estratégias extremas falham e a estratégia atenta vence.
 
@@ -179,7 +186,7 @@ flowchart LR
         O["Oficial médico<br/>suporte de vida e dose"] --- B
         S["Cientista<br/>ciência e rover"] --- B
     end
-    T -- "mensagens só pelo jogo,<br/>atraso real da missão,<br/>chegam no sol seguinte" --> C
+    T -- "mensagens só pelo jogo,<br/>atraso de 3 a 22 min,<br/>chegam no sol seguinte" --> C
 ```
 
 A Terra sabe do clima espacial antes, mas não decide. Marte decide, mas recebe os avisos atrasados. Um precisa do outro.
@@ -253,6 +260,17 @@ Este modo e o modo Terra e Marte funcionam juntos: os dois fazem parte do jogo.
 
 **Controle, sem joystick.** A criança toca no astronauta e depois no problema. Ele anda até lá, trabalha e fica ocupado até terminar. No modo solo, um jogador comanda os quatro. No cooperativo, cada jogador de Marte é dono do astronauta do seu papel; com menos de 4 jogadores em Marte, alguém comanda mais de um.
 
+**Dois jeitos de controlar, ao mesmo tempo** (decisão de 14/11/2026, sem menu de configuração):
+
+| Ação | Clique / toque | Teclado |
+| --- | --- | --- |
+| Escolher astronauta | Tocar nele | Teclas **1 a 4** (comandante, engenheiro de voo, oficial médico, cientista) |
+| Andar | Tocar no chão; ele anda sozinho até lá | **Setas** ou **WASD**, relativas à câmera |
+| Pular | — | **Espaço** (mostra que a gravidade de Marte é 38% da Terra) |
+| Plano de energia e janelas | Botões | **Tab** e **Enter** |
+
+A movimentação usa física (Rapier) com a gravidade de Marte, carregada em segundo plano; enquanto ela carrega, ou se falhar, o jogo continua só com a interface.
+
 ### Como fica um sol com as duas opções
 
 1. **Vez da Terra** (só no cooperativo com Terra): vê o clima espacial e envia uma mensagem.
@@ -306,12 +324,12 @@ As três partes somam de 12 a 17 horas, o que aperta o prazo de dois dias. Se o 
 
 ## Dados reais da NASA
 
-As tempestades solares do jogo usam CMEs reais do DONKI, organizadas em [missões históricas](#calendário-da-missão-janelas-históricas-reais). Detalhes técnicos de cada API estão em [apis-nasa.md](apis-nasa.md). Os outros conjuntos de dados entram aos poucos, e cada um mostra no jogo um selo honesto do seu estado.
+As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros conjuntos de dados entram aos poucos, e cada um mostra no jogo um selo honesto do seu estado.
 
 | Fonte | Uso no jogo | Estado no protótipo |
 | --- | --- | --- |
-| [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) (ejeções de massa coronal), via [api.nasa.gov](https://api.nasa.gov/) | Tipo, velocidade e data de cada tempestade das missões históricas; resumo do clima espacial real na tela inicial | Pronto: `public/data/missions.json`, baixado em 2026-11-14; falta o jogo ler o arquivo |
-| [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) (efemérides) | Atraso real das mensagens em cada missão; posição do Sol em Jezero para a luz da cena | Atraso por sol pronto em `missions.json`; posição do Sol planejada |
+| [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) (erupções solares), via [api.nasa.gov](https://api.nasa.gov/) | Classe e data de cada tempestade; resumo do clima espacial real na tela inicial | Snapshot real pronto (305 erupções M5+ e X, de 2016 até a coleta); busca ao vivo pendente. Resumo na tela inicial pendente |
+| [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/) (CMEs) e [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) | [Missões históricas](#calendário-da-missão-janelas-históricas-reais): tempestades com data real e atraso real Terra-Marte por sol | Planejado; dados prontos em `public/data/missions.json` (`npm run data:missions`), falta o jogo ler |
 | [OSDR](https://osdr.nasa.gov/bio/repo/) (pesquisa de saúde no espaço) | Três estudos reais na tela final, rotulados como pesquisas em biologia espacial | Pronto, mas a leitura da resposta não foi testada |
 | [RadLab](https://visualization.osdr.nasa.gov/radlab/gui/data-api/) (dose medida na ISS) | Contexto sobre radiação no espaço, sempre rotulado "medido na ISS, em órbita da Terra"; nunca como dose em Marte | Planejado |
 | [Mars Trek](https://trek.nasa.gov/mars/) (relevo de Marte) | Terreno real da cratera Jezero | Planejado; hoje o terreno é gerado por código |
@@ -320,7 +338,7 @@ As tempestades solares do jogo usam CMEs reais do DONKI, organizadas em [missõe
 **Regras de honestidade (o enunciado do desafio pede isso):**
 
 - O jogo nunca apresenta dado estático como ao vivo. A tela "Dados da NASA" mostra um selo para cada fonte: "ao vivo", "dados reais baixados" (com a data) ou "simulado".
-- Cada alerta de tempestade diz se a tempestade é real (com data e link para o DONKI) ou simulada.
+- Cada alerta de tempestade diz se a erupção é real (com data e link para o DONKI) ou simulada.
 - O jogo avisa que energia, vida, blindagem e dose são simplificados. Só é chamado de real o que veio de uma fonte.
 - As fontes são citadas dentro do jogo, com links.
 
@@ -330,12 +348,13 @@ O jogo segue a [Art Bible (seção 7)](art-bible.md#7-fundamentação-científic
 - as medições do RadLab sempre aparecem como medidas na ISS, em órbita da Terra;
 - os estudos do OSDR aparecem como pesquisas em biologia espacial, não como condições médicas em Marte.
 
-**Ordem de carregamento das tempestades:**
+**Ordem de carregamento das erupções:**
 
-1. O arquivo `public/data/missions.json`, gerado antes do deploy por `npm run data:missions` (DONKI e Horizons).
-2. Tempestades simuladas, marcadas como tal.
+1. API do DONKI ao vivo, chamada do navegador do jogador, com os últimos 60 dias. **Pendente.** Atenção: o endpoint `DONKI/FLR` responde 404 (testado em 2026-11-14); a busca ao vivo precisa usar `DONKI/notifications?type=FLR` (ver [dados.md](dados.md)).
+2. O arquivo `public/data/donki-flares.json`, gerado por `npm run fetch-data` com erupções reais de 2016 até a coleta.
+3. Erupções simuladas, marcadas como tal.
 
-As missões não dependem de chamada ao vivo durante a partida. A API do DONKI ao vivo fica só para o resumo do clima espacial de hoje na tela inicial.
+Ao sortear as tempestades, o jogo prefere as erupções reais de classe M e X da lista carregada, que são as que mais pesam na dose.
 
 ## Direção visual
 
@@ -457,7 +476,7 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 | --- | --- |
 | Barra superior | Nome da missão e local, "Sol N de 15", botões "Dados da NASA" e idioma |
 | Recursos (esquerda) | Bateria, suporte de vida, blindagem, dose (com marcas em 50 e 70) e ciência (com a meta), cada um com barra e botão "?" |
-| Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de tempestade real ou simulada |
+| Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | Blocos de energia distribuídos com + e −, dicas como "precisa de 3 para não cair", e o botão "Terminar o sol" |
 | Janelas | Tutorial (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
 
@@ -476,9 +495,12 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 - Botões têm rótulo para leitor de tela, e as mensagens são anunciadas.
 - A cena aceita girar e aproximar, mas o jogo inteiro funciona só com a interface.
 
-## Tecnologia e arquitetura (protótipo do hackathon)
+## Tecnologia e arquitetura
 
-> **Atenção:** esta seção descreve o **protótipo** original (JavaScript puro, sem Rapier, nomes de arquivos `main.js`, `game.js` etc.). A base deste repositório é outra (TypeScript + Three.js + Rapier, ver [arquitetura.md](arquitetura.md) e o [ADR 0001](decisoes/0001-stack.md)). Ao portar, mantenha o princípio central (simulação pura separada da cena) e registre a decisão em um ADR.
+> Este repositório implementa o jogo em TypeScript a partir deste GDD, com o mesmo princípio do protótipo original
+> (simulação pura separada da cena). Detalhes: [arquitetura.md](arquitetura.md) e
+> [ADR 0004](decisoes/0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md).
+> O diagrama abaixo mostra os papéis; os nomes de arquivo correspondentes aqui estão entre parênteses na tabela.
 
 O jogo é um site estático, sem servidor e sem banco de dados. A regra principal: as regras do jogo ficam numa simulação pura, sem tela e sem 3D, para poderem ser testadas e balanceadas sozinhas.
 
@@ -509,13 +531,17 @@ A interface manda as decisões para a simulação e repassa o estado resultante 
 
 | Item | Escolha |
 | --- | --- |
-| Linguagem | JavaScript, sem framework de interface |
-| 3D | Three.js r187: material toon de 3 faixas, contorno por casco invertido, sombras |
+| Linguagem | TypeScript, sem framework de interface |
+| Simulação | `src/sim/` (`config.ts`, `mission.ts`, `cards.ts`); teste de equilíbrio em `scripts/balance.ts` |
+| Cena | `src/scene/` (`MarsBase.ts`, `Crew.ts`) e `src/render/toon.ts` |
+| Interface e textos | `src/ui/` e `src/i18n/` (PT e EN) |
+| 3D | Three.js r187: material toon de 4 faixas, contorno por casco invertido, sombras |
+| Física | Rapier, só sob demanda na etapa de movimentação (fora do pacote principal) |
 | Build | Vite 8; `npm run build` gera a pasta `dist/` com caminhos relativos |
 | Hospedagem | Qualquer host estático (GitHub Pages, Netlify, Cloudflare Pages) |
-| Chave da NASA | `VITE_NASA_API_KEY` no `.env`; sem ela, usa a `DEMO_KEY` |
-| Tamanho | Cerca de 160 KB compactado |
-| Código-fonte | `missao-jezero.zip`, com README de instalação |
+| Chave da NASA | `NASA_API_KEY` no `.env`, só para `npm run fetch-data` (não vai para o navegador) |
+| Tamanho | Cerca de 165 KB compactado (sem o Rapier) |
+| Código-fonte | Este repositório; o protótipo original (`missao-jezero.zip`) é só referência |
 
 ## Critérios de aceite
 
@@ -532,9 +558,8 @@ O jogo está pronto para o envio quando todos os itens abaixo passam num navegad
 
 ### Dados reais
 
-- [x] O arquivo de dados das 6 missões históricas (DONKI e Horizons) está no projeto (`public/data/missions.json`).
-- [ ] A tela final mostra as datas reais da missão.
-- [ ] Em produção, as tempestades mostram a data real e um link para o DONKI.
+- [x] O snapshot de erupções reais do DONKI está no projeto (`npm run fetch-data`).
+- [x] Em produção, as tempestades mostram a data real e um link para o DONKI.
 - [x] Quando não há dado real, o jogo diz "simulado" e nunca "ao vivo".
 - [x] A tela "Dados da NASA" lista as fontes com selo de estado e links.
 - [ ] A tela final mostra estudos reais do OSDR (testar a busca).
@@ -550,13 +575,13 @@ O jogo está pronto para o envio quando todos os itens abaixo passam num navegad
 
 ## Backlog, entregas e riscos
 
-A prioridade máxima é trocar as tempestades simuladas pelas missões históricas reais. O resto melhora o projeto, mas não é obrigatório.
+A prioridade máxima é trocar as erupções simuladas por dados reais. O resto melhora o projeto, mas não é obrigatório.
 
 ### Backlog do hackathon (por prioridade)
 
 | # | Tarefa | Por quê | Tamanho |
 | --- | --- | --- | --- |
-| 1 | Fazer o jogo ler `public/data/missions.json` e rodar `npm run balance` com as 6 missões (o arquivo já existe) | Dados reais nas tempestades, com datas coerentes | 2 h |
+| 1 | Pegar a chave em api.nasa.gov e rodar `npm run fetch-data` | Dados reais nas tempestades | 5 min |
 | 2 | Publicar (GitHub Pages ou similar) e conferir o selo do DONKI ao vivo | Sem download para os jurados | 30 min |
 | 3 | Testar a busca do OSDR e ajustar `data/osdr.js` | Estudos reais na tela final | 30 min |
 | 4 | Testar com uma criança de verdade e ajustar os textos | O desafio é ensinar | 1 h |
@@ -570,6 +595,7 @@ A prioridade máxima é trocar as tempestades simuladas pelas missões históric
 | 12 | Arte 2D original para a tela de título e o vídeo | Impacto visual | 2 h |
 | 13 | Missão na Lua, com a noite lunar de cerca de 14 dias terrestres | Segunda missão, mais rejogabilidade | 4 h ou mais |
 | 14 | Migrar o protótipo para a Art Bible: paleta oficial, 4 faixas de sombra, contorno mais fino, modelos mais detalhados, astronauta de 1,85 m com traje completo e pôr do sol com halo azul | Arte e jogo coerentes, como pede o alinhamento | 4 a 6 h |
+| 15 | Missões históricas: a simulação lê `public/data/missions.json` (tempestades e atraso real por sol) e `npm run balance` roda com as 6 missões | Datas reais coerentes entre tempestade, atraso e Sol; história forte na tela final | 2 a 3 h |
 
 ### Entregas do envio
 

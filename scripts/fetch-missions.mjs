@@ -3,7 +3,7 @@
 // (docs/game-design.md, seção "Calendário da missão: janelas históricas reais").
 // Busca no DONKI as CMEs e os eventos SEP de cada janela e, no JPL Horizons,
 // o atraso real das mensagens entre Terra e Marte em cada sol.
-// Uso: npm run data:missions   (lê VITE_NASA_API_KEY do .env; sem ela, usa DEMO_KEY)
+// Uso: npm run data:missions   (lê NASA_API_KEY do .env; sem ela, usa DEMO_KEY)
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +16,7 @@ try {
 }
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'data', 'missions.json');
-const API_KEY = process.env.VITE_NASA_API_KEY || process.env.NASA_API_KEY || 'DEMO_KEY';
+const API_KEY = process.env.NASA_API_KEY || 'DEMO_KEY';
 
 // Duração de um sol: 24 h 39 min 35,244 s (https://science.nasa.gov/mars/facts/).
 const SOL_SECONDS = 88775.244;

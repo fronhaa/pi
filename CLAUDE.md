@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Jogo 3D cartoon no navegador para o desafio NASA Space Apps 2026 "Junior Astronaut Mission Trainer": crianças de 7–12 anos gerenciam uma base em Marte. Vite + TypeScript + Three.js + Rapier. Docs do time em `docs/`.
+Jogo 3D cartoon no navegador para o desafio NASA Space Apps 2026 "Junior Astronaut Mission Trainer": crianças de 7–12 anos gerenciam uma base em Marte. Vite + TypeScript + Three.js (Rapier só sob demanda). Docs do time em `docs/`.
 
 ## Antes de mexer
 
@@ -9,10 +9,13 @@ Jogo 3D cartoon no navegador para o desafio NASA Space Apps 2026 "Junior Astrona
 
 ## Regras do projeto
 
-- A física é dona da posição: mova corpos Rapier, nunca `mesh.position` de objetos linkados.
-- Gameplay físico em `fixedUpdate()`; só visual em `update()`.
+- `src/sim/` é simulação pura: sem DOM, sem Three.js; imports relativos com `.ts`. Todo número de jogo fica em `src/sim/config.ts`; mudou um, rode `npm run balance`.
+- A cena (`src/scene/`) só desenha o estado; a interface (`src/ui/`) só mostra e repassa decisões. Regras nunca ficam nelas.
+- Textos sempre via `t()` de `src/i18n`, com a chave em PT e EN.
+- Honestidade de dados: nunca chamar de "ao vivo" o que é baixado; previsão é previsão; dose do jogo é escala INTERPRETADA.
+- Física (quando voltar): é dona da posição; mova corpos Rapier, nunca `mesh.position` de objetos linkados. `Physics.ts` só via `import()`.
 - Objetos visuais do jogo usam os helpers de `src/render/toon.ts` e cores de `PALETTE`.
-- `main.ts` e `src/ui/LoadingScreen.ts` não podem importar estaticamente `core/`, `entities/`, `world/` ou `render/` (o jogo é carregado via `import()` dinâmico).
+- `main.ts` e `src/ui/LoadingScreen.ts` não podem importar estaticamente `core/`, `scene/`, `sim/` ou `render/` (o jogo é carregado via `import()` dinâmico).
 
 ## Documentação (obrigatório)
 
@@ -24,4 +27,4 @@ Jogo 3D cartoon no navegador para o desafio NASA Space Apps 2026 "Junior Astrona
 
 ## Verificação
 
-- `npm run typecheck` e `npm run build` devem passar.
+- `npm run typecheck` e `npm run build` devem passar; `npm run balance` se mexer em `src/sim/`.

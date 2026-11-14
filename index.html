@@ -3,26 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pi — Space Apps</title>
+    <title>Missão Jezero</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-      :root { --ink: #1a1a2e; --sky: #8ecae6; --accent: #ff8c42; }
+      :root { --ink: #473c3a; --sky: #e8b98c; --accent: #e8792b; }
       html, body { margin: 0; height: 100%; overflow: hidden; background: var(--sky); }
       canvas { display: block; }
 
-      #hud {
-        position: fixed; left: 16px; bottom: 16px;
-        font: 600 14px/1.4 system-ui, sans-serif; color: var(--ink);
-        background: #ffffffcc; padding: 8px 12px; border-radius: 12px;
-        border: 3px solid var(--ink); user-select: none;
-      }
-      body.loading #hud { display: none; }
 
       /* Tela de carregamento: HTML/CSS puro para aparecer antes de qualquer JS. Ver src/ui/LoadingScreen.ts */
       #loading {
         position: fixed; inset: 0; z-index: 10;
         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
         background: var(--sky); color: var(--ink);
-        font: 700 18px/1.4 system-ui, sans-serif;
+        font: 600 18px/1.4 'Fredoka', ui-rounded, system-ui, sans-serif;
         transition: opacity 0.4s ease;
       }
       #loading.hidden { opacity: 0; pointer-events: none; }
@@ -52,12 +48,11 @@
   </head>
   <body class="loading">
     <div id="loading" role="status" aria-live="polite">
-      <h1>Pi</h1>
+      <h1>Missão Jezero</h1>
       <div class="bar" aria-hidden="true"></div>
       <div id="loading-status">Carregando…</div>
       <button type="button" onclick="location.reload()">Tentar de novo</button>
     </div>
-    <div id="hud">WASD / setas: mover · Espaço: pular</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

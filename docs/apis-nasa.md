@@ -15,7 +15,7 @@ O jogo é um site estático: roda no navegador do jogador, sem servidor. Por iss
 
 | API | CORS | Uso na Missão Jezero | Decisão |
 | --- | --- | --- | --- |
-| [DONKI (clima espacial)](#donki-clima-espacial) | ✅ | Tempestades solares reais | **Usar (núcleo).** Atenção: o endpoint `FLR` está fora do ar |
+| [DONKI (clima espacial)](#donki-clima-espacial) | ✅ | Tempestades solares reais | **Em uso (núcleo).** O endpoint `FLR` está fora do ar; as erupções vêm de `notifications` ([dados.md](dados.md)) |
 | [JPL Horizons](#jpl-horizons-distância-terra-marte) | ❌ | Atraso real das mensagens entre Terra e Marte | **Usar, com dado baixado** |
 | [MEDA, clima do Perseverance](#meda-clima-do-perseverance) | ✅ | Nascer e pôr do sol e temperatura real de Jezero no relatório do sol | **Usar, com dado baixado** |
 | [OSDR, busca](#osdr-pesquisas-de-biologia-espacial) | ❌ | Estudos reais na tela final | **Usar, com dado baixado** |
@@ -24,7 +24,7 @@ O jogo é um site estático: roda no navegador do jogador, sem servidor. Por iss
 | [RadLab](#radlab-dose-medida-na-iss) | ❌ | Comparação com dose medida na ISS | Depois do hackathon |
 | [Biblioteca de imagens](#biblioteca-de-imagens-e-vídeos-da-nasa) | ✅ | Arte da tela de título e do vídeo | Baixa prioridade |
 
-**Prioridade no hackathon:** (1) corrigir as tempestades do DONKI, (2) atraso real com o Horizons, (3) baixar OSDR e MEDA antes do deploy.
+**Prioridade no hackathon:** as tempestades reais do DONKI já estão no jogo ([dados.md](dados.md)). Próximos: (1) missões históricas com atraso real do Horizons (dados prontos), (2) baixar OSDR e MEDA antes do deploy.
 
 ## Configurar a chave da NASA
 
@@ -32,18 +32,17 @@ A chave pessoal do projeto fica no arquivo `.env` da raiz, que **não vai para o
 
 ```bash
 # .env
-VITE_NASA_API_KEY=sua-chave-aqui
+NASA_API_KEY=sua-chave-aqui
 ```
 
 - **Quem acabou de clonar o repositório:** copie `.env.example` para `.env` e cole a chave do time (peça a quem tem o `.env`) ou gere uma própria, grátis, em <https://api.nasa.gov/>.
 - **Nunca** escreva a chave em código, docs ou commits. O código sempre lê da variável de ambiente.
-- O prefixo `VITE_` faz o Vite embutir o valor no JavaScript do jogo, então quem abre o jogo consegue ver a chave. Para uma chave grátis da NASA isso é aceitável; o risco é alguém gastar o limite de chamadas. Se isso acontecer, gere uma chave nova e troque só o `.env`.
-- **No deploy** (GitHub Pages, Netlify etc.), configure `VITE_NASA_API_KEY` nas variáveis de ambiente do serviço de build, já que o `.env` não sobe para o repositório.
+- A chave só é usada pelos scripts de coleta (`npm run fetch-data`, `npm run data:missions`). **O jogo nunca chama a API** ([dados.md](dados.md)), então a chave não vai para o JavaScript publicado e o deploy não precisa dela. Por isso a variável **não** tem o prefixo `VITE_`: com ele, o Vite embutiria a chave no jogo.
 - Limite: a chave do projeto aceitou 2.500 chamadas por hora no teste de 2026-11-14 (o cabeçalho `X-RateLimit-Remaining` de cada resposta mostra quanto sobra). Com a `DEMO_KEY`, o limite é bem menor e é dividido por IP.
 
 ## Regras para todo código que usa estas APIs
 
-1. **Chave da NASA:** só o `api.nasa.gov` exige chave (DONKI). O projeto já tem uma chave pessoal configurada no arquivo `.env` da raiz, na variável `VITE_NASA_API_KEY` (ver [Configurar a chave](#configurar-a-chave-da-nasa)). No navegador, leia `import.meta.env.VITE_NASA_API_KEY`; em scripts Node, `process.env.VITE_NASA_API_KEY`. Sem chave, use `DEMO_KEY`, que tem limite baixo de chamadas por hora.
+1. **Chave da NASA:** só o `api.nasa.gov` exige chave (DONKI). O projeto já tem uma chave pessoal configurada no arquivo `.env` da raiz, na variável `NASA_API_KEY` (ver [Configurar a chave](#configurar-a-chave-da-nasa)). Em scripts Node, leia `process.env.NASA_API_KEY`. Sem chave, use `DEMO_KEY`, que tem limite baixo e quase sempre está esgotada.
 2. **Sempre checar vazio e nulo.** Telemetria vem com falhas: o DONKI devolve `[]` quando não houve evento, e o MEDA devolve `"--"` em temperaturas sem leitura.
 3. **Ordem de carregamento** para todo dado: ao vivo, depois arquivo baixado, depois simulado. O jogo mostra um selo honesto em cada caso: "ao vivo", "dados reais baixados em AAAA-MM-DD" ou "simulado". Dado baixado **nunca** aparece como ao vivo (o desafio exige isso).
 4. **Não usar** a API antiga `api.nasa.gov/mars-photos/api/v1/...`, que foi aposentada. Para fotos, use os feeds diretos do JPL listados aqui.
@@ -66,21 +65,22 @@ Tipos de evento:
 
 | Tipo | O que é | Estado em 2026-11-14 | Campos úteis |
 | --- | --- | --- | --- |
-| `FLR` | Erupção solar (*flare*) | ❌ **devolve 404** para qualquer período | `flrID`, `beginTime`, `peakTime`, `classType` (`"X1.2"`), `sourceLocation` |
+| `FLR` | Erupção solar (*flare*) | ❌ **devolve 404** para qualquer período. Alternativa em uso: `notifications?type=FLR` ([dados.md](dados.md)) | `flrID`, `beginTime`, `peakTime`, `classType` (`"X1.2"`), `sourceLocation` |
 | `CME` | Ejeção de massa coronal: nuvem de plasma lançada pelo Sol | ✅ | `activityID`, `startTime`, `cmeAnalyses[].speed`, `cmeAnalyses[].type`, `linkedEvents[]`, `link` |
 | `SEP` | Evento de partículas solares energéticas | ✅ | `sepID`, `eventTime`, `linkedEvents[]` |
 | `GST` | Tempestade geomagnética (na Terra) | ✅ | `gstID`, `startTime`, `allKpIndex[].kpIndex` |
 
-**Uso no jogo:** cada tempestade solar da partida é uma CME real de uma das [missões históricas](game-design.md#calendário-da-missão-janelas-históricas-reais) do GDD, com data e link para o DONKI. A intensidade vem do tipo da CME: S e C = fraca, O = média, R e ER = forte.
+**Uso no jogo hoje:** as tempestades são erupções reais M5+ e X, extraídas das notificações do DONKI por `npm run fetch-data` e salvas em `public/data/donki-flares.json`. Coleta, cache e limitações: [dados.md](dados.md).
 
-**Por que CME e não FLR.** O `FLR` (erupções) está fora do ar, então o GDD passou a usar `CME`. As missões vêm de um arquivo baixado antes do deploy; sem ele, o jogo usa tempestades simuladas, marcadas como tal. A chamada ao vivo fica só para o resumo do clima espacial de hoje na tela inicial.
+**Planejado:** as [missões históricas](game-design.md#calendário-da-missão-janelas-históricas-reais) usam CMEs, pelo tipo de velocidade: S e C = fraca, O = média, R e ER = forte. Os dados já estão em `public/data/missions.json` (ver [abaixo](#missões-históricas-npm-run-datamissions)).
 
 Vale considerar também o `SEP`: as partículas solares energéticas são o que de fato aumenta a dose de radiação de um astronauta. Cinco das 6 missões têm eventos SEP no DONKI dentro dos 15 sóis (a missão 5 não tem); eles estão em `sepEvents` no `missions.json` e podem virar texto no relatório do sol.
 
 Exemplo de leitura defensiva:
 
 ```ts
-const key = import.meta.env.VITE_NASA_API_KEY || 'DEMO_KEY';
+// Em script Node (o jogo não chama a API).
+const key = process.env.NASA_API_KEY || 'DEMO_KEY';
 const url = `https://api.nasa.gov/DONKI/CME?startDate=${start}&endDate=${end}&api_key=${key}`;
 
 const res = await fetch(url);
@@ -219,13 +219,13 @@ Exemplo útil para a Art Bible: a busca `q=Curiosity sunset Gale` devolve `PIA19
 
 ## Dados baixados antes do deploy
 
-Para as APIs sem CORS, e como reserva para as que têm, os dados são baixados por scripts em Node e salvos em `public/data/`, com a data em que foram baixados (para o selo "dados reais baixados em AAAA-MM-DD").
+As erupções do jogo atual são coletadas por `npm run fetch-data`, documentado em [dados.md](dados.md). Para as outras APIs sem CORS, e como reserva para as que têm, os dados também são baixados por scripts em Node e salvos em `public/data/`, com a data em que foram baixados (para o selo "dados reais baixados em AAAA-MM-DD").
 
 ### Missões históricas: `npm run data:missions`
 
 Script: [`scripts/fetch-missions.mjs`](../scripts/fetch-missions.mjs). Saída: [`public/data/missions.json`](../public/data/missions.json) (cerca de 30 KB).
 
-1. Lê `VITE_NASA_API_KEY` do `.env` (ou usa `DEMO_KEY`).
+1. Lê `NASA_API_KEY` do `.env` (ou usa `DEMO_KEY`).
 2. Para cada uma das 6 missões do [GDD](game-design.md#calendário-da-missão-janelas-históricas-reais), busca no DONKI as CMEs e os SEPs da janela e, no Horizons, a distância Terra-Marte a cada 6 h.
 3. Confere as regras: cada CME escolhida existe, tem tipo válido, cai entre os sóis 4 e 14 e fica a pelo menos 2 sóis da anterior. Se algo falhar, o script para com erro e não grava o arquivo.
 

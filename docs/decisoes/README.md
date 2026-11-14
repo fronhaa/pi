@@ -33,5 +33,6 @@ adiciona a linha na tabela abaixo. Preencha, abra PR e discuta lá.
 | --- | --- | --- |
 | [0001](0001-stack.md) | Stack: Vite + TypeScript + Three.js + Rapier | Aceito |
 | [0002](0002-estilo-toon.md) | Estilo visual toon com inverted hull | Aceito |
-| [0003](0003-manter-rapier-apesar-do-tamanho-do-bundle.md) | Manter Rapier apesar do tamanho do bundle | Aceito |
+| [0003](0003-manter-rapier-apesar-do-tamanho-do-bundle.md) | Manter Rapier apesar do tamanho do bundle | Substituído em parte por [0004](0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md) |
+| [0004](0004-jogo-da-missao-jezero-em-typescript-com-rapier-sob-demanda.md) | Jogo da Missão Jezero em TypeScript, com Rapier sob demanda | Aceito |
 <!-- adr-index:fim (não remova, usado pelo scripts/new-adr.mjs) -->
