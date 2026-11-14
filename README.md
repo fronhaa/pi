@@ -21,6 +21,7 @@ Controles: **WASD / setas** para mover, **Espaço** para pular.
 | `npm run build`      | Gera a versão de produção em `dist/`            |
 | `npm run preview`    | Serve o `dist/` localmente                      |
 | `npm run docs:adr -- "título"` | Cria um novo registro de decisão (ADR) |
+| `npm run data:missions` | Baixa da NASA os dados das missões históricas para `public/data/missions.json` (precisa do `.env`, ver `.env.example`) |
 
 ## Documentação
 

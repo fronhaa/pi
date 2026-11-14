@@ -27,6 +27,7 @@ recebem o que precisam pelo construtor (ex.: `Player` recebe `Physics` e `Input`
 | [`src/world/`](../src/world) | Fases/cenários: chão, plataformas, objetos do mapa. |
 | [`src/ui/`](../src/ui) | Interface em HTML por cima do canvas (tela de carregamento, futuramente menus/HUD). Sem framework. |
 | [`public/assets/`](../public/assets) | Modelos (`.glb`), texturas, áudio. Servidos como estão. |
+| [`public/data/`](../public/data) | Dados reais da NASA baixados antes do deploy (ex.: `missions.json`). Gerados por scripts em [`scripts/`](../scripts); não edite à mão. Ver [apis-nasa.md](apis-nasa.md#dados-baixados-antes-do-deploy). |
 | [`docs/`](.) | Esta documentação. |
 
 Import com alias: `import { Physics } from '@/core/Physics'` (`@` = `src/`).
