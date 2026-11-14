@@ -15,6 +15,9 @@ Mars Exploration: Missão Jezero é um jogo de navegador. Nele, uma criança de 
 | Público | Crianças de 7 a 12 anos; também serve para pais e sala de aula |
 | Plataforma | Navegador, sem download e sem conta; computador e celular |
 | Local da missão | Cratera Jezero, Marte |
+| Lua | Só entra se Marte estiver concluído a tempo; aí vira uma segunda missão (backlog #13) |
+| Controles | Clique/toque **ou** teclado, alternando a qualquer momento: vale o último usado ([ADR 0004](decisoes/0004-controle-por-teclado-e-clique-toque.md)) |
+| Física | Gravidade real da NASA: Marte 3,7 m/s², Lua 1,624 m/s² ([fisica.md](fisica.md#gravidade-real)) |
 | Duração de uma partida | 15 sóis, cerca de 10 a 15 minutos |
 | Jogadores | 1 no modo solo; de 2 a 5 no modo cooperativo, no mesmo aparelho (planejado) |
 | Idiomas | Português e inglês |
@@ -215,7 +218,7 @@ Além da energia, o jogo ensina um segundo recurso real: o tempo da tripulação
 
 Este modo e o modo Terra e Marte funcionam juntos: os dois fazem parte do jogo.
 
-**Controle, sem joystick.** A criança toca no astronauta e depois no problema. Ele anda até lá, trabalha e fica ocupado até terminar. No modo solo, um jogador comanda os quatro. No cooperativo, cada jogador de Marte é dono do astronauta do seu papel; com menos de 4 jogadores em Marte, alguém comanda mais de um.
+**Controle, sem joystick.** O jogo aceita clique/toque e teclado, e a criança alterna quando quiser ([ADR 0004](decisoes/0004-controle-por-teclado-e-clique-toque.md)). No clique/toque, a criança toca no astronauta e depois no problema. Ele anda até lá, trabalha e fica ocupado até terminar. No teclado, as setas/WASD movem o astronauta selecionado, e as teclas 1 a 4 escolhem o astronauta (planejado). No modo solo, um jogador comanda os quatro. No cooperativo, cada jogador de Marte é dono do astronauta do seu papel; com menos de 4 jogadores em Marte, alguém comanda mais de um.
 
 ### Como fica um sol com as duas opções
 
@@ -531,7 +534,7 @@ A prioridade máxima é trocar as erupções simuladas por dados reais. O resto 
 | 10 | Terreno real da cratera Jezero com o Mars Trek | Mais um dado real visível | 2 a 3 h |
 | 11 | Sons (alarme, antena, noite) | Imersão | 1 h |
 | 12 | Arte 2D original para a tela de título e o vídeo | Impacto visual | 2 h |
-| 13 | Missão na Lua, com a noite lunar de cerca de 14 dias terrestres | Segunda missão, mais rejogabilidade | 4 h ou mais |
+| 13 | Missão na Lua, com a noite lunar de cerca de 14 dias terrestres. **Só começa depois de Marte concluído** (critérios de aceite fechados). A gravidade lunar real já está pronta no código | Segunda missão, mais rejogabilidade | 4 h ou mais |
 | 14 | Migrar o protótipo para a Art Bible: paleta oficial, 4 faixas de sombra, contorno mais fino, modelos mais detalhados, astronauta de 1,85 m com traje completo e pôr do sol com halo azul | Arte e jogo coerentes, como pede o alinhamento | 4 a 6 h |
 
 ### Entregas do envio

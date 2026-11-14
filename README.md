@@ -12,7 +12,8 @@ npm install
 npm run dev        # abre em http://localhost:5173
 ```
 
-Controles: **WASD / setas** para mover, **Espaço** para pular.
+Controles: **clique/toque** no chão para andar até o ponto, ou **WASD / setas** para mover; **Espaço** para pular.
+Vale o último usado: dá para alternar a qualquer momento. A gravidade é a real de Marte (3,7 m/s²).
 
 | Comando              | O que faz                                       |
 | -------------------- | ----------------------------------------------- |

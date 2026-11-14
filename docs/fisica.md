@@ -59,6 +59,10 @@ Se o mesh estiver rotacionado, aplique a mesma rotação ao collider (veja a ram
 (`lockRotations`) para não tombar. A cada passo:
 
 - Define a velocidade horizontal pelo input e mantém a vertical (gravidade).
+  O input vem do **teclado** ou do **clique/toque**, e vale o último usado ([ADR 0004](decisoes/0004-controle-por-teclado-e-clique-toque.md)):
+  - Com teclado, a direção é `moveAxis()`. Apertar uma tecla cancela o alvo do clique.
+  - Sem teclado, o jogador anda até `input.moveTarget` (o ponto clicado), desacelera a 1 m do ponto e para a 0,2 m.
+  - O `Game` faz o raycast do clique e desenha o anel amarelo no destino. O anel é só visual e não tem corpo físico.
 - Pulo: só se `isGrounded()`, que lança um raio para baixo (`castRay`) ignorando o próprio corpo.
 - O visual (`model`) gira para a direção do movimento; o corpo físico não gira.
 
@@ -67,8 +71,41 @@ Se precisarmos de escadas/degraus e rampas mais precisas, o próximo passo é mi
 
 ## Ajustes globais
 
-[`src/core/constants.ts`](../src/core/constants.ts): `GRAVITY` (−20, mais "arcade" que os −9,81 reais),
+[`src/core/constants.ts`](../src/core/constants.ts): `CELESTIAL_BODIES` / `gravityOf()` (gravidade real, abaixo),
 `FIXED_DT`, `MAX_FRAME_DT`.
+
+## Gravidade real
+
+A gravidade do mundo é a **real** do corpo celeste da missão, com dados da NASA ([ADR 0005](decisoes/0005-gravidade-real-com-dados-da-nasa.md)).
+Não existe mais gravidade "arcade". Classificação: **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)).
+
+| Corpo | Gravidade | Em relação à Terra | Fonte |
+| --- | --- | --- | --- |
+| Marte (padrão) | 3,7 m/s² | 0,37 g | [NASA Glenn: Mars](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/mars/) |
+| Lua | 1,624 m/s² (equador) | ~1/6 g | [NASA Science: Compare Earth and the Moon](https://science.nasa.gov/moon/by-the-numbers/) |
+| Terra (comparação) | 9,80665 m/s² | 1 g | Mesma página da NASA Science |
+
+Como usar:
+
+```ts
+const physics = await Physics.create();        // Marte (DEFAULT_BODY)
+const lunar = await Physics.create('moon');    // Lua, quando a missão lunar existir
+```
+
+**O que muda por causa disso (e é o que o jogo ensina):**
+
+- **Pulo:** `JUMP_SPEED` em [`Player.ts`](../src/entities/Player.ts) é **3,1 m/s**, a velocidade de impulso de um salto de ~0,5 m na Terra
+  (√(2 × 9,81 × 0,5)). Com a mesma força, o astronauta sobe **~1,3 m em Marte** e **~3 m na Lua**, e fica mais tempo no ar.
+  É uma simplificação que ignora a massa do traje (INTERPRETADO).
+- **Queda de objetos:** caixas e bolas caem mais devagar; não "corrija" isso aumentando a gravidade.
+- **Sem arrasto de ar:** o Rapier não simula atmosfera. Em Marte o ar é ~1% do da Terra e na Lua não há ar, então ignorar o arrasto é coerente.
+
+**Regras:**
+
+1. Número real de física só entra com **fonte da NASA aberta e citada** nesta tabela e no comentário da constante.
+2. Mudou o valor? Atualize a tabela, o comentário em `constants.ts` e, se mudar o comportamento do jogo, o [`game-design.md`](game-design.md).
+3. A ficha mais precisa (NSSDC, que dá 3,73 m/s² para Marte) estava fora do ar em 14/11/2026. Quando voltar, confira e, se preciso, atualize com fonte.
+4. Velocidades de gameplay (ex.: `MOVE_SPEED`) **não** são dados reais; ficam como constantes de jogo, sem fingir precisão.
 
 ## Debug
 

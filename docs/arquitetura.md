@@ -7,7 +7,7 @@ index.html  (tela de carregamento em HTML/CSS: aparece na hora, sem JS)
 main.ts     (~1,5 KB gzip)
   └── import('@/core/Game')  ← carregado sob demanda (~1,8 MB: Three + Rapier)
         └── Game.create()
-              ├── Physics.create()   (carrega o WASM do Rapier)
+              ├── Physics.create()   (carrega o WASM do Rapier; gravidade de Marte)
               ├── Renderer / Scene / Camera / Luzes (Three.js)
               ├── Input
               ├── buildTestLevel()   (fase)
@@ -21,7 +21,7 @@ recebem o que precisam pelo construtor (ex.: `Player` recebe `Physics` e `Input`
 
 | Pasta | Responsabilidade |
 | --- | --- |
-| [`src/core/`](../src/core) | Infra do motor: loop (`Game`), física (`Physics`), teclado (`Input`), constantes. |
+| [`src/core/`](../src/core) | Infra do motor: loop (`Game`), física (`Physics`, com gravidade real), entrada por teclado e clique/toque (`Input`), constantes. |
 | [`src/render/`](../src/render) | Visual: materiais toon, contornos, paleta. Nada de física aqui. |
 | [`src/entities/`](../src/entities) | Coisas com comportamento: jogador, inimigos, itens. |
 | [`src/world/`](../src/world) | Fases/cenários: chão, plataformas, objetos do mapa. |

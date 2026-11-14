@@ -34,4 +34,6 @@ adiciona a linha na tabela abaixo. Preencha, abra PR e discuta lá.
 | [0001](0001-stack.md) | Stack: Vite + TypeScript + Three.js + Rapier | Aceito |
 | [0002](0002-estilo-toon.md) | Estilo visual toon com inverted hull | Aceito |
 | [0003](0003-manter-rapier-apesar-do-tamanho-do-bundle.md) | Manter Rapier apesar do tamanho do bundle | Aceito |
+| [0004](0004-controle-por-teclado-e-clique-toque.md) | Controle por teclado e clique/toque | Proposto |
+| [0005](0005-gravidade-real-com-dados-da-nasa.md) | Gravidade real com dados da NASA | Proposto |
 <!-- adr-index:fim (não remova, usado pelo scripts/new-adr.mjs) -->

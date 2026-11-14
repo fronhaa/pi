@@ -1,6 +1,6 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { Object3D } from 'three';
-import { FIXED_DT, GRAVITY } from './constants';
+import { DEFAULT_BODY, FIXED_DT, gravityOf, type CelestialBodyId } from './constants';
 
 export { RAPIER };
 
@@ -17,15 +17,18 @@ export class Physics {
   readonly world: RAPIER.World;
   private links: Link[] = [];
 
-  private constructor() {
-    this.world = new RAPIER.World(GRAVITY);
+  private constructor(readonly body: CelestialBodyId) {
+    this.world = new RAPIER.World(gravityOf(body));
     this.world.timestep = FIXED_DT;
   }
 
-  /** O Rapier precisa carregar o WASM antes de qualquer uso. */
-  static async create(): Promise<Physics> {
+  /**
+   * O Rapier precisa carregar o WASM antes de qualquer uso.
+   * `body` define a gravidade real do mundo (Marte por padrão).
+   */
+  static async create(body: CelestialBodyId = DEFAULT_BODY): Promise<Physics> {
     await RAPIER.init();
-    return new Physics();
+    return new Physics(body);
   }
 
   /** Liga um corpo físico a um objeto visual; o objeto seguirá o corpo a cada frame. */

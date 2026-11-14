@@ -4,7 +4,7 @@ import { Input } from './Input';
 import { Physics } from './Physics';
 import { Player } from '@/entities/Player';
 import { buildTestLevel } from '@/world/Level';
-import { PALETTE } from '@/render/toon';
+import { PALETTE, toonMesh } from '@/render/toon';
 
 /**
  * Orquestra renderer, cena, física e loop.
@@ -21,6 +21,13 @@ export class Game {
   private accumulator = 0;
   private readonly cameraOffset = new THREE.Vector3(0, 7, 11);
   private readonly cameraTarget = new THREE.Vector3();
+
+  // Clique/toque para andar (ADR 0004)
+  private readonly raycaster = new THREE.Raycaster();
+  private readonly pointer = new THREE.Vector2();
+  /** Anel no chão mostrando o destino do clique. Só visual: não tem corpo físico. */
+  private readonly targetMarker: THREE.Mesh;
+  private markerY = 0;
 
   private constructor(
     container: HTMLElement,
@@ -39,6 +46,16 @@ export class Game {
     buildTestLevel(this.scene, physics);
     this.player = new Player(physics, this.input);
     this.scene.add(this.player.root);
+
+    this.targetMarker = toonMesh(new THREE.RingGeometry(0.25, 0.4, 32), PALETTE.yellow, 0);
+    this.targetMarker.rotation.x = -Math.PI / 2; // deitado no chão, virado para cima
+    this.targetMarker.castShadow = false;
+    this.targetMarker.visible = false;
+    this.scene.add(this.targetMarker);
+
+    // touch-action: none evita que o toque role/dê zoom na página em vez de mover o jogador.
+    this.renderer.domElement.style.touchAction = 'none';
+    this.renderer.domElement.addEventListener('pointerdown', (e) => this.onPointerDown(e));
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -61,6 +78,30 @@ export class Game {
     Object.assign(sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 1, far: 60 });
     sun.shadow.bias = -0.0005;
     this.scene.add(sun);
+  }
+
+  /** Converte o clique/toque em um ponto do mundo e define como alvo de movimento. */
+  private onPointerDown(e: PointerEvent): void {
+    if (e.button !== 0) return; // só botão principal (o toque também chega como 0)
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.set(
+      ((e.clientX - rect.left) / rect.width) * 2 - 1,
+      -((e.clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const hit = this.raycaster
+      .intersectObjects(this.scene.children, true)
+      .find((h) => !this.isPlayerOrMarker(h.object));
+    if (!hit) return;
+    this.markerY = hit.point.y + 0.02; // um pouco acima da superfície para não piscar (z-fighting)
+    this.input.setMoveTarget(hit.point);
+  }
+
+  private isPlayerOrMarker(object: THREE.Object3D): boolean {
+    for (let o: THREE.Object3D | null = object; o; o = o.parent) {
+      if (o === this.player.root || o === this.targetMarker) return true;
+    }
+    return false;
   }
 
   private resize(): void {
@@ -103,5 +144,9 @@ export class Game {
     this.cameraTarget.lerp(this.player.root.position, 0.1);
     this.camera.position.copy(this.cameraTarget).add(this.cameraOffset);
     this.camera.lookAt(this.cameraTarget);
+
+    const target = this.input.moveTarget;
+    this.targetMarker.visible = target !== null;
+    if (target) this.targetMarker.position.set(target.x, this.markerY, target.z);
   }
 }
