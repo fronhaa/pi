@@ -591,3 +591,110 @@ func TestCrewPositionsRelayToOthersOnly(t *testing.T) {
 		t.Fatal("partida nova começa sem posições antigas")
 	}
 }
+
+// ---------- EVA no modo em grupo ----------
+
+// evaRoom: comandante (A) e médico (B) em jogadores diferentes, já na fase do dia.
+func evaRoom(t *testing.T) (*Room, *Player, *Player) {
+	t.Helper()
+	for seed := uint32(1); seed < 200; seed++ {
+		r := newRoom("EVAS", nil, nil, func() (uint32, uint32) { return seed, seed })
+		a, b := NewPlayer(nil), NewPlayer(nil)
+		must(t, r.join(a))
+		must(t, r.join(b))
+		must(t, r.Handle(a.ID, Action{T: "claim", Role: Commander}))
+		must(t, r.Handle(b.ID, Action{T: "claim", Role: Medic}))
+		must(t, r.Handle(a.ID, Action{T: "start"}))
+		g := r.game
+		for g.Phase != PhaseEnded && g.Phase != PhaseDay {
+			answerAnyCard(t, g)
+			if g.Phase != PhaseMars {
+				break
+			}
+			if g.Mission.EvaBanned() || len(g.Mission.State.Problems) == 0 {
+				_, _ = g.EndSol()
+				continue
+			}
+			must(t, r.Handle(a.ID, Action{T: "start_day"}))
+		}
+		if g.Phase == PhaseDay {
+			return r, a, b
+		}
+	}
+	t.Fatal("nenhuma partida chegou a um dia com problemas")
+	return nil, nil, nil
+}
+
+func TestEvaInCoop(t *testing.T) {
+	r, a, b := evaRoom(t)
+	pos := func(role Role) Action {
+		return Action{T: "crew_pos", List: []CrewPos{{Role: role, X: 1, Z: 1, Place: "outside"}}}
+	}
+
+	if err := r.Handle(b.ID, Action{T: "eva", Pair: []Role{Commander, Medic}}); !errors.Is(err, ErrNotYourRole) {
+		t.Fatalf("só o dono do líder inicia a EVA: %v", err)
+	}
+	must(t, r.Handle(a.ID, Action{T: "eva", Pair: []Role{Commander, Medic}})) // parceiro de outro jogador
+	if err := r.Handle(b.ID, Action{T: "eva", Pair: []Role{Medic, Engineer}}); !errors.Is(err, errEvaBusy) {
+		t.Fatalf("só uma dupla fora por vez: %v", err)
+	}
+	if v := r.viewFor(b.ID); v.Eva == nil || v.Eva.By != a.ID || v.Eva.Pair != [2]Role{Commander, Medic} {
+		t.Fatalf("todos veem a EVA e quem comanda: %+v", v.Eva)
+	}
+	// Durante a EVA, quem comanda move o parceiro; o dono dele, não.
+	must(t, r.Handle(a.ID, pos(Medic)))
+	if err := r.Handle(b.ID, pos(Medic)); !errors.Is(err, ErrNotYourRole) {
+		t.Fatalf("o dono do parceiro não move o astronauta durante a EVA: %v", err)
+	}
+	if err := r.Handle(b.ID, Action{T: "eva_end"}); !errors.Is(err, ErrNotYourRole) {
+		t.Fatalf("só quem comanda encerra a EVA: %v", err)
+	}
+	if err := r.Handle(a.ID, Action{T: "crew_pos", List: []CrewPos{{Role: Medic, X: 1, Z: 1, Place: "lua"}}}); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("lugar inválido deveria ser recusado: %v", err)
+	}
+	must(t, r.Handle(a.ID, Action{T: "eva_end"}))
+	must(t, r.Handle(b.ID, pos(Medic))) // de volta: o dono controla de novo
+
+	// A EVA some quando o dia acaba.
+	must(t, r.Handle(a.ID, Action{T: "eva", Pair: []Role{Commander, Medic}}))
+	must(t, r.Handle(a.ID, Action{T: "end_day"}))
+	if r.viewFor(a.ID).Eva != nil {
+		t.Fatal("de noite ninguém está em EVA")
+	}
+}
+
+func TestEvaBannedOnStormDay(t *testing.T) {
+	for seed := uint32(1); seed < 400; seed++ {
+		r := newRoom("BANS", nil, nil, func() (uint32, uint32) { return seed, seed })
+		a := NewPlayer(nil)
+		must(t, r.join(a))
+		must(t, r.Handle(a.ID, Action{T: "claim", Role: Commander}))
+		must(t, r.Handle(a.ID, Action{T: "start"}))
+		g := r.game
+		for g.Phase == PhaseMars {
+			answerAnyCard(t, g)
+			if g.Phase != PhaseMars {
+				break
+			}
+			if !g.Mission.EvaBanned() || len(g.Mission.State.Problems) == 0 {
+				_, _ = g.EndSol()
+				continue
+			}
+			must(t, r.Handle(a.ID, Action{T: "start_day"}))
+			g.Tick(36) // todos os problemas do dia já apareceram
+			if err := r.Handle(a.ID, Action{T: "eva", Pair: []Role{Commander, Medic}}); !errors.Is(err, errEvaBanned) {
+				t.Fatalf("seed %d: no dia da tempestade avisada ninguém sai: %v", seed, err)
+			}
+			for _, p := range g.Mission.State.Problems {
+				if p.Status == "open" && !g.Mission.CanResolve(p.UID) {
+					if err := r.Handle(a.ID, Action{T: "problem_resolve", UID: p.UID}); !errors.Is(err, errEvaBanned) {
+						t.Fatalf("seed %d: conserto lá fora no dia proibido deveria ser recusado: %v", seed, err)
+					}
+					return
+				}
+			}
+			break
+		}
+	}
+	t.Fatal("nenhuma partida com problema de fora no dia da tempestade")
+}

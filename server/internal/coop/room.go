@@ -38,6 +38,8 @@ type Room struct {
 
 	// Última posição de cada astronauta (modo em grupo; só visual). Vai no "state" para quem reconecta.
 	crew map[Role]CrewPos
+	// Dupla em EVA (no máximo uma por sala) e quem a comanda. Ver eva.go.
+	eva *EvaView
 
 	// Relógio do dia: TimeScale > 1 acelera (só nos testes). dayGen evita dois relógios ao mesmo tempo.
 	TimeScale float64
@@ -187,11 +189,19 @@ func (r *Room) apply(pid string, a Action) error {
 			return err
 		}
 		return r.game.EndDay()
+	case "eva":
+		return r.startEva(pid, a.Pair)
+	case "eva_end":
+		return r.endEva(pid)
 	case "problem_progress", "problem_resolve":
 		if err := r.mustMars(pid); err != nil {
 			return err
 		}
 		if a.T == "problem_resolve" {
+			// Com a EVA proibida (tempestade avisada), problema de fora não pode ser consertado.
+			if r.game.Phase == PhaseDay && !r.game.Mission.CanResolve(a.UID) {
+				return errEvaBanned
+			}
 			return r.game.ResolveProblem(a.UID)
 		}
 		return r.game.ProblemProgress(a.UID, a.Progress)
@@ -219,6 +229,7 @@ func (r *Room) start() error {
 	hist := sim.PickHistorical(r.missions, seed, r.firstGame)
 	r.firstGame = false
 	r.crew = nil
+	r.eva = nil
 	r.game = NewGame(seed, coopSeed, r.flares, hist, !hasEarth)
 	return nil
 }
@@ -350,9 +361,15 @@ type StateMsg struct {
 	Earth     *EarthView   `json:"earth,omitempty"`
 	// Última posição conhecida de cada astronauta (para quem acabou de entrar ou reconectou).
 	Crew []CrewPos `json:"crew,omitempty"`
+	// Dupla em EVA e quem a comanda (só durante o dia).
+	Eva *EvaView `json:"eva,omitempty"`
 }
 
 func (r *Room) broadcastLocked() {
+	// A EVA só existe de dia: acabou o dia (noite, fim), a dupla está dentro.
+	if r.eva != nil && (r.game == nil || r.game.Phase != PhaseDay) {
+		r.eva = nil
+	}
 	for _, p := range r.players {
 		if p.send == nil {
 			continue
@@ -380,6 +397,7 @@ func (r *Room) viewFor(id string) StateMsg {
 	}
 	msg.Phase = g.Phase
 	msg.AutoEarth = g.AutoEarth
+	msg.Eva = r.eva
 	for _, role := range MarsRoles {
 		if p, ok := r.crew[role]; ok {
 			msg.Crew = append(msg.Crew, p)

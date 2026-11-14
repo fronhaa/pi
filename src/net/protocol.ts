@@ -26,6 +26,14 @@ export interface CrewPos {
   z: number;
   tx?: number;
   tz?: number;
+  /** Onde está: dentro, na câmara de descompressão ou fora (ausente = fora). */
+  place?: 'inside' | 'airlock' | 'outside';
+}
+
+/** Dupla em EVA e quem a comanda (ID do jogador). No máximo uma por sala. */
+export interface EvaView {
+  pair: [CoopRole, CoopRole];
+  by: string;
 }
 
 export type CoopPhase = 'lobby' | 'earth' | 'mars' | 'day' | 'ended';
@@ -95,6 +103,8 @@ export interface CoopState {
   earth?: EarthView;
   /** Última posição conhecida de cada astronauta (para quem acabou de entrar ou reconectou). */
   crew?: CrewPos[];
+  /** Dupla lá fora (só de dia). */
+  eva?: EvaView;
 }
 
 export type ServerMsg =
@@ -115,4 +125,6 @@ export type ClientAction =
   | { t: 'end_sol' | 'start_day' | 'pause' | 'end_day' }
   | { t: 'problem_progress'; uid: number; progress: number }
   | { t: 'problem_resolve'; uid: number }
-  | { t: 'crew_pos'; list: CrewPos[] };
+  | { t: 'crew_pos'; list: CrewPos[] }
+  | { t: 'eva'; pair: [CoopRole, CoopRole] }
+  | { t: 'eva_end' };
