@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { PALETTE, toonMesh } from '@/render/toon';
 import type { SceneryModel } from '@/render/sceneryModel';
-import { ROVER_KEEP_OUT, ROVER_TRACK, terrainHeight, type Obstacle } from './layout';
+import { ROVER_DOCK, ROVER_KEEP_OUT, ROVER_TRACK, terrainHeight, type Obstacle } from './layout';
 import type { Rock } from './terrain';
 
 // Valores de cena (só visual), não regras do jogo.
@@ -28,6 +28,15 @@ const ORBIT = { rx: ROVER_TRACK.rx + 4, rz: ROVER_TRACK.rz + 4 };
 const ORBIT_STEP = 0.6;
 /** Antes de andar, confere esta distância à frente do nariz (m); fechado, gira parado. */
 const NOSE_CHECK = 1.5;
+/** Paradas de estudo por expedição: depois delas, volta à garagem para entregar as amostras. */
+const EXPEDITION_STUDIES = 3;
+/** Na garagem: entrega as amostras (braço estendido) e fica em revisão até estar pronto (s). */
+const DELIVER_SECONDS = 2.5;
+const SERVICE_SECONDS = 9;
+/** Velocidade na rampa e na manobra de entrar e sair (m/s): devagar e com cuidado. */
+const DOCK_SPEED = 1.3;
+/** Luz da revisão (verde) e de espera por astronauta (âmbar). */
+const LIGHT_SERVICE = 0x5cf07a;
 /** Velocidade andando (m/s) e giro máximo (rad/s): ele vira aos poucos, como um veículo de verdade. */
 const DRIVE_SPEED = 2.4;
 const TURN_RATE = 1.3;
@@ -57,6 +66,8 @@ interface Target {
   /** Para a esta distância do destino (na frente da pedra, não em cima dela). */
   stop: number;
   rock: Rock | null;
+  /** Volta para casa: é o ponto de aproximação da garagem, não uma pedra para estudar. */
+  home?: boolean;
   /** Segundos dirigindo até ele; demorou demais (preso atrás de algo), escolhe outro. */
   driving: number;
   limit: number;
@@ -90,8 +101,17 @@ export class Rover {
   private heading = 0;
   private target: Target | null = null;
   private lastRock: Rock | null = null;
-  private phase: 'drive' | 'study' = 'drive';
+  /**
+   * O que ele está fazendo: dirigindo ou estudando na expedição; entrando na garagem (`dockIn`: aproximação,
+   * rampa); na garagem (`service`: entrega as amostras e revisão); saindo de ré (`dockOut`).
+   */
+  private phase: 'drive' | 'study' | 'dockIn' | 'service' | 'dockOut' = 'service';
   private studyLeft = 0;
+  /** Paradas de estudo nesta expedição. */
+  private studies = 0;
+  /** Distância percorrida no caminho da garagem (aproximação → pé da rampa → topo → dentro). */
+  private dockS = 0;
+  private serviceLeft = 1;
   private readonly warning: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   /** Cabeça da câmera (gira para olhar a rocha), braço robótico (desce para estudar) e luz do instrumento. */
   private readonly head: THREE.Group;
@@ -149,7 +169,10 @@ export class Rover {
     this.warning = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshBasicMaterial({ color: 0x5a4a2a }));
     this.warning.position.set(0.7, 2.36, 0);
     this.root.add(this.warning);
-    this.root.position.set(12.5, 0, 9);
+    // Começa estacionado na garagem: no primeiro dia com ciência, sai de ré para a primeira expedição.
+    this.root.position.copy(ROVER_DOCK.inside);
+    this.heading = ROVER_DOCK.heading;
+    this.root.rotation.set(0, this.heading, 0);
   }
 
   /** Troca o rover simples pelo .glb: a lógica de andar, parar e desviar continua a mesma. */
@@ -175,6 +198,7 @@ export class Rover {
     if (!at) this.root.rotation.set(0, this.heading, 0);
     if (at) this.heading = 0.7; // a inclinação de atolado usa este giro
     // Desatolou: segue explorando a partir de onde está (anda até o próximo destino, sem teleporte).
+    if (at) this.phase = 'drive'; // atolou no meio do caminho: a entrada na garagem recomeça depois
     if (!at && wasStuck) {
       this.target = null;
       this.phase = 'drive';
@@ -184,6 +208,16 @@ export class Rover {
   /** O rover está parado estudando uma rocha? (para testes) */
   get isStudying(): boolean {
     return this.phase === 'study';
+  }
+
+  /** Na garagem, entregando amostras ou em revisão? (para testes) */
+  get isServicing(): boolean {
+    return this.phase === 'service';
+  }
+
+  /** O que o rover está fazendo agora (para testes): drive, study, dockIn, service ou dockOut. */
+  get activity(): string {
+    return this.phase;
   }
 
   /** O rover está parado esperando um astronauta sair da frente? (para testes e interface) */
@@ -235,8 +269,15 @@ export class Rover {
    * real vai estudar), longe o bastante de onde ele está para valer a viagem. Sem pedra na faixa, um ponto livre.
    */
   private pickTarget(scienceBlocks: number): void {
-    const { near, far } = exploreRange(scienceBlocks);
     const p = this.root.position;
+    // Expedição completa: volta para a garagem (o ponto de aproximação, em frente à rampa).
+    if (this.studies >= EXPEDITION_STUDIES) {
+      const a = ROVER_DOCK.approach;
+      const dist = Math.hypot(a.x - p.x, a.z - p.z);
+      this.target = { x: a.x, z: a.z, stop: 0.6, rock: null, home: true, driving: 0, limit: (dist / DRIVE_SPEED) * 3 + 15 };
+      return;
+    }
+    const { near, far } = exploreRange(scienceBlocks);
     const rocks = this.rocks.filter((k) => {
       const d = this.fromBase(k.x, k.z);
       return d >= near && d <= far && !this.inCore(k.x, k.z, 4) && k !== this.lastRock && Math.hypot(k.x - p.x, k.z - p.z) > 8;
@@ -366,12 +407,104 @@ export class Rover {
       this.blocked = false;
       this.animateTools(false, dt, time);
     } else if (scienceBlocks > 0 && !night) {
-      this.explore(dt, time, crew, scienceBlocks);
+      if (this.phase === 'dockIn' || this.phase === 'service' || this.phase === 'dockOut') this.dock(dt, time, crew);
+      else this.explore(dt, time, crew, scienceBlocks);
     } else {
       this.blocked = false;
       this.animateTools(false, dt, time);
     }
-    this.warning.material.color.setHex(this.blocked && Math.sin(time * 10) > 0 ? 0xffb020 : 0x5a4a2a);
+    const amber = this.blocked && Math.sin(time * 10) > 0;
+    const service = this.phase === 'service' && Math.sin(time * 3) > 0;
+    this.warning.material.color.setHex(amber ? 0xffb020 : service ? LIGHT_SERVICE : 0x5a4a2a);
+  }
+
+  /** Caminho da garagem: aproximação → pé da rampa → topo da rampa → dentro. */
+  private static readonly DOCK_PATH = [ROVER_DOCK.approach, ROVER_DOCK.foot, ROVER_DOCK.top, ROVER_DOCK.inside];
+
+  /** Ponto do caminho da garagem a `s` m do começo (com a altura: sobe na rampa) e se está na rampa. */
+  private dockPoint(s: number): { x: number; y: number; z: number; slope: number } {
+    const path = Rover.DOCK_PATH;
+    let left = s;
+    for (let i = 1; i < path.length; i++) {
+      const a = path[i - 1];
+      const b = path[i];
+      const run = Math.hypot(b.x - a.x, b.z - a.z);
+      if (left <= run || i === path.length - 1) {
+        const k = run > 0 ? Math.min(1, left / run) : 1;
+        const ground = (x: number, z: number, y: number) => (y > 0 ? y : terrainHeight(x, z));
+        const x = a.x + (b.x - a.x) * k;
+        const z = a.z + (b.z - a.z) * k;
+        return { x, z, y: THREE.MathUtils.lerp(ground(a.x, a.z, a.y), ground(b.x, b.z, b.y), k), slope: Math.atan2(b.y - a.y, run) };
+      }
+      left -= run;
+    }
+    const last = path[path.length - 1];
+    return { x: last.x, y: last.y, z: last.z, slope: 0 };
+  }
+
+  private static dockLength(): number {
+    const path = Rover.DOCK_PATH;
+    let total = 0;
+    for (let i = 1; i < path.length; i++) total += Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z);
+    return total;
+  }
+
+  /**
+   * Garagem: entra (vira de frente para a rampa, sobe devagar), entrega as amostras, fica em revisão
+   * (luz verde piscando) e, pronto, sai de ré até a aproximação e começa outra expedição.
+   * Astronauta perto do caminho: espera (luz âmbar).
+   */
+  private dock(dt: number, time: number, crew: THREE.Vector3[]): void {
+    const p = this.root.position;
+    if (this.phase === 'service') {
+      this.blocked = false;
+      this.serviceLeft -= dt;
+      // Primeiro entrega as amostras (braço estendido), depois a revisão (braço guardado, luz verde).
+      this.animateTools(this.serviceLeft > SERVICE_SECONDS - DELIVER_SECONDS, dt, time);
+      if (this.serviceLeft <= 0) {
+        this.phase = 'dockOut';
+        this.dockS = Rover.dockLength();
+      }
+      return;
+    }
+    this.animateTools(false, dt, time);
+    // Antes de entrar, vira parado de frente para a rampa.
+    if (this.phase === 'dockIn' && this.dockS === 0) {
+      const diff = Math.atan2(Math.sin(ROVER_DOCK.heading - this.heading), Math.cos(ROVER_DOCK.heading - this.heading));
+      // Chegou perto do ponto de aproximação (até ~0,6 m): termina de chegar enquanto vira, sem pulo.
+      const a = ROVER_DOCK.approach;
+      const gap = Math.hypot(a.x - p.x, a.z - p.z);
+      if (Math.abs(diff) > 0.02 || gap > 0.01) {
+        this.heading += THREE.MathUtils.clamp(diff, -TURN_RATE * dt, TURN_RATE * dt);
+        const k = gap > 0 ? Math.min(1, (DOCK_SPEED * dt) / gap) : 1;
+        p.set(p.x + (a.x - p.x) * k, terrainHeight(p.x, p.z), p.z + (a.z - p.z) * k);
+        this.root.rotation.set(0, this.heading, 0);
+        return;
+      }
+      this.heading = ROVER_DOCK.heading;
+    }
+    if (crew.some((c) => Math.hypot(c.x - p.x, c.z - p.z) < CREW_NEAR + 0.6)) {
+      this.blocked = true;
+      return;
+    }
+    this.blocked = false;
+    const total = Rover.dockLength();
+    const step = DOCK_SPEED * dt;
+    this.dockS = this.phase === 'dockIn' ? Math.min(total, this.dockS + step) : Math.max(0, this.dockS - step);
+    // De ré as rodas giram ao contrário.
+    for (const w of this.wheels) w.rotation.z -= (this.phase === 'dockIn' ? step : -step) / this.wheelRadius;
+    const q = this.dockPoint(this.dockS);
+    this.root.position.set(q.x, q.y, q.z);
+    this.root.rotation.order = 'YZX';
+    this.root.rotation.set(0, this.heading, q.slope);
+    if (this.phase === 'dockIn' && this.dockS >= total) {
+      this.phase = 'service';
+      this.serviceLeft = SERVICE_SECONDS;
+      this.studies = 0;
+    } else if (this.phase === 'dockOut' && this.dockS <= 0) {
+      this.phase = 'drive';
+      this.target = null;
+    }
   }
 
   private explore(dt: number, time: number, crew: THREE.Vector3[], scienceBlocks: number): void {
@@ -387,7 +520,7 @@ export class Rover {
     }
     // Sem destino, ou o destino ficou longe demais (tiraram blocos de ciência): escolhe outro.
     const { far } = exploreRange(scienceBlocks);
-    if (!this.target || this.fromBase(this.target.x, this.target.z) > far + 4) this.pickTarget(scienceBlocks);
+    if (!this.target || (!this.target.home && this.fromBase(this.target.x, this.target.z) > far + 4)) this.pickTarget(scienceBlocks);
     const t = this.target!;
     t.driving += dt;
     if (t.driving > t.limit) {
@@ -396,6 +529,14 @@ export class Rover {
     }
     // Chegou: para e estuda.
     if (Math.hypot(t.x - p.x, t.z - p.z) <= t.stop) {
+      if (t.home) {
+        // Em frente à rampa: daqui em diante é a manobra de entrar na garagem.
+        this.phase = 'dockIn';
+        this.dockS = 0;
+        this.blocked = false;
+        return;
+      }
+      this.studies++;
       this.phase = 'study';
       this.studyLeft = STUDY_SECONDS;
       this.blocked = false;

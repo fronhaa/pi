@@ -16,28 +16,58 @@ import type { ProblemKind } from '@/sim/types';
  * cientista perto do rover, comandante perto da antena. Precisam ficar FORA das caixas de `obstacles`.
  */
 export const POSTS: Record<Role, THREE.Vector3> = {
-  commander: new THREE.Vector3(4.6, 0, 2.7),
+  commander: new THREE.Vector3(7.6, 0, -4.2),
   engineer: new THREE.Vector3(-9.0, 0, 8.4),
-  medic: new THREE.Vector3(3.4, 0, -2.6),
+  medic: new THREE.Vector3(-3.6, 0, -6.2),
   scientist: new THREE.Vector3(10.5, 0, 9.5),
 };
 
-/**
- * Onde fica a base de pesquisa (research-base.glb, docs/rover-e-base-de-pesquisa.md): o casco corre em X,
- * a torre do airlock (a porta) fica virada para +Z, para o lado da câmera. Origem do modelo no chão.
+/*
+ * Arranjo da base (concept art ARC-001/ARC-002, "Conceitos de Bases Lunar e Marciana", vista superior):
+ * a CÚPULA da estufa é o núcleo, no centro; os módulos saem dela como raios, ligados por túneis:
+ *
+ *              torre da antena
+ *                    |
+ *   academia─alojamento ═ CÚPULA ═ laboratório (porta do airlock)   painéis solares
+ *                    ║
+ *                 GARAGEM do rover (com rampa, virada para a câmera)
+ *                    |
+ *                  rampa
+ *
+ * Os módulos são o mesmo research-base.glb (o design não muda, só a posição). Mudou um centro? Os pontos de
+ * dentro (camas, academia, postos) acompanham, porque são medidos a partir daqui.
  */
-export const HABITAT_POSITION = new THREE.Vector3(-1.5, 0, 1.8);
+
+/** Cúpula com a estufa: o núcleo da base. */
+export const DOME_CENTER = new THREE.Vector3(0, 0, -1);
+export const DOME_RADIUS = 3.6;
+/**
+ * Até onde o túnel entra na cúpula: ali a cúpula ainda tem a altura do túnel (o casco fica a ~2,1 m do chão).
+ * O túnel vai daqui até a porta de acoplamento do módulo.
+ */
+const TUBE_START = 2.9;
+const TUBE_LENGTH = 1.8;
+/** Porta de acoplamento de cada módulo: ±3,25 m do centro no modelo (em escala). */
+const PORT = 3.25;
+
+/**
+ * Laboratório, com a torre do airlock (a porta) virada para +Z, para o lado da câmera (research-base.glb,
+ * docs/rover-e-base-de-pesquisa.md). O casco corre em X. Origem do modelo no chão.
+ */
+export const HABITAT_POSITION = new THREE.Vector3(DOME_CENTER.x + TUBE_START + TUBE_LENGTH + PORT * 0.8, 0, DOME_CENTER.z);
 /** Porta do airlock no referencial do modelo: o astronauta anda até ela e some (doc do modelo). */
 export const HABITAT_DOOR_LOCAL_Z = 4.1;
-/** Abrigo de regolito (tempestade solar): à frente e à esquerda do habitat, longe da trilha do rover. */
+/** Abrigo de regolito (tempestade solar): à frente e à esquerda da base, longe do caminho do rover. */
 export const SHELTER_CENTER = new THREE.Vector3(-13.5, 0, 8.5);
-/** Cúpula com a estufa. */
-export const DOME_CENTER = new THREE.Vector3(-1.5, 0, -4.6);
-export const DOME_RADIUS = 3.6;
-/** Torre da antena (com a luz de alarme). */
-export const TOWER_POSITION = new THREE.Vector3(7.4, 0, -0.6);
-/** Contêiner da bateria (o medidor fica na frente). */
-export const BATTERY_POSITION = new THREE.Vector3(7.6, 0, 3.8);
+/** Torre da antena (com a luz de alarme): atrás da cúpula, à direita. */
+export const TOWER_POSITION = new THREE.Vector3(5.5, 0, -7);
+/** Contêiner da bateria (o medidor fica na frente), atrás do laboratório, perto da torre. */
+export const BATTERY_POSITION = new THREE.Vector3(10.6, 0, -5.4);
+/**
+ * Campo de painéis solares, à direita da base (como no concept art): 2 fileiras de 5, começando aqui.
+ * Fica a ~3 m do laboratório: a tripulação passa entre os dois para ir da porta para trás da base.
+ */
+export const PANELS_ORIGIN = new THREE.Vector3(14.5, 0, 2);
 
 /**
  * Escala dos módulos do habitat (cascos, pernas, teto). Em 100% o casco tem 3,3 m de diâmetro e o astronauta
@@ -47,10 +77,54 @@ export const BATTERY_POSITION = new THREE.Vector3(7.6, 0, 3.8);
 export const HABITAT_SCALE = 0.8;
 /** Comprimento útil do piso em cada módulo (entre as portas de acoplamento, ±3,25 m no modelo). */
 export const MODULE_FLOOR_LENGTH = 6.5 * HABITAT_SCALE;
-/** Deslocamento do alojamento em relação ao laboratório: a port_b dele encaixa na port_a do laboratório. */
-export const QUARTERS_OFFSET_X = -7 * HABITAT_SCALE;
-/** A academia encaixa do mesmo jeito na port_a do alojamento. */
-export const GYM_OFFSET_X = 2 * QUARTERS_OFFSET_X;
+/**
+ * Alojamento, medido a partir do laboratório: do outro lado da cúpula (raio oeste), ligado a ela por um túnel.
+ * O interior (beliches, mesa) e os pontos de dentro usam este deslocamento.
+ */
+export const QUARTERS_OFFSET_X = 2 * (DOME_CENTER.x - HABITAT_POSITION.x);
+/** A academia encaixa na ponta do alojamento, como antes (port_b na port_a). */
+export const GYM_OFFSET_X = QUARTERS_OFFSET_X - 7 * HABITAT_SCALE;
+
+/**
+ * Garagem do rover: o mesmo módulo, no raio sul (virado para a câmera), com o casco correndo em Z.
+ * Em 100% de escala (os outros estão em 80%): o rover (~2,7 m de altura) precisa caber dentro.
+ * Depois de uma expedição o rover sobe a rampa, entrega as amostras e fica em revisão (src/scene/base/Rover.ts).
+ */
+export const GARAGE_SCALE = 1;
+export const GARAGE_POSITION = new THREE.Vector3(DOME_CENTER.x, 0, DOME_CENTER.z + TUBE_START + TUBE_LENGTH + PORT * GARAGE_SCALE);
+/** Giro do módulo (o modelo corre em X; aqui corre em Z). */
+export const GARAGE_ROTATION_Y = Math.PI / 2;
+/** Piso da garagem: onde o rover fica (a rampa sobe até aqui). */
+export const GARAGE_FLOOR_Y = 1.25;
+/** Rampa na ponta da garagem: do topo (na porta de acoplamento) ao pé, no chão. */
+export const GARAGE_RAMP = {
+  top: new THREE.Vector3(GARAGE_POSITION.x, GARAGE_FLOOR_Y, GARAGE_POSITION.z + PORT * GARAGE_SCALE + 0.15),
+  foot: new THREE.Vector3(GARAGE_POSITION.x, 0, GARAGE_POSITION.z + PORT * GARAGE_SCALE + 4.6),
+  width: 2.3,
+} as const;
+/**
+ * Caminho do rover para entrar: chega ao ponto de aproximação (fora da base, em frente à rampa), vai reto
+ * até o pé da rampa, sobe e para no meio da garagem. Para sair, faz o caminho ao contrário, de ré.
+ * `heading` = para onde o nariz aponta ao entrar (−Z).
+ */
+export const ROVER_DOCK = {
+  approach: new THREE.Vector3(GARAGE_POSITION.x, 0, GARAGE_RAMP.foot.z + 4),
+  foot: GARAGE_RAMP.foot,
+  top: GARAGE_RAMP.top,
+  inside: new THREE.Vector3(GARAGE_POSITION.x, GARAGE_FLOOR_Y, GARAGE_POSITION.z),
+  heading: Math.PI / 2,
+} as const;
+
+/** Túneis da cúpula até cada módulo (centro do casco a esta altura do chão). */
+export const TUBE_Y = 2.1;
+export const TUBES: readonly { from: THREE.Vector3; to: THREE.Vector3 }[] = [
+  // Leste: laboratório.
+  { from: new THREE.Vector3(DOME_CENTER.x + TUBE_START, TUBE_Y, DOME_CENTER.z), to: new THREE.Vector3(DOME_CENTER.x + TUBE_START + TUBE_LENGTH, TUBE_Y, DOME_CENTER.z) },
+  // Oeste: alojamento.
+  { from: new THREE.Vector3(DOME_CENTER.x - TUBE_START, TUBE_Y, DOME_CENTER.z), to: new THREE.Vector3(DOME_CENTER.x - TUBE_START - TUBE_LENGTH, TUBE_Y, DOME_CENTER.z) },
+  // Sul: garagem.
+  { from: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START), to: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START + TUBE_LENGTH) },
+];
 /** Altura das duas camas de cada beliche, acima do piso. */
 export const BUNK_LEVELS = [0.3, 1.12] as const;
 /** Fundo dos módulos, onde ficam os beliches e os aparelhos (z relativo ao centro do casco). */
@@ -103,7 +177,7 @@ export const GYM_STATIONS = [
 ] as const;
 
 /** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
-export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(1.0, 0.4, -4.6);
+export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(DOME_CENTER.x + 1.8, 0.4, DOME_CENTER.z - 1.8);
 
 /**
  * Onde a tripulação entra à noite (ponto no chão, em frente à porta): no habitat para dormir,
@@ -120,9 +194,9 @@ export const ENTRANCES = {
  * Problema novo em src/sim/problems.ts? Precisa de um lugar aqui (o TypeScript cobra).
  */
 export const PROBLEM_SPOTS: Record<ProblemKind, THREE.Vector3> = {
-  dustyPanels: new THREE.Vector3(17, 0, 6.6),
-  greenhouseLeak: new THREE.Vector3(2.3, 0, -4.6),
-  antenna: new THREE.Vector3(9.7, 0, -0.6),
+  dustyPanels: new THREE.Vector3(19.5, 0, 6.6),
+  greenhouseLeak: new THREE.Vector3(DOME_CENTER.x + 3.0, 0, DOME_CENTER.z - 3.0),
+  antenna: new THREE.Vector3(TOWER_POSITION.x + 2.3, 0, TOWER_POSITION.z),
   roverStuck: new THREE.Vector3(22, 0, 13),
   tornBag: new THREE.Vector3(SHELTER_CENTER.x, 0, SHELTER_CENTER.z + 3.9),
 };

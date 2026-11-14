@@ -9,6 +9,9 @@ Bloco "base de pesquisa", o mesmo modelo na Lua e em Marte. Os próximos blocos 
 - Porta de acesso no chão (1,0 x 1,95 m), 10 cm mais alta que o astronauta, sem escada: o astronauta anda até a porta e some em `(0, 0, 4,1)`; a subida acontece dentro do tubo de acesso.
 - Marcadores de acoplamento `port_a` / `port_b` (escotilha de ~1,96 m).
 - Clipes: `observatory_scan` (24 s) e `weather_spin` (1,2 s).
+- No jogo, o mesmo bloco aparece 4 vezes, arranjado em estrela em volta da cúpula (laboratório, alojamento, academia e a
+  garagem do rover com rampa). Só a posição muda; o design é o mesmo. Ver `src/scene/base/layout.ts` e
+  [estilo-visual.md](estilo-visual.md).
 
 ## rover.glb
 

@@ -5,6 +5,11 @@ import {
   BACK_Z,
   BUNK_DX,
   BUNK_LEVELS,
+  GARAGE_FLOOR_Y,
+  GARAGE_POSITION,
+  GARAGE_RAMP,
+  GARAGE_ROTATION_Y,
+  GARAGE_SCALE,
   GYM_DX,
   GYM_OFFSET_X,
   HABITAT_FLOOR_Y,
@@ -12,6 +17,7 @@ import {
   HABITAT_SCALE,
   MODULE_FLOOR_LENGTH,
   QUARTERS_OFFSET_X,
+  TUBES,
   addObstacle,
   type Obstacle,
 } from './layout';
@@ -38,6 +44,8 @@ export class Habitat {
   readonly root = new THREE.Group();
   /** Habitat simples, só até a base de pesquisa (.glb) carregar ou se ela falhar. */
   private readonly fallback = new THREE.Group();
+  /** Casco simples da garagem (fora do grupo `fallback`, que está em outra escala). */
+  private garageFallback: THREE.Object3D | null = null;
   private readonly windows = new THREE.MeshBasicMaterial({ color: PALETTE.window });
   /** Vidros das janelas dos módulos .glb: acendem à noite (luz de dentro). */
   private readonly windowGlass: THREE.MeshToonMaterial[] = [];
@@ -77,13 +85,89 @@ export class Habitat {
     opening.position.set(0, 0.9 / HABITAT_SCALE, 3.61 / HABITAT_SCALE);
     this.root.add(fb);
 
-    this.buildInterior();
+    const garageHull = hull.clone();
+    garageHull.scale.setScalar(GARAGE_SCALE);
+    garageHull.position.set(GARAGE_POSITION.x, 2.65 * GARAGE_SCALE, GARAGE_POSITION.z);
+    garageHull.rotation.y = GARAGE_ROTATION_Y;
+    this.garageFallback = garageHull;
+    this.root.add(garageHull);
 
-    // Colisão: os três cascos com as pernas, torre do airlock e o armário de amostras ao lado da porta.
+    this.buildInterior();
+    this.buildGarage();
+    this.buildTubes();
+
+    // Colisão: laboratório (raio leste), alojamento + academia (raio oeste), garagem e rampa (raio sul),
+    // túneis, torre do airlock e o armário de amostras ao lado da porta.
     const { x, z } = HABITAT_POSITION;
-    addObstacle(obstacles, x + GYM_OFFSET_X / 2, z, 3.6 * HABITAT_SCALE - GYM_OFFSET_X / 2, 2.5 * HABITAT_SCALE);
+    const halfX = 3.6 * HABITAT_SCALE;
+    const halfZ = 2.5 * HABITAT_SCALE;
+    addObstacle(obstacles, x, z, halfX, halfZ);
+    addObstacle(obstacles, x + (QUARTERS_OFFSET_X + GYM_OFFSET_X) / 2, z, halfX + (QUARTERS_OFFSET_X - GYM_OFFSET_X) / 2, halfZ);
     addObstacle(obstacles, x, z + 2.4, 1.0, 1.5);
     addObstacle(obstacles, x - 1.5, z + 3.06, 0.6, 0.35);
+    addObstacle(obstacles, GARAGE_POSITION.x, GARAGE_POSITION.z, 2.5 * GARAGE_SCALE, 3.6 * GARAGE_SCALE);
+    const ramp = GARAGE_RAMP;
+    addObstacle(obstacles, ramp.foot.x, (ramp.top.z + ramp.foot.z) / 2, ramp.width / 2, (ramp.foot.z - ramp.top.z) / 2);
+    for (const t of TUBES) {
+      const len = t.from.distanceTo(t.to);
+      const alongX = Math.abs(t.to.x - t.from.x) > Math.abs(t.to.z - t.from.z);
+      addObstacle(obstacles, (t.from.x + t.to.x) / 2, (t.from.z + t.to.z) / 2, alongX ? len / 2 : 0.9, alongX ? 0.9 : len / 2);
+    }
+  }
+
+  /**
+   * Garagem do rover: piso dentro do casco (o rover estaciona aqui) e a rampa da ponta até o chão,
+   * com corrimãos. O módulo em si é o mesmo dos outros (modelo simples ou .glb).
+   */
+  private buildGarage(): void {
+    const g = GARAGE_POSITION;
+    const floor = toonMesh(new THREE.BoxGeometry(2.2, 0.08, MODULE_FLOOR_LENGTH / HABITAT_SCALE), PALETTE.tech, 0);
+    floor.position.set(g.x, GARAGE_FLOOR_Y - 0.04, g.z);
+    this.root.add(floor);
+
+    const { top, foot, width } = GARAGE_RAMP;
+    const run = foot.z - top.z;
+    const rise = top.y - foot.y;
+    const length = Math.hypot(run, rise);
+    const slope = Math.atan2(rise, run);
+    const ramp = new THREE.Group();
+    ramp.position.set(top.x, (top.y + foot.y) / 2, (top.z + foot.z) / 2);
+    ramp.rotation.x = slope; // a ponta de +Z (o pé) desce até o chão
+    const deck = toonMesh(new THREE.BoxGeometry(width, 0.12, length), PALETTE.tech, 0.03);
+    ramp.add(deck);
+    // Faixas de aderência, para ler como rampa de longe.
+    for (let i = 0; i < 6; i++) {
+      const strip = toonMesh(new THREE.BoxGeometry(width * 0.9, 0.03, 0.12), PALETTE.light, 0);
+      strip.position.set(0, 0.075, -length / 2 + ((i + 0.5) / 6) * length);
+      ramp.add(strip);
+    }
+    for (const side of [-1, 1]) {
+      const rail = toonMesh(new THREE.BoxGeometry(0.08, 0.08, length), PALETTE.accent, 0);
+      rail.position.set((side * width) / 2, 0.55, 0);
+      ramp.add(rail);
+      for (const k of [-0.45, 0, 0.45]) {
+        const post = toonMesh(new THREE.BoxGeometry(0.06, 0.55, 0.06), PALETTE.tech, 0);
+        post.position.set((side * width) / 2, 0.28, k * length);
+        ramp.add(post);
+      }
+    }
+    this.root.add(ramp);
+  }
+
+  /** Túneis pressurizados ligando a cúpula a cada módulo (vista superior do concept art). */
+  private buildTubes(): void {
+    for (const t of TUBES) {
+      const len = t.from.distanceTo(t.to);
+      const geo = new THREE.CylinderGeometry(0.85, 0.85, len, 16);
+      const tube = toonMesh(geo, PALETTE.light, 0.03);
+      tube.position.copy(t.from).add(t.to).multiplyScalar(0.5);
+      tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), t.to.clone().sub(t.from).normalize());
+      this.root.add(tube);
+      const ring = toonMesh(new THREE.CylinderGeometry(0.95, 0.95, 0.16, 16), PALETTE.accent, 0);
+      ring.position.copy(t.to);
+      ring.quaternion.copy(tube.quaternion);
+      this.root.add(ring);
+    }
   }
 
   /** Janelas acendem à noite (`night` de 0 a 1). */
@@ -241,6 +325,14 @@ export class Habitat {
       this.root.add(module);
       return module;
     });
+    // Garagem do rover: o mesmo módulo (sem torre, armário, observatório e placa), virado para a câmera.
+    const garage = extras[0].clone(true);
+    garage.scale.setScalar(GARAGE_SCALE);
+    garage.position.copy(GARAGE_POSITION);
+    garage.rotation.y = GARAGE_ROTATION_Y;
+    this.root.add(garage);
+    extras.push(garage);
+    if (this.garageFallback) this.garageFallback.visible = false;
 
     for (const name of ['access_tower', 'sample_station']) {
       const o = m.root.getObjectByName(name);

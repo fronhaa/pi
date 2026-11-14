@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PALETTE, toonMaterial, toonMesh } from '@/render/toon';
-import { SHELTER_CENTER, distanceToRoverTrack, seededRandom, terrainHeight } from './layout';
+import { ROVER_DOCK, SHELTER_CENTER, distanceToRoverTrack, seededRandom, terrainHeight } from './layout';
 
 /** Pedra no chão que o rover precisa evitar (posição e raio). */
 export interface Rock {
@@ -73,6 +73,8 @@ function buildRocks(root: THREE.Object3D): Rock[] {
     const r = Math.max(sx, sz);
     // Faixa sem pedras em volta da base (caminho de saída e volta do rover).
     if (distanceToRoverTrack(x, z) < r + 2) continue;
+    // Caminho da garagem do rover (aproximação até o pé da rampa) sempre livre.
+    if (Math.abs(x - ROVER_DOCK.approach.x) < r + 2.5 && z > ROVER_DOCK.foot.z - 1 && z < ROVER_DOCK.approach.z + 3) continue;
     // Nada de pedra em cima do abrigo de regolito e dos sacos em volta dele.
     if (Math.hypot(x - SHELTER_CENTER.x, z - SHELTER_CENTER.z) < r + 4.5) continue;
     rocks.push({ x, z, r });

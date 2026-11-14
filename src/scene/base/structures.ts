@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PALETTE, toonMesh } from '@/render/toon';
 import { CONFIG } from '@/sim/config';
 import type { Resources } from '@/sim/types';
-import { BATTERY_POSITION, DOME_CENTER, DOME_RADIUS, SHELTER_CENTER, TOWER_POSITION, addObstacle, seededRandom, type Obstacle } from './layout';
+import { BATTERY_POSITION, PANELS_ORIGIN, DOME_CENTER, DOME_RADIUS, SHELTER_CENTER, TOWER_POSITION, addObstacle, seededRandom, type Obstacle } from './layout';
 
 const PANEL_CLEAN = new THREE.Color(PALETTE.panel);
 const PLANT_OK = new THREE.Color(PALETTE.plant);
@@ -133,8 +133,8 @@ export class BaseStructures {
     const geo = new THREE.BoxGeometry(2.2, 0.08, 1.3);
     for (let row = 0; row < 2; row++) {
       for (let col = 0; col < 5; col++) {
-        const x = 12 + col * 2.5;
-        const z = 2 + row * 2.3;
+        const x = PANELS_ORIGIN.x + col * 2.5;
+        const z = PANELS_ORIGIN.z + row * 2.3;
         const p = toonMesh(geo, PALETTE.panel, 0.02);
         p.position.set(x, 1.15, z);
         p.rotation.x = -0.35;
@@ -145,7 +145,7 @@ export class BaseStructures {
         this.root.add(post);
       }
     }
-    addObstacle(this.obstacles, 17, 3.15, 6.4, 2);
+    addObstacle(this.obstacles, PANELS_ORIGIN.x + 5, PANELS_ORIGIN.z + 1.15, 6.4, 2);
   }
 
   private buildBattery(): THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> {

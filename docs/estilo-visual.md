@@ -89,15 +89,21 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   do airlock (`ENTRANCES.habitat`) virada para a câmera. O rover usa a mesma lógica de andar, parar e desviar; as rodas
   `wheel_0..5` giram pela distância e, ao parar para estudar, tocam `scan` e `drill`. Até carregar (ou se falhar), ficam
   o módulo e o rover simples.
-- Habitat de dois módulos do mesmo `research-base.glb`: o **laboratório** (com o airlock, a bancada e o observatório) e o
-  **alojamento** acoplado pela porta de acoplamento da esquerda (`QUARTERS_OFFSET_X`, sem airlock nem placa "LAB"), com
-  dois beliches, uma cama por astronauta. As janelas acendem à noite.
+- **Arranjo da base em estrela** (concept art ARC-001/ARC-002, vista superior:
+  [conceito-bases-lunar-marciana.png](img/conceito-bases-lunar-marciana.png)), definido em
+  [`src/scene/base/layout.ts`](../src/scene/base/layout.ts): a **cúpula** da estufa é o núcleo (`DOME_CENTER`), e túneis
+  (`TUBES`, cilindros claros com anel laranja na ponta) a ligam a quatro módulos do mesmo `research-base.glb`, sem mudar o
+  design: **laboratório** a leste (com o airlock virado para a câmera, a bancada e o observatório), **alojamento** a oeste
+  (`QUARTERS_OFFSET_X`, dois beliches, uma cama por astronauta) com a **academia** acoplada na ponta, e a **garagem do
+  rover** ao sul (`GARAGE_POSITION`, casco correndo em Z, em 100% de escala para o rover caber, com piso e uma **rampa**
+  com faixas e corrimãos laranja até o chão: `GARAGE_RAMP`). Painéis à direita (`PANELS_ORIGIN`), torre e bateria atrás.
+  As janelas acendem à noite.
 - Dentro do habitat: cabines **transparentes**. Todas as peças do casco (casco, faixas, janelas e portas de acoplamento)
   ficam translúcidas (`glassMaterial`), sem contorno e sem sombra, para nada opaco cortar a tripulação. Testamos uma vista
   em corte, mas o time preferiu ver através do casco. Cada módulo tem seu piso. Comandante e cientista
   ficam no laboratório e engenheiro e médico no alojamento (`HABITAT_SPOTS`); quem conserta o vazamento vai para a estufa
   (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de descompressão, somem.
-- O abrigo de regolito fica em `SHELTER_CENTER`, à esquerda do alojamento.
+- O abrigo de regolito fica em `SHELTER_CENTER`, à frente e à esquerda do alojamento.
 - Os módulos do habitat ficam em 80% (`HABITAT_SCALE`), para o astronauta caber justo na cabine; a torre do airlock e o
   armário continuam em 100% (a porta segue mais alta que o astronauta). As janelas acendem à noite. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
 - Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
