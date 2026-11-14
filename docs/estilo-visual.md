@@ -73,14 +73,14 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
 - Habitat de dois módulos do mesmo `research-base.glb`: o **laboratório** (com o airlock, a bancada e o observatório) e o
   **alojamento** acoplado pela porta de acoplamento da esquerda (`QUARTERS_OFFSET_X`, sem airlock nem placa "LAB"), com
   dois beliches, uma cama por astronauta. As janelas acendem à noite.
-- Dentro do habitat: **vista em corte** (casa de boneca). O casco, as faixas e as janelas de cada módulo perdem a parte da
-  frente e de cima (`CUTAWAY_PLANES`, `clipIntersection`), com material dos dois lados; o resto do casco fica opaco.
-  Antes era translúcido, mas ficava turvo e as faixas cortavam os bonecos. Cada módulo tem seu piso. Comandante e cientista
+- Dentro do habitat: cabines **transparentes**. Todas as peças do casco (casco, faixas, janelas e portas de acoplamento)
+  ficam translúcidas (`glassMaterial`), sem contorno e sem sombra, para nada opaco cortar a tripulação. Testamos uma vista
+  em corte, mas o time preferiu ver através do casco. Cada módulo tem seu piso. Comandante e cientista
   ficam no laboratório e engenheiro e médico no alojamento (`HABITAT_SPOTS`); quem conserta o vazamento vai para a estufa
   (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de descompressão, somem.
 - O abrigo de regolito fica em `SHELTER_CENTER`, à esquerda do alojamento.
 - Os módulos do habitat ficam em 80% (`HABITAT_SCALE`), para o astronauta caber justo na cabine; a torre do airlock e o
-  armário continuam em 100% (a porta segue mais alta que o astronauta). As janelas da frente caem no corte; as do fundo acendem à noite. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
+  armário continuam em 100% (a porta segue mais alta que o astronauta). As janelas acendem à noite. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
 - Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
   (GDD, "Atividades dentro da base", B): quem está dentro sem ordem há 8 s vai à esteira ou à bicicleta (`GYM_STATIONS`,
   animação de andar no lugar), descansa deitado no beliche e volta ao posto. Na primeira vez aparece o fato F9.

@@ -67,23 +67,15 @@ export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
 };
 
 /**
- * Vista em corte (casa de boneca): some a parte da frente e de cima de cada cabine, onde z passa de
- * CUT_Z e y passa de CUT_Y ao mesmo tempo. O casco fica opaco; a câmera vê o interior sem vidro na frente.
+ * Cabines transparentes: todas as peças do casco (casco, faixas, janelas, portas de acoplamento) ficam
+ * translúcidas, para ver a tripulação lá dentro sem nada opaco na frente. Sem contorno e sem sombra.
  */
-const CUT_Z = HABITAT_POSITION.z + 0.3;
-const CUT_Y = HABITAT_FLOOR_Y + 0.3;
-const CUTAWAY_PLANES = [new THREE.Plane(new THREE.Vector3(0, 0, -1), CUT_Z), new THREE.Plane(new THREE.Vector3(0, -1, 0), CUT_Y)];
-
-/** Material de casco com o corte: os dois lados aparecem (de dentro se vê a parede do fundo). */
-function cutawayMaterial<M extends THREE.Material>(mat: M): M {
+function glassMaterial<M extends THREE.Material>(mat: M, opacity: number): M {
   const m = mat.clone();
-  m.clippingPlanes = CUTAWAY_PLANES;
-  m.clipIntersection = true;
-  m.clipShadows = true;
-  m.side = THREE.DoubleSide;
-  m.transparent = false;
-  m.opacity = 1;
-  m.depthWrite = true;
+  m.transparent = true;
+  m.opacity = opacity;
+  m.depthWrite = false;
+  m.side = THREE.FrontSide;
   return m;
 }
 
@@ -328,8 +320,7 @@ export class MarsBase {
     const fb = this.habitatFallback;
     const hullGeo = new THREE.CylinderGeometry(1.6, 1.6, 7.2, 20);
     hullGeo.rotateZ(Math.PI / 2);
-    const hull = new THREE.Mesh(hullGeo, cutawayMaterial(toonMaterial(PALETTE.light)));
-    hull.castShadow = true;
+    const hull = new THREE.Mesh(hullGeo, glassMaterial(toonMaterial(PALETTE.light), 0.3));
     hull.position.y = 2.65;
     fb.add(hull);
     const tower = toonMesh(new THREE.BoxGeometry(1.9, 3.9, 2.4), PALETTE.light);
@@ -534,8 +525,8 @@ export class MarsBase {
       o.position.divideScalar(HABITAT_SCALE);
     }
 
-    // Vista em corte: casco, faixas e janelas da frente somem na parte da frente e de cima (CUTAWAY_PLANES).
-    // O contorno dessas peças sai (ele é compartilhado e não aceita o corte).
+    // Cabines transparentes: TODAS as peças do casco ficam translúcidas (o casco mais claro, faixas e janelas um
+    // pouco mais visíveis), para nada opaco cortar a tripulação. Sem contorno (ele é opaco) e sem sombra.
     const cut = new Map<THREE.Material, THREE.Material>();
     for (const module of [m.root, ...extras]) {
       module.getObjectByName('hull')?.traverse((o) => {
@@ -544,14 +535,15 @@ export class MarsBase {
         const src = mesh.material as THREE.Material;
         let mat = cut.get(src);
         if (!mat) {
-          mat = cutawayMaterial(src);
+          mat = glassMaterial(src, mesh.name === 'hull_shell' ? 0.28 : 0.5);
           cut.set(src, mat);
         }
         mesh.material = mat;
+        mesh.castShadow = false;
         for (const c of [...mesh.children]) if (c.userData.isOutline) mesh.remove(c);
       });
     }
-    // Vidros das janelas (as do fundo continuam; as da frente caem no corte): acendem à noite.
+    // Vidros das janelas: acendem à noite.
     m.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (mesh.isMesh && (mesh.material as THREE.Material).name === 'window') {
