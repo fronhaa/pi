@@ -4,8 +4,11 @@ import { createSolarPanels } from '@/models/SolarPanels';
 import { createRover } from '@/models/Rover';
 import { createRocks } from '@/models/Rocks';
 import { createResearchBase } from '@/models/ResearchBase';
+import { createGreenhouseBase } from '@/models/GreenhouseBase';
+import { createCommBase } from '@/models/CommBase';
+import { createSolarPower } from '@/models/SolarPower';
 
-const models = { 'mars-station': createMarsStation(), 'solar-panels': createSolarPanels(), rover: createRover(), 'mars-rocks': createRocks(), 'research-base': createResearchBase() };
+const models = { 'mars-station': createMarsStation(), 'solar-panels': createSolarPanels(), rover: createRover(), 'mars-rocks': createRocks(), 'research-base': createResearchBase(), 'greenhouse-base': createGreenhouseBase(), 'comm-base': createCommBase(), 'solar-panels-battery': createSolarPower() };
 (async () => {
   const out: Record<string, string> = {};
   for (const [name, m] of Object.entries(models)) {
