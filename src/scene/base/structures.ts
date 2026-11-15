@@ -9,6 +9,9 @@ import {
   COMM_POSITION,
   DOME_CENTER,
   DOME_RADIUS,
+  GREENHOUSE_STAIRS,
+  STAIR_WIDTH,
+  WALKWAY_WIDTH,
   HABITAT_SCALE,
   OUTLET_LOCAL_X,
   PANELS_ORIGIN,
@@ -227,12 +230,17 @@ export class BaseStructures {
     this.root.add(base);
     // Canteiros: mais plantas na cúpula maior, fora da passarela que cruza a estufa de leste a oeste.
     const rng = seededRandom(3);
-    for (let i = 0; i < 34; i++) {
+    for (let i = 0; i < 48; i++) {
       const a = rng() * Math.PI * 2;
       const d = rng() * (r - 1.2);
-      if (Math.abs(Math.sin(a) * d) < 1.1) continue;
+      const px = Math.cos(a) * d;
+      const pz = Math.sin(a) * d;
+      // Livre: embaixo da passarela (leste-oeste e o braço da garagem, ao sul) e na frente das escadas.
+      if (Math.abs(pz) < WALKWAY_WIDTH / 2 + 0.5) continue;
+      if (pz > 0 && Math.abs(px) < WALKWAY_WIDTH / 2 + 0.5) continue;
+      if (GREENHOUSE_STAIRS.some((st) => Math.abs(center.x + px - st.top.x) < STAIR_WIDTH / 2 + 0.5 && (pz - (st.top.z - center.z)) * st.side > -0.2 && (pz - (st.harvest.z - center.z)) * st.side < 0.6)) continue;
       const plant = toonMesh(new THREE.SphereGeometry(0.35 + rng() * 0.25, 10, 8), PALETTE.plant, 0.05);
-      plant.position.set(center.x + Math.cos(a) * d, 0.7 + rng() * 0.3, center.z + Math.sin(a) * d);
+      plant.position.set(center.x + px, 0.7 + rng() * 0.3, center.z + pz);
       this.plants.push(plant);
       this.root.add(plant);
     }

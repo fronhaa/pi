@@ -134,6 +134,8 @@ export const ROVER_DOCK = {
 
 /** Túneis da cúpula até cada módulo (centro do casco a esta altura do chão). */
 export const TUBE_Y = 2.1;
+/** Raio do túnel (m). Por dentro sobra ~1,7 m acima do piso: o astronauta (1,87 m) passa abaixado. */
+export const TUBE_RADIUS = 0.85;
 export const TUBES: readonly { from: THREE.Vector3; to: THREE.Vector3 }[] = [
   // Leste: laboratório.
   { from: new THREE.Vector3(DOME_CENTER.x + TUBE_START, TUBE_Y, DOME_CENTER.z), to: new THREE.Vector3(DOME_CENTER.x + TUBE_START + TUBE_LENGTH, TUBE_Y, DOME_CENTER.z) },
@@ -144,10 +146,83 @@ export const TUBES: readonly { from: THREE.Vector3; to: THREE.Vector3 }[] = [
 ];
 /** Altura das duas camas de cada beliche, acima do piso. */
 export const BUNK_LEVELS = [0.3, 1.12] as const;
-/** Fundo dos módulos, onde ficam os beliches e os aparelhos (z relativo ao centro do casco). */
+/** Fundo dos módulos, onde ficam a bancada e os aparelhos (z relativo ao centro do casco). */
 export const BACK_Z = -0.55;
+/**
+ * Beliches um pouco mais para o meio do casco que a bancada: o casco é redondo, e deitado na cama de cima o
+ * ombro saía pelo casco (raio 1,3 m em volta de y = 2,1) com a cama no fundo (BACK_Z).
+ */
+export const BUNK_Z = -0.38;
 /** Piso dentro do casco (em 80% o casco vai de y = 0,8 a 3,4; neste piso sobra ~2,1 m de altura). */
 export const HABITAT_FLOOR_Y = 1.25;
+/** Raio do casco dos módulos em 80% e a altura do eixo dele. */
+const HULL_RADIUS = 1.3;
+const HULL_AXIS_Y = 2.1;
+
+/** Chão da estufa, dentro da cúpula (em cima da base da cúpula), onde ficam os canteiros. */
+export const GREENHOUSE_FLOOR_Y = 0.4;
+/** Largura da passarela da cúpula (m). */
+export const WALKWAY_WIDTH = 1.2;
+/**
+ * Passarela da cúpula, na altura do piso dos módulos: cruza de leste a oeste (laboratório ↔ alojamento) e tem um
+ * braço para o sul, até o túnel da garagem do rover. Os canteiros ficam embaixo.
+ */
+export const WALKWAY = {
+  east: new THREE.Vector3(TUBES[0].from.x, HABITAT_FLOOR_Y, DOME_CENTER.z),
+  west: new THREE.Vector3(TUBES[1].from.x, HABITAT_FLOOR_Y, DOME_CENTER.z),
+  south: new THREE.Vector3(DOME_CENTER.x, HABITAT_FLOOR_Y, TUBES[2].from.z),
+} as const;
+/** Escada da passarela até o chão da estufa: degraus de ~17 cm, como numa casa. */
+export const STAIR_STEPS = 5;
+export const STAIR_RUN = 0.3;
+export const STAIR_WIDTH = 0.8;
+/**
+ * Escadas da passarela para os canteiros, uma de cada lado (norte e sul), para colher e cuidar das plantas.
+ * `top` fica na borda da passarela, `bottom` no chão da estufa; `harvest` é onde o astronauta para, no canteiro.
+ * A do sul fica do lado oeste, para não bater no braço da garagem.
+ */
+export const GREENHOUSE_STAIRS = [-1, 1].map((side) => {
+  // side = −1: lado norte (−Z), a leste; side = +1: lado sul (+Z), a oeste.
+  const x = DOME_CENTER.x - side * 2.2;
+  const edge = DOME_CENTER.z + side * (WALKWAY_WIDTH / 2);
+  const run = STAIR_STEPS * STAIR_RUN;
+  return {
+    side,
+    top: new THREE.Vector3(x, HABITAT_FLOOR_Y, edge),
+    bottom: new THREE.Vector3(x, GREENHOUSE_FLOOR_Y, edge + side * run),
+    harvest: new THREE.Vector3(x, GREENHOUSE_FLOOR_Y, edge + side * (run + 0.7)),
+  };
+});
+/** Pontos de colheita e manutenção das plantas (um de cada lado), para a tarefa "Colher na estufa" (GDD, A). */
+export const GREENHOUSE_HARVEST_SPOTS = GREENHOUSE_STAIRS.map((s) => s.harvest);
+
+/**
+ * Quanto sobra de altura acima do piso dos módulos neste ponto (m). Nos túneis (e na boca deles, onde a cúpula
+ * é baixa) sobra ~1,7 m: o astronauta passa abaixado. No resto da passarela e nos módulos, cabe em pé.
+ */
+export function headroomAt(x: number, z: number): number {
+  let ceiling = Infinity;
+  const d = Math.hypot(x - DOME_CENTER.x, z - DOME_CENTER.z);
+  const inDome = d < DOME_RADIUS;
+  if (inDome) ceiling = Math.sqrt(DOME_RADIUS ** 2 - d * d);
+  for (const t of TUBES) {
+    const ax = t.to.x - t.from.x;
+    const az = t.to.z - t.from.z;
+    const len = Math.hypot(ax, az);
+    const along = ((x - t.from.x) * ax + (z - t.from.z) * az) / len;
+    const side = Math.abs((x - t.from.x) * az - (z - t.from.z) * ax) / len;
+    // A boca do túnel começa um pouco dentro da cúpula, onde ela fica mais baixa que o túnel.
+    if (along < -0.8 || along > len + 0.1 || side > TUBE_RADIUS) continue;
+    const top = TUBE_Y + TUBE_RADIUS;
+    ceiling = inDome ? Math.max(ceiling, top) : Math.min(ceiling, top);
+  }
+  return ceiling - HABITAT_FLOOR_Y;
+}
+
+/** Ponto dentro do casco do módulo (redondo, centro em y = HULL_AXIS_Y)? Para conferir camas e postos. */
+export function insideHull(zFromAxis: number, y: number): boolean {
+  return Math.hypot(zFromAxis, y - HULL_AXIS_Y) <= HULL_RADIUS;
+}
 
 /**
  * Onde cada papel fica DENTRO do habitat, visível pelo casco translúcido: comandante e cientista no
@@ -178,7 +253,7 @@ function bunkSpot(dx: number, level: 0 | 1): THREE.Vector3 {
   return new THREE.Vector3(
     HABITAT_POSITION.x + QUARTERS_OFFSET_X + dx + LYING_LENGTH / 2,
     HABITAT_FLOOR_Y + BUNK_LEVELS[level] + 0.36,
-    HABITAT_POSITION.z + BACK_Z,
+    HABITAT_POSITION.z + BUNK_Z,
   );
 }
 
@@ -207,8 +282,11 @@ export const HABITAT_LOOK: Record<Role, THREE.Vector3> = {
   medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X, HABITAT_FLOOR_Y + 0.7, HABITAT_POSITION.z + 0.3),
 };
 
-/** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
-export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(DOME_CENTER.x + DOME_RADIUS * 0.45, 0.4, DOME_CENTER.z - DOME_RADIUS * 0.45);
+/**
+ * Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). Ele desce pela
+ * escada do lado norte (GREENHOUSE_STAIRS[0]).
+ */
+export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(DOME_CENTER.x + DOME_RADIUS * 0.45, GREENHOUSE_FLOOR_Y, DOME_CENTER.z - DOME_RADIUS * 0.45);
 
 /**
  * Onde a tripulação entra à noite (ponto no chão, em frente à porta): no habitat para dormir,
