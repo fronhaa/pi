@@ -4,9 +4,11 @@
  * Parâmetros entre chaves: {n}. Toda chave precisa existir nos dois idiomas (o TypeScript confere).
  */
 export const pt = {
-  'fact.exercise': 'Astronautas fazem exercício todo dia, umas 2 horas. Assim os ossos e os músculos continuam fortes. Camundongos na Estação Espacial perderam músculo e osso em 33 dias.',
-  'fact.exercise.source': 'Fonte: NASA (2023) e estudo OSD-342 do OSDR',
-  'fact.greenhouseInflatable': 'A NASA estuda uma estufa inflável para a Lua e Marte. Ela não é de vidro e ficaria sob o solo. A luz do Sol chega por fibra óptica.',
+  'fact.exercise.title': '💪 Hora de malhar!',
+  'fact.exercise': 'Astronautas fazem exercício todo dia, umas 2 horas. Assim os ossos e os músculos ficam fortes.',
+  'fact.exercise.source': 'Fonte: NASA (2023)',
+  'fact.greenhouseInflatable.title': '🌱 Estufa de encher',
+  'fact.greenhouseInflatable': 'A NASA estuda uma estufa que enche igual a um balão. A luz do Sol chega por fibra óptica (cabos de luz).',
   'fact.greenhouseInflatable.source': 'Fonte: NASA, estufas para a Lua e Marte (2017)',
   'flare.real': 'Erupção real: {date}',
   'flare.simulated': 'Erupção simulada',
@@ -63,9 +65,11 @@ export const pt = {
 } as const;
 
 export const en: Record<keyof typeof pt, string> = {
-  'fact.exercise': 'Astronauts exercise every day, about 2 hours. That keeps their bones and muscles strong. Mice on the Space Station lost muscle and bone in 33 days.',
-  'fact.exercise.source': 'Source: NASA (2023) and OSDR study OSD-342',
-  'fact.greenhouseInflatable': 'NASA is studying an inflatable greenhouse for the Moon and Mars. It is not glass, and it would sit under soil. Sunlight reaches it through optical fibers.',
+  'fact.exercise.title': '💪 Workout time!',
+  'fact.exercise': 'Astronauts exercise every day, for about 2 hours. That way, their bones and muscles stay strong.',
+  'fact.exercise.source': 'Source: NASA (2023)',
+  'fact.greenhouseInflatable.title': '🌱 A blow-up greenhouse',
+  'fact.greenhouseInflatable': 'NASA is studying a greenhouse that fills up like a balloon. Sunlight comes in through optical fibers (light cables).',
   'fact.greenhouseInflatable.source': 'Source: NASA, greenhouses for the Moon and Mars (2017)',
   'flare.real': 'Real flare: {date}',
   'flare.simulated': 'Simulated flare',
