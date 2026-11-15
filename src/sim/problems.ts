@@ -5,7 +5,7 @@ import type { Problem, ProblemKind } from './types.ts';
 /**
  * Problemas pela base (docs/game-design.md, "Tempo da tripulação e movimentação").
  * Tempos e efeitos são valores iniciais de jogo, ainda a balancear (GDD).
- * A ONDE cada problema fica no mapa é da cena (src/scene/MarsBase.ts, PROBLEM_SPOTS); aqui só regras.
+ * A ONDE cada problema fica no mapa é da cena (src/scene/base/layout.ts, PROBLEM_SPOTS); aqui só regras.
  */
 export interface ProblemDef {
   kind: ProblemKind;

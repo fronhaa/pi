@@ -67,8 +67,11 @@ São três recursos centrais (energia, suporte de vida e blindagem), seguindo o 
 | Suporte de vida (ar, água, comida) | 70 | Precisa de 3 blocos para ficar estável; cada bloco a mais ou a menos muda 6 | Em 0, a missão termina |
 | Blindagem | 40 | Perde 4 por desgaste; ganha 8 por bloco | Máximo 100 |
 | Dose de radiação | 0 | +1 por sol, mesmo sem tempestade | Em 100, a tripulação volta para a Terra |
-| Ciência | 0 | +3 por bloco; metade disso no sol de tempestade | Meta: 100 |
+| Ciência | 0 | +3 por bloco; metade disso no sol de tempestade; metade também quando acabam os tubos de amostra | Meta: 100 |
+| Tubos de amostra | 38 | Todo sol com energia na ciência, o rover faz uma expedição e enche 3 tubos (não importa quantos blocos). Com o rover atolado, não sai e não gasta tubos | Os 38 são da missão inteira. Sem tubos, o rover só mede, sem guardar amostras, e a ciência do dia vale a metade |
 | Poeira nos painéis | 0% | Cai 6 pontos percentuais por sol com vento | Máximo 80%; reduz os blocos gerados na mesma proporção |
+
+**Tubos de amostra.** O rover Perseverance levou 43 tubos para Marte: 38 para amostras e 5 "tubos-testemunha" ([F14](ciencia-marte.md#f14-o-perseverance-tem-poucos-tubos-de-amostra)). No jogo, os 38 são da missão inteira e cada expedição enche 3 (`CONFIG.samples`, INTERPRETADO: o número 38 é real; 3 por expedição e a ciência pela metade sem tubos são regras do jogo). A lição: os tubos são poucos, então vale escolher bem quando mandar o rover. Espalhar 1 bloco de ciência por dia gasta 3 tubos para +3 de ciência; concentrar a ciência rende mais por tubo. O plano de energia mostra o custo antes de terminar o sol ("+9 · 🧪 −3 tubos"; sem tubos: "🧪 sem tubos: só metade"). O painel mostra "Tubos de amostra" com o gasto do dia já previsto ("38 · −3 hoje"; com 0 blocos na ciência, só "38") e **enchendo ao vivo**: a cada parada de estudo do rover, um tubo a menos (37, 36, 35, "🧪 3 de 3 cheios hoje"). A regra é que decide os 3 tubos do sol; na noite, o relatório confirma o número, o relatório conta quantos o rover encheu e quantos restam, e o primeiro relatório com expedição traz o fato do Perseverance (só em Marte). Na cena, o rover faz uma expedição por sol, com 3 paradas de estudo (uma por tubo), e volta à garagem para entregar as amostras; depois fica estacionado até o próximo sol.
 
 **Tempestade solar.** Um evento solar real do DONKI dispara a tempestade e define a intensidade dela no jogo. Nas [missões históricas](#calendário-da-missão-janelas-históricas-reais) (o modo padrão), o evento é uma ejeção de massa coronal (CME), e a força vem do tipo de velocidade: S e C = fraca, O = média, R e ER = forte. Sem as missões, o evento é uma erupção sorteada, e a força vem da classe: C = fraca, M = média, X = forte. As duas usam a mesma escala: fraca (10), média (25), forte (45). A dose recebida é calculada assim:
 
@@ -197,6 +200,8 @@ Medição de 2026-11-14 (`npm run balance`, 2.000 partidas por estratégia). Com
 mais difícil, porque o DONKI só registra erupções a partir de M5.0 (não há classe C, a "fraca"). A forma se mantém.
 
 Qualquer mudança nos números deve manter essa forma: as duas estratégias extremas falham e a estratégia atenta vence.
+
+**Com os tubos de amostra** (38 tubos, 3 por expedição; 2026-11-14, 1.000 partidas por estratégia, erupções reais, simuladas, Lua e as 6 missões, comparado com a versão sem tubos): **igual em todos os cenários**, menos a missão histórica 1, em que a estratégia atenta passa de 5% para 6% de 1 estrela. Com 15 sóis, 38 tubos dão 12 expedições completas e uma com 2 tubos; quem manda o rover todo sol só fica sem tubos nos 2 últimos sóis. A regra pesa para quem espalha pouca ciência por muitos dias, não para as estratégias do teste.
 
 **Com as cartas do rover** (MOXIE e "Caminho do rover", 2026-11-14, 1.000 partidas por estratégia, erupções reais, simuladas e as 6 missões): a forma se mantém em todos os cenários. As estratégias extremas continuam falhando sempre, "ignora a blindagem" não mudou, e a estratégia atenta (que pega o atalho e resgata o rover) termina com 1 estrela um pouco menos vezes (ex.: erupções reais, de 9% para 5%).
 
@@ -435,7 +440,7 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 
 **Decisão (14/11/2026):** os astronautas não ficam encarando a câmera. Eles vivem a base e só se viram para quem controla quando são **tocados**.
 
-**Implementado:** `Astronaut.lookFree`/`lookAt`/`faceToward` em `src/scene/Crew.ts` (giro de no máximo 180°/s), pontos de olhar em `HABITAT_LOOK` (`src/scene/MarsBase.ts`) e o toque em `Game.select` (2 s olhando para a câmera, só para quem esta tela controla e sem ordem).
+**Implementado:** `Astronaut.lookFree`/`lookAt`/`faceToward` em `src/scene/Crew.ts` (giro de no máximo 180°/s), pontos de olhar em `HABITAT_LOOK` (`src/scene/base/layout.ts`), a rotina de dentro em `CrewRoutine.update` (`src/scene/crewRoutine.ts`) e o toque em `Game.select` (2 s olhando para a câmera, só para quem esta tela controla e sem ordem).
 
 | Situação | Para onde olha |
 | --- | --- |
@@ -459,8 +464,8 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 | # | Arquivo | O que fazer |
 | --- | --- | --- |
 | 1 | `src/scene/Crew.ts` | Trocar `faceCamera` (instantâneo) por um alvo de direção com giro suave: `lookAt(point, seconds)` e `lookFree(dt)` (sorteia pontos de olhar) |
-| 2 | `src/scene/MarsBase.ts` | Um ponto de olhar por módulo (`HABITAT_LOOK`), ao lado de `HABITAT_SPOTS` |
-| 3 | `src/core/Game.ts` | `showCrewInside` deixa de chamar `faceCamera` todo quadro; `select(role)` pede `lookAt(câmera, 2)` se o astronauta não tem tarefa e é controlado por esta tela |
+| 2 | `src/scene/base/layout.ts` | Um ponto de olhar por módulo (`HABITAT_LOOK`), ao lado de `HABITAT_SPOTS` |
+| 3 | `src/scene/crewRoutine.ts` e `src/core/Game.ts` | `CrewRoutine` deixa de chamar `faceCamera` todo quadro; `select(role)` pede `lookAt(câmera, 2)` se o astronauta não tem tarefa e é controlado por esta tela |
 
 **Pronto quando:** com ninguém tocado, nenhum astronauta fica encarando a câmera; ao tocar num astronauta parado, ele vira devagar para a tela e volta ao que fazia; ao tocar em quem está consertando, ele continua de frente para o conserto.
 
@@ -505,8 +510,8 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 | 1 | `src/core/constants.ts` | `WALK_INSIDE`, `WALK_SUIT`, `LOPE_SPEED`, `LOPE_MIN_DIST`, `TRACTION` (μ), `TURN_RATE_SUIT` |
 | 2 | `src/scene/crewMotion.ts` | Velocidade-alvo com aceleração limitada (μ·g) em vez de `setLinvel` instantâneo; trote saltado com impulso vertical pequeno a cada passada quando a distância é longa |
 | 3 | `src/scene/Crew.ts` | `timeScale` do clipe `walk` pela cadência; inclinação de traje; giro com limite por segundo; poeira nos passos (`toon.ts`, cor de `PALETTE`) |
-| 4 | `src/core/Game.ts` | Dentro da base, caminho a pé entre módulo, corredor, estufa e câmara (pontos fixos) em vez de copiar a posição |
-| 5 | `src/i18n/strings.ts` | Textos dos cartões F12 e F13 (PT/EN) |
+| 4 | `src/scene/crewRoutine.ts` | Dentro da base, caminho a pé entre módulo, corredor, estufa e câmara (pontos fixos) em vez de copiar a posição |
+| 5 | `src/i18n/strings/nasa.ts` | Textos dos cartões F12 e F13 (PT/EN) |
 | 6 | `docs/fisica.md` | Nova seção da tripulação com as constantes e a conta μ·g |
 
 **Pronto quando:** fora, o astronauta embala, anda de passos largos e freia em menos de 1 s, e trota com pequenos voos até o rover; dentro, anda até a estufa sem teleporte; no modo em grupo, as duas telas mostram a mesma posição; o dia continua dando para resolver tudo.
@@ -588,10 +593,10 @@ Valores **iniciais, a balancear** (ver [Balanceamento](#balanceamento-das-tarefa
 | 4 | `src/sim/problems.ts` (`scheduleProblems`) | Depois de sortear e ordenar os problemas, **acrescentar** as duas tarefas com `spawnAt: 0`, **sem** usar o gerador aleatório (não muda o sorteio do resto) |
 | 5 | `src/sim/mission.ts` (`resolveProblem`) | Se for opcional: aplicar o efeito (vida com `clamp` no máximo; ciência sem teto), linha `report.task.*`, **sem** dose |
 | 6 | `src/sim/mission.ts` (`endSol`) | Opcionais não feitos ficam **fora** de `failed` e de `carried` (nada acontece) |
-| 7 | `src/scene/MarsBase.ts` | `PROBLEM_SPOTS.harvest` (dentro da cúpula) e `PROBLEM_SPOTS.analysis` (no módulo do laboratório). O astronauta precisa conseguir chegar: confira com `crewPath` |
+| 7 | `src/scene/base/layout.ts` | `PROBLEM_SPOTS.harvest` (dentro da cúpula) e `PROBLEM_SPOTS.analysis` (no módulo do laboratório). O astronauta precisa conseguir chegar: confira com `crewPath` |
 | 8 | `src/scene/ProblemMarkers.ts` | Ícone por tipo: 🌱 e 🔬 nos opcionais, "!" nos problemas |
 | 9 | `src/ui/Hud.ts` (`renderDay`) | Opcionais numa subseção "Se sobrar tempo:", depois dos problemas |
-| 10 | `src/i18n/strings.ts` | Chaves da tabela acima |
+| 10 | `src/i18n/strings/crew.ts` | Chaves da tabela acima |
 | 11 | `scripts/balance.ts` | A estratégia "atenta" faz as tarefas quando sobra astronauta livre |
 | 12 | `npm run build` | Regera o `server/internal/sim/simjs/sim.js`: **o modo em grupo já funciona**, porque as tarefas usam `problem_progress`/`problem_resolve`. Não precisa mexer em Go |
 
@@ -619,7 +624,7 @@ Se a atenta passar de 60%, reduza o efeito (ex.: ciência +3). Se ficar abaixo d
 
 ### B. Rotina visual: exercício e descanso
 
-> **Implementado (adaptado):** como a tripulação fica dentro por padrão, a rotina acontece no habitat translúcido: posto → academia (esteira ou bicicleta) → beliche → posto. Não há caminhada pela física; a cena troca o lugar e a animação. Em grupo, cada tela calcula a rotina sozinha (é só visual e quem está dentro não é sincronizado).
+> **Implementado (adaptado):** como a tripulação fica dentro por padrão, a rotina acontece no habitat translúcido: posto → academia (esteira ou bicicleta) → beliche → posto. **Entre um lugar e outro, o astronauta anda** pelo corredor central (módulos, túneis e uma passarela que cruza a cúpula), sem sumir de um módulo e aparecer em outro: sai para o corredor, anda por ele e entra no lugar; sobe e desce do beliche andando. Quem volta de uma EVA aparece dentro do laboratório, junto à porta, e anda até o posto. Velocidades: 1,3 m/s de dia, 2,2 m/s indo dormir e 2,4 m/s (apressado) indo consertar a estufa; o conserto de dentro só começa quando ele chega (no máximo 8 s). Medido: o maior deslocamento por quadro é o próprio passo (0,22 a 0,24 m). Não usa a física (`src/scene/crewRoutine.ts`); a cena calcula o caminho e a animação. Em grupo, cada tela calcula a rotina sozinha (é só visual e quem está dentro não é sincronizado).
 
 **Regras (só cena, nenhuma regra muda):**
 
@@ -634,11 +639,11 @@ Se a atenta passar de 60%, reduza o efeito (ex.: ciência +3). Se ficar abaixo d
 
 | Arquivo | O que fazer |
 | --- | --- |
-| `src/scene/MarsBase.ts` | Pontos `ROUTINE_SPOTS.treadmill` (dentro do habitat) e `ROUTINE_SPOTS.bunk` |
+| `src/scene/base/layout.ts` | Pontos `ROUTINE_SPOTS.treadmill` (dentro do habitat) e `ROUTINE_SPOTS.bunk` |
 | `src/scene/crewMotion.ts` | Reaproveitar o piloto automático (`walkPath`/`auto`, o mesmo de ir dormir). Expor algo como `startRoutine(role, spot, onArrive)` e cancelar em `moveRole`/setas |
 | `src/scene/Crew.ts` | Animação simples de exercício (balanço no lugar) e de descanso (escondido, como dentro) |
-| `src/core/Game.ts` | Relógio de "sem ordem" por astronauta; só para `canControl(role)` no modo em grupo |
-| `src/i18n/strings.ts` | `fact.exercise` (texto PT/EN do F9) |
+| `src/scene/crewRoutine.ts` | Relógio de "sem ordem" por astronauta; só para `canControl(role)` no modo em grupo |
+| `src/i18n/strings/nasa.ts` | `fact.exercise` (texto PT/EN do F9) |
 
 **Pronto quando:**
 
@@ -753,11 +758,11 @@ O passo do tutorial do sol 1 sobre energia passa a apontar para a estufa, não p
 
 | # | Arquivo | O que fazer |
 | --- | --- | --- |
-| 1 | `src/scene/MarsBase.ts` | Pontos de cada lugar (`ENERGY_SPOTS`), cabos dos painéis e luzes que acendem por bloco. Só desenha o plano recebido |
+| 1 | `src/scene/base/layout.ts` e `src/scene/base/structures.ts` | Pontos de cada lugar (`ENERGY_SPOTS`), cabos dos painéis e luzes que acendem por bloco. Só desenha o plano recebido |
 | 2 | `src/ui/EnergyMarkers.ts` (novo) | Botões projetados sobre a cena, com setas na borda para lugar fora da tela |
 | 3 | `src/ui/Hud.ts` | Plano sem + e −; continua com blocos, prévia, avisos e o botão do dia. `change()` vira pública para os marcadores |
 | 4 | `src/core/Game.ts` | Liga marcadores ao `Hud` (solo) e à ação `blocks` (grupo, só papéis editáveis); câmera da manhã enquadra os lugares |
-| 5 | `src/i18n/strings.ts` | Chaves acima |
+| 5 | `src/i18n/strings/ui.ts` | Chaves acima |
 
 **Regra e servidor:** nada muda em `src/sim`, no Go nem no protocolo.
 
@@ -833,7 +838,7 @@ O céu não tem cor na paleta oficial. De dia, ele segue a cor da poeira; no pô
 
 **Elementos da cena:**
 
-- fila de módulos ligados e cúpula geodésica com a estufa dentro;
+- base em estrela, como na vista superior do concept art ([conceito-bases-lunar-marciana.png](img/conceito-bases-lunar-marciana.png)): a cúpula geodésica com a estufa é o núcleo (5 m de raio, a maior peça da base, com canteiros dos dois lados de uma passarela que a cruza), e túneis a ligam ao laboratório (leste), ao alojamento e à academia (oeste) e à **garagem do rover** (sul, com rampa, virada para a câmera);
 - torre com antena e luz de alarme;
 - campo de painéis solares e bateria em contêiner;
 - abrigo de radiação de regolito, com sacos de terra em volta;
@@ -856,7 +861,8 @@ Isso é parte do ensino, não enfeite.
 | Noite | Quem ainda está lá fora anda até a escotilha do habitat e entra; o relatório do sol espera todos entrarem (no mínimo 2,2 s e no máximo 6 s; quem não chegar entra direto). De manhã, todos continuam dentro |
 | Noite de tempestade | Quem está lá fora corre para o abrigo de regolito |
 | Mensagem da Terra | A antena pisca |
-| Energia na ciência | O rover anda um trecho (8 s), **para e estuda** (5 s: o braço desce até o chão, a ponta do instrumento pisca e a câmera vira para a pedra mais perto) e segue, como os rovers reais, que passam a maior parte do sol parados fazendo ciência: no recorde do Perseverance, foram cerca de 4 h 24 min dirigindo num sol de 24 h 39 min ([JPL](https://www.jpl.nasa.gov/images/pia26645-nasas-perseverance-breaks-own-rover-driving-record/)). Rovers reais não têm doca: o Perseverance e o Curiosity geram energia o tempo todo com um gerador nuclear e recarregam as baterias onde estão ([JPL](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/)). Depois de desatolado, ele volta andando do lugar onde atolou até o ponto mais perto da trilha (sem teleporte). Ao andar, o rover anda em volta da base; se um astronauta estiver na rota, ele recalcula e desvia (3 m para dentro ou para fora), também de pedras e prédios; sem rota livre ou com o astronauta colado, para e pisca uma luz âmbar. As rodas giram, ele inclina com o relevo e é sólido: astronautas não o atravessam |
+| Energia na ciência | O rover **explora**: escolhe uma pedra (ou um ponto) para estudar, dirige até ela, **para e estuda** (5 s: o braço desce até o chão, a ponta do instrumento pisca e a câmera vira para a pedra) e escolhe o próximo destino. **Mais blocos de ciência, destinos mais longe da base** (`exploreRange` em `src/scene/base/Rover.ts`, só visual): com 1 bloco ele explora a cerca de 20 a 30 m do centro da base; com 3, até ~40 m; com 5 ou mais, até ~50 m. Assim a criança vê a energia virar exploração; tirar blocos traz o rover de volta para perto. Rovers reais passam a maior parte do sol parados fazendo ciência: no recorde do Perseverance, foram cerca de 4 h 24 min dirigindo num sol de 24 h 39 min ([JPL](https://www.jpl.nasa.gov/images/pia26645-nasas-perseverance-breaks-own-rover-driving-record/)). Rovers reais não têm doca: o Perseverance e o Curiosity geram energia o tempo todo com um gerador nuclear e recarregam as baterias onde estão ([JPL](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/)). No caminho ele nunca atravessa a base: para ir ao outro lado, contorna por uma elipse de fora. Desvia de prédios, do abrigo com os sacos, da cúpula, de pedras e de astronautas, como o AutoNav do Perseverance: **planeja o desvio até 10 m à frente**, avaliando 29 direções e ficando com a de menor custo (desviar pouco do destino, virar pouco, não mudar de ideia toda hora, caminho livre lá na frente e folga de ~1,6 m dos obstáculos). Assim começa a curva cedo e suave; a direção é amortecida (sem zigue-zague) e ele freia um pouco quando passa perto de algo. Como segurança, antes de avançar confere a frente do nariz e, se ela estiver fechada, gira parado (rovers reais giram no lugar). Medido em 30 min por nível de energia: giro parado ~3 a 10 vezes menor, viradas fortes ~3 vezes menos e zigue-zague ~3 vezes menos, sem nenhuma colisão. Astronauta no caminho: desvia com folga (sem parar); sem desvio, ou com o astronauta colado, para e pisca uma luz âmbar. Sem passagem por causa de pedras, manobra ou escolhe outro destino. Depois de desatolado, segue explorando de onde está (sem teleporte). **Expedição e garagem:** **uma expedição por sol**, como a regra dos tubos de amostra: a cada 3 paradas de estudo (uma por tubo), ele volta para a base, para em frente à rampa, vira de frente para ela, sobe devagar e estaciona dentro da garagem (o casco é translúcido, dá para vê-lo lá dentro). Primeiro entrega as amostras (braço estendido, ~2,5 s), depois fica **em revisão** (luz verde piscando, ~6 s) e, pronto, fica estacionado na garagem até o próximo sol; aí sai de ré pela rampa e começa outra expedição. Com um astronauta perto do caminho da rampa, espera (luz âmbar). No começo da missão ele está estacionado na garagem. À noite ou sem blocos, fica parado (a revisão também pausa). **Rodas como as do Perseverance:** as 4 rodas dos cantos viram (apontam para o centro da curva; girando parado, ficam em "X") e as do meio ficam retas; **cada roda gira pela velocidade do ponto onde está, na direção para onde aponta** (na curva, a de fora gira mais; girando parado, as do meio giram em sentidos opostos; de ré, para trás); cada roda tem **suspensão** (sobe até 22 cm ou desce até 15 cm para tocar o chão embaixo dela) e o corpo fica na média das 6 rodas, inclinando aos poucos, como a suspensão rocker-bogie. **Na rampa**, as rodas da frente sobem primeiro e o corpo inclina gradualmente (a inclinação muda no máximo ~1° por quadro; antes mudava ~15° de uma vez no pé e no topo), e ele vai mais devagar perto do pé e do topo. Para entrar na garagem, ele vira para o ponto em frente à rampa, anda reto até lá (de frente ou de ré) e vira de frente para a rampa: nunca desliza de lado. Medido: o giro de cada roda bate com o quanto ela andou (erro médio 0,003 a 0,015 m/s; antes, até 0,15 m/s e deslize lateral na entrada da garagem). Ele é sólido: astronautas não o atravessam |
+| Hora do sol | O Sol anda pelo céu (disco no céu e luz direcional): de manhã acabou de nascer; durante o dia cruza o céu com o relógio do dia; à noite se põe atrás da base (sombras compridas, céu alaranjado perto do horizonte). Ao começar um sol novo, nasce de novo do lado certo. Na Lua (polo sul), anda baixo, quase paralelo ao horizonte, e não se põe. Só visual (`src/scene/base/Sky.ts`, caminho em `src/scenarios/`) |
 | Noite | Céu escurece, estrelas aparecem, janelas acendem |
 
 ### O que não usar
@@ -924,7 +930,7 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 | Área | Conteúdo |
 | --- | --- |
 | Barra superior | Nome da missão e local, "Sol N de 15", botões "Dados da NASA" e idioma |
-| Recursos (esquerda) | Bateria, suporte de vida, blindagem, dose (com marcas em 50 e 70) e ciência (com a meta), cada um com barra e botão "?" |
+| Recursos (esquerda) | Bateria, suporte de vida, blindagem, dose (com marcas em 50 e 70), ciência (com a meta) e tubos de amostra (de 38), cada um com barra e botão "?" |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |
 | Janelas | Tutorial (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
@@ -986,7 +992,7 @@ A interface manda as decisões para a simulação e repassa o estado resultante 
 | --- | --- |
 | Linguagem | TypeScript, sem framework de interface |
 | Simulação | `src/sim/` (`config.ts`, `mission.ts`, `cards.ts`); teste de equilíbrio em `scripts/balance.ts` |
-| Cena | `src/scene/` (`MarsBase.ts`, `Crew.ts`) e `src/render/toon.ts` |
+| Cena | `src/scene/` (`BaseScene.ts`, `base/`, `Crew.ts`), `src/scenarios/` (Marte, Lua) e `src/render/toon.ts` |
 | Interface e textos | `src/ui/` e `src/i18n/` (PT e EN) |
 | 3D | Three.js r187: material toon de 4 faixas, contorno por casco invertido, sombras |
 | Física | Rapier, só sob demanda na etapa de movimentação (fora do pacote principal) |

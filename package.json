@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "docs:adr": "node scripts/new-adr.mjs",
     "fetch-data": "node --env-file-if-exists=.env scripts/fetch-donki.mjs",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/sim/*.test.ts",
     "balance": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/balance.ts",
     "sim:bundle": "vite build --config vite.sim.config.ts --logLevel warn",
     "data:missions": "node scripts/fetch-missions.mjs"

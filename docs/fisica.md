@@ -66,15 +66,15 @@ Se o mesh estiver rotacionado, aplique a mesma rotação ao collider
 
 - Cada astronauta é uma cápsula `dynamic` com **rotação travada**. Velocidade horizontal pelo input ou
   pelo alvo do clique; a vertical fica com a gravidade. O visual gira para a direção do movimento.
-- Os obstáculos são as caixas de `MarsBase.obstacles` (módulos, cúpula, torre, painéis, bateria, abrigo).
+- Os obstáculos são as caixas de `BaseScene.obstacles` (módulos, cúpula, base de comunicação, painéis, bateria e tomada, abrigo).
   **Os postos (`POSTS`) precisam ficar fora dessas caixas**, senão o astronauta nasce preso.
 - Clique no chão: anda em linha reta até o ponto. Não há busca de caminho; se ficar preso 1,5 s, desiste.
 - **Piloto automático** (`goInside` à noite; `exit` e `enter` na EVA): cada astronauta segue um caminho calculado por
   [`crewPath.ts`](../src/scene/crewPath.ts) (grafo de visibilidade sobre os cantos das caixas de `obstacles`,
-  alargadas pelo raio da cápsula) até a porta em `ENTRANCES` (`MarsBase.ts`): habitat para dormir, abrigo na tempestade.
+  alargadas pelo raio da cápsula) até a porta em `ENTRANCES` (`src/scene/base/layout.ts`): habitat para dormir, abrigo na tempestade.
   Ao chegar, o corpo é **desativado** (`setEnabled(false)`) e escondido, para não bloquear a porta. A tripulação fica
   dentro por padrão: só numa EVA o corpo é reposicionado ao lado da porta do habitat (`exit`, com `setTranslation`, a única
-  exceção ao "mova por velocidade"). Quem decide quem sai e quando é `src/core/CrewTasks.ts`.
+  exceção ao "mova por velocidade"). Quem decide quem sai e quando é `src/core/CrewTasks.ts`, com as regras da EVA de `src/sim/eva.ts`. A gravidade vem do cenário (`src/scenarios/`, campo `gravity`).
   Preso por 1,5 s no piloto automático conta como "chegou". Seta ou clique do jogador cancela o piloto daquele astronauta.
   **`ENTRANCES` precisa ficar fora das caixas de `obstacles`**, como os `POSTS`.
 - Velocidades da volta: `NIGHT_WALK_SPEED` e `STORM_RUN_SPEED` em [`constants.ts`](../src/core/constants.ts).

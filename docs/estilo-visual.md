@@ -46,7 +46,7 @@ Cor nova? Adicione em `PALETTE` **e** nesta tabela, dizendo a origem.
 
 ### Base lunar (`MOON_PALETTE`)
 
-Na Lua (`MarsBase.setLocation('moon')`), só as cores de **terreno** mudam: os materiais que usam `soil`, `rock`, `lit` e
+Na Lua (`BaseScene.setLocation('moon')`, cenário em [`src/scenarios/moon.ts`](../src/scenarios/moon.ts)), só as cores de **terreno** mudam: os materiais que usam `soil`, `rock`, `lit` e
 `dust` (chão, pedras, mesetas, abrigo, sacos) trocam para os cinzas abaixo. Prédios, trajes e plantas ficam iguais.
 
 | Nome | Hex | Uso |
@@ -58,7 +58,7 @@ Na Lua (`MarsBase.setLocation('moon')`), só as cores de **terreno** mudam: os m
 | `sky` | `#0B0D16` | Céu preto até de dia (sem atmosfera) |
 | `earth` / `earthLand` | `#3F7FD6` / `#5F9A4F` | A Terra grande e baixa no horizonte (no polo sul ela fica sempre perto do horizonte) |
 
-Outras diferenças na Lua: estrelas visíveis de dia, quase sem névoa, sem partículas de poeira no ar, Sol branco e baixo
+O Sol anda pelo céu ao longo do sol (`Scenario.sun.path`, em `src/scenarios/`): em Marte nasce atrás da câmera, passa alto pelo lado dela ao meio-dia (frente iluminada) e se põe atrás da base, com o céu alaranjado perto do horizonte; o disco do Sol fica a 170 m (um pouco maior que o real, para ver). Outras diferenças na Lua: estrelas visíveis de dia, quase sem névoa, sem partículas de poeira no ar, Sol branco e baixo, que anda rente ao horizonte e não se põe
 (sombras compridas, como no polo sul), mesetas achatadas (viram bordas de cratera) e crateras extras longe da base.
 A luz do Sol da cena acompanha a luz do dia (`SceneState.sunlight`, 0–1): de 20% a 100% da intensidade, então dias de pouco Sol e de sombra ficam mais escuros. A noite (descanso da tripulação) quase não escurece a cena na Lua (12% do escurecimento de Marte), porque no polo sul o Sol não se põe a cada 24 h; só a noite da sombra fica escura de verdade.
 
@@ -73,8 +73,9 @@ A luz do Sol da cena acompanha a luz do dia (`SceneState.sunlight`, 0–1): de 2
 
 ## A cena mostra o estado do jogo
 
-A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()` e `MarsBase.update()`
-([`src/scene/MarsBase.ts`](../src/scene/MarsBase.ts)); a cena nunca muda regras.
+A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()` e `BaseScene.update()`
+([`src/scene/BaseScene.ts`](../src/scene/BaseScene.ts)), que repassam às partes de [`src/scene/base/`](../src/scene/base)
+(`structures.ts`: painéis, plantas, sacos, bateria, alarme; `Sky.ts`: céu e luz; `Habitat.ts`: janelas; `Rover.ts`); a cena nunca muda regras.
 
 ## Escala e modelos
 
@@ -84,28 +85,39 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
   (`ROLE_COLORS`). Animações: `walk` ao andar, `jump` no Espaço, `interact` ao consertar. Até carregar (ou se falhar),
   fica o boneco simples de cápsulas.
 - Base e rover: `research-base.glb` e `rover.glb` (ver [rover-e-base-de-pesquisa.md](rover-e-base-de-pesquisa.md)),
-  carregados por `MarsBase.loadModels()` com `src/render/sceneryModel.ts`. A base fica em `HABITAT_POSITION`, com a porta
+  carregados por `BaseScene.loadModels()` com `src/render/sceneryModel.ts`. A base fica em `HABITAT_POSITION`, com a porta
   do airlock (`ENTRANCES.habitat`) virada para a câmera. O rover usa a mesma lógica de andar, parar e desviar; as rodas
   `wheel_0..5` giram pela distância e, ao parar para estudar, tocam `scan` e `drill`. Até carregar (ou se falhar), ficam
   o módulo e o rover simples.
-- Habitat de dois módulos do mesmo `research-base.glb`: o **laboratório** (com o airlock, a bancada e o observatório) e o
-  **alojamento** acoplado pela porta de acoplamento da esquerda (`QUARTERS_OFFSET_X`, sem airlock nem placa "LAB"), com
-  dois beliches, uma cama por astronauta. As janelas acendem à noite.
+- **Arranjo da base em estrela** (concept art ARC-001/ARC-002, vista superior:
+  [conceito-bases-lunar-marciana.png](img/conceito-bases-lunar-marciana.png)), definido em
+  [`src/scene/base/layout.ts`](../src/scene/base/layout.ts): a **cúpula** da estufa é o núcleo (`DOME_CENTER`), e túneis
+  (`TUBES`, cilindros claros com anel laranja na ponta) a ligam a quatro módulos do mesmo `research-base.glb`, sem mudar o
+  design: **laboratório** a leste (com o airlock virado para a câmera, a bancada e o observatório), **alojamento** a oeste
+  (`QUARTERS_OFFSET_X`, dois beliches, uma cama por astronauta) com a **academia** acoplada na ponta, e a **garagem do
+  rover** ao sul (`GARAGE_POSITION`, casco correndo em Z, em 100% de escala para o rover caber, com piso e uma **rampa**
+  com faixas e corrimãos laranja até o chão: `GARAGE_RAMP`). Base de comunicação acoplada na ponta do laboratório, painéis à direita (`PANELS_ORIGIN`) e bateria na frente da base de comunicação.
+  As janelas acendem à noite.
 - Dentro do habitat: cabines **transparentes**. Todas as peças do casco (casco, faixas, janelas e portas de acoplamento)
-  ficam translúcidas (`glassMaterial`), sem contorno e sem sombra, para nada opaco cortar a tripulação. Cada peça tem ordem de desenho fixa
+  ficam translúcidas para a câmera (`glassMaterial`, sem contorno), para nada opaco cortar a tripulação. Para o sol o casco
+  continua metal: faz sombra pelos dois lados (`shadowSide = DoubleSide`), o sol não entra, e cada cabine (e a garagem)
+  tem uma luminária no teto (`PointLight` sem sombra). Cada peça tem ordem de desenho fixa
   (`GLASS_ORDER`): sem ela, as faixas e portas que se cruzam piscavam ao girar a câmera. Testamos uma vista
   em corte, mas o time preferiu ver através do casco. Cada módulo tem seu piso. Comandante e cientista
   ficam no laboratório e engenheiro e médico no alojamento (`HABITAT_SPOTS`); quem conserta o vazamento vai para a estufa
   (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de descompressão, somem.
-- O abrigo de regolito fica em `SHELTER_CENTER`, à esquerda do alojamento.
+- O abrigo de regolito fica em `SHELTER_CENTER`, à frente e à esquerda do alojamento.
 - Base de comunicação (`comm-base.glb`, ver [base-comunicacao-e-bateria.md](base-comunicacao-e-bateria.md)): acoplada na
-  port_b do laboratório (`COMM_POSITION`), em `HABITAT_SCALE`, sem a torre de acesso. Substitui a torre de antena antiga:
-  a luz de alerta (`alarm`) pisca na tempestade e a ponta da antena (`antenna_tip`) com mensagem da Terra. O conserto da
-  antena (`PROBLEM_SPOTS.antenna`) e o posto do comandante ficam ao lado dela.
-- Placas e bateria (`solar-panels-battery.glb`): no mesmo lugar das placas simples (o modelo usa as coordenadas do jogo).
-  A poeira escurece as células (`panel_cells`). A bateria toca `battery_charge` de dia, `battery_discharge` à noite e,
-  cheia, mostra o nível (`battery_level` com `timeScale = 0`). A tomada foi para `OUTLET_X` (5,0) para não ficar embaixo
-  do bloco de comunicação; o cabo de saída é encurtado junto.
+  port_b do laboratório, na ponta leste da estrela (`COMM_POSITION`), em `HABITAT_SCALE`, sem a torre de acesso.
+  Substitui a torre de antena antiga (que fica de reserva se o `.glb` falhar): a luz de alerta (`alarm`) pisca na
+  tempestade e a ponta da antena (`antenna_tip`) com mensagem da Terra. O conserto da antena (`PROBLEM_SPOTS.antenna`) e
+  o posto do comandante ficam ao lado dela. Código: `BaseStructures.useCommBase` (`src/scene/base/structures.ts`).
+- Placas e bateria (`solar-panels-battery.glb`): o modelo foi feito com o primeiro painel em (12; 2); no arranjo em
+  estrela ele é deslocado em `SOLAR_MODEL_OFFSET` para `PANELS_ORIGIN`, à direita da base de comunicação, com a bateria
+  (`BATTERY_POSITION`) na frente dela. A poeira escurece as células (`panel_cells`). A bateria toca `battery_charge` de
+  dia, `battery_discharge` à noite e, cheia, mostra o nível (`battery_level` com `timeScale = 0`). A tomada fica em
+  `OUTLET_LOCAL_X` (5,0 no referencial do modelo), depois da torre do airlock; o cabo de saída é encurtado junto.
+  Código: `BaseStructures.useSolarField`.
 - Os módulos do habitat ficam em 80% (`HABITAT_SCALE`), para o astronauta caber justo na cabine; a torre do airlock e o
   armário continuam em 100% (a porta segue mais alta que o astronauta). As janelas acendem à noite. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
 - Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual

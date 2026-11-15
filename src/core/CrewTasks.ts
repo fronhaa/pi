@@ -1,11 +1,13 @@
 import * as THREE from 'three';
-import type { Mission } from '@/sim/mission';
+import type { MissionPort } from './session';
 import { CONFIG } from '@/sim/config';
-import { PROBLEMS, taskTime } from '@/sim/problems';
+import { taskTime } from '@/sim/problems';
+import { needsEva, planEva } from '@/sim/eva';
 import type { Problem } from '@/sim/types';
-import { ROLES, type Crew } from '@/scene/Crew';
+import type { Crew } from '@/scene/Crew';
+import { ROLES, type Role } from '@/sim/crew';
 import type { CrewMotion } from '@/scene/crewMotion';
-import { ENTRANCES, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
+import { ENTRANCES, PROBLEM_SPOTS } from '@/scene/base/layout';
 
 /** Distância para começar a trabalhar e para considerar que o astronauta saiu do lugar (m). */
 const WORK_RADIUS = 1.6;
@@ -16,6 +18,8 @@ const INTERACT_RADIUS = 3;
 const FALLBACK_SPEED = 2.4;
 /** Andar pelos corredores até um problema de dentro (s). Valor de jogo. */
 const INSIDE_WALK_SECONDS = 2;
+/** Andando de verdade até a estufa (src/scene/crewRoutine.ts): começa ao chegar, mas espera no máximo isto (s). */
+const INSIDE_WALK_MAX_SECONDS = 8;
 /** Depois de consertar, a dupla volta logo; parada lá fora sem tarefa, volta depois disto (s). */
 const RETURN_AFTER_DONE = 0.8;
 const RETURN_WHEN_IDLE = 12;
@@ -49,7 +53,8 @@ interface Assignment {
  * Problema de dentro: alguém de dentro conserta sem sair. Problema de fora: sai uma dupla (EVA),
  * passa pela câmara de descompressão, conserta e volta sozinha. No máximo uma dupla fora;
  * com a EVA proibida (tempestade hoje), ninguém sai. Largar o trabalho perde o progresso.
- * As REGRAS do que acontece ao resolver ficam na simulação; aqui só tempo e lugar.
+ * As REGRAS (quem pode sair, o que acontece ao resolver) ficam na simulação (src/sim/eva.ts,
+ * src/sim/actions.ts); aqui só tempo e lugar. Fala com a missão por uma MissionPort (solo ou grupo).
  */
 export class CrewTasks {
   private readonly assignments = new Map<Role, Assignment>();
@@ -70,11 +75,16 @@ export class CrewTasks {
   // ---------- modo em grupo (docs/servidor-coop.md, "EVA no modo em grupo") ----------
   /** Escolhe o parceiro da EVA entre os livres. Sem isso, o primeiro livre. */
   pickBuddy: ((free: Role[], leader: Role) => Role | undefined) | null = null;
+  /**
+   * A cena diz se o astronauta já chegou à estufa andando por dentro (com a física carregada). Sem isso,
+   * vale o tempo fixo de corredor (INSIDE_WALK_SECONDS).
+   */
+  insideArrived: ((role: Role) => boolean) | null = null;
   /** Há uma dupla lá fora comandada por OUTRO jogador: ninguém daqui sai (máximo uma dupla). */
   remoteEva = false;
 
   constructor(
-    private readonly mission: () => Mission,
+    private readonly mission: () => MissionPort,
     private readonly crew: Crew,
   ) {
     this.clear();
@@ -117,16 +127,16 @@ export class CrewTasks {
     return this.assignments.get(role)?.phase === 'working' && this.places[role] !== 'airlockOut';
   }
 
-  /** Está cuidando de um problema de dentro (a estufa)? A cena usa para mostrar onde ele está. */
   /** Tem uma ordem (problema ou tarefa) agora? */
   hasTask(role: Role): boolean {
     return this.assignments.has(role);
   }
 
+  /** Está cuidando de um problema de dentro (a estufa)? A cena usa para mostrar onde ele está. */
   onInsideTask(role: Role): boolean {
     const a = this.assignments.get(role);
     const p = a && this.mission().state.problems.find((x) => x.uid === a.uid);
-    return !!p && !PROBLEMS[p.kind].outside;
+    return !!p && !needsEva(p.kind);
   }
 
   isWorking(uid: number): boolean {
@@ -149,7 +159,7 @@ export class CrewTasks {
   assign(role: Role, uid: number): SendResult {
     const p = this.mission().state.problems.find((x) => x.uid === uid);
     if (!p || p.status !== 'open') return 'ok';
-    return PROBLEMS[p.kind].outside ? this.assignOutside(role, p) : this.assignInside(role, p);
+    return needsEva(p.kind) ? this.assignOutside(role, p) : this.assignInside(role, p);
   }
 
   private assignInside(role: Role, p: Problem): SendResult {
@@ -160,9 +170,8 @@ export class CrewTasks {
   }
 
   private assignOutside(role: Role, p: Problem): SendResult {
-    if (this.mission().evaBanned) return 'storm';
-    if (this.remoteEva) return 'full';
-    if (this.eva) {
+    const banned = this.mission().evaBanned;
+    if (this.eva && !banned && !this.remoteEva) {
       const pair = this.eva.pair;
       // Outro astronauta não pode sair: já tem uma dupla lá fora (máximo 2). Se ela estiver livre, é ela que vai.
       if (!pair.includes(role) && pair.some((r) => this.assignments.get(r)?.phase === 'working')) return 'full';
@@ -175,11 +184,10 @@ export class CrewTasks {
       this.eva.returnAfter = RETURN_WHEN_IDLE;
       return 'ok';
     }
-    const free = this.freeInside();
-    const leader = free.includes(role) ? role : free[0];
-    const others = free.filter((r) => r !== leader);
-    const buddy = this.pickBuddy && leader ? this.pickBuddy(others, leader) : others[0];
-    if (!leader || !buddy) return 'nobody';
+    // EVA nova: a regra de quem pode sair é da simulação (src/sim/eva.ts).
+    const plan = planEva({ banned, pairBusy: this.remoteEva, free: this.freeInside(), chosen: role, pickBuddy: this.pickBuddy ?? undefined });
+    if (!plan.ok) return plan.reason;
+    const [leader, buddy] = plan.pair;
     this.eva = { pair: [leader, buddy], idle: 0, returnAfter: RETURN_WHEN_IDLE };
     this.goOut(leader);
     this.goOut(buddy);
@@ -199,7 +207,7 @@ export class CrewTasks {
   interact(role: Role): boolean {
     const open = this.mission().state.problems.filter((p) => p.status === 'open');
     if (this.places[role] === 'inside') {
-      const p = open.find((x) => !PROBLEMS[x.kind].outside);
+      const p = open.find((x) => !needsEva(x.kind));
       if (!p) return false;
       this.assign(role, p.uid);
       return true;
@@ -220,7 +228,7 @@ export class CrewTasks {
     this.assignments.delete(role);
     // Largar o trabalho faz perder o progresso (GDD).
     const p = this.mission().state.problems.find((x) => x.uid === a.uid);
-    if (p && p.status !== 'done') this.mission().setProblemProgress(a.uid, 0);
+    if (p && p.status !== 'done') this.mission().dispatch({ type: 'problemProgress', uid: a.uid, progress: 0 });
     this.onChange();
   }
 
@@ -263,9 +271,9 @@ export class CrewTasks {
     this.cancel(who);
     // Trabalho que continuou de uma noite de tempestade começa de onde parou.
     const a: Assignment = { uid: p.uid, phase: 'walking', worked: p.progress * taskTime(p.kind) };
-    if (!PROBLEMS[p.kind].outside) a.insideLeft = INSIDE_WALK_SECONDS;
+    if (!needsEva(p.kind)) a.insideLeft = INSIDE_WALK_SECONDS;
     this.assignments.set(who, a);
-    if (PROBLEMS[p.kind].outside && this.places[who] === 'outside') this.beginWalk(who, a);
+    if (needsEva(p.kind) && this.places[who] === 'outside') this.beginWalk(who, a);
     this.onChange();
   }
 
@@ -324,10 +332,13 @@ export class CrewTasks {
         this.assignments.delete(role);
         continue;
       }
-      if (!PROBLEMS[p.kind].outside) {
+      if (!needsEva(p.kind)) {
         if (a.phase === 'walking') {
           a.insideLeft = (a.insideLeft ?? 0) - dt;
-          if (a.insideLeft <= 0) {
+          const arrived = this.motion && this.insideArrived
+            ? this.insideArrived(role) || a.insideLeft <= INSIDE_WALK_SECONDS - INSIDE_WALK_MAX_SECONDS
+            : a.insideLeft <= 0;
+          if (arrived) {
             a.phase = 'working';
             this.onChange();
           }
@@ -371,10 +382,10 @@ export class CrewTasks {
     const m = this.mission();
     a.worked += dt;
     const progress = Math.min(1, a.worked / taskTime(p.kind));
-    m.setProblemProgress(p.uid, progress);
+    m.dispatch({ type: 'problemProgress', uid: p.uid, progress });
     if (progress < 1) return;
     this.assignments.delete(role);
-    m.resolveProblem(p.uid);
+    m.dispatch({ type: 'resolveProblem', uid: p.uid });
     // EVA é curta: terminou o conserto, a dupla volta logo.
     if (this.eva && this.eva.pair.includes(role)) {
       this.eva.idle = 0;

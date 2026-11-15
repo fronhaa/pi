@@ -26,7 +26,7 @@ O jogo é desenhado para **a criança de 7 anos conseguir jogar sozinha**; a de 
 | Vocabulário | Palavras do dia a dia. Termo científico só com "?" na primeira vez que aparece |
 | Tom | Ativo e direto: "Reforce a blindagem!", não "É recomendável que a blindagem seja reforçada" |
 
-**Hoje, 10 dos 165 textos em português passam de 20 palavras** (contagem em `src/i18n/strings.ts`, 14/11/2026). Os maiores:
+**Hoje, 10 dos 165 textos em português passam de 20 palavras** (contagem em `src/i18n/strings.ts`, hoje dividido em `src/i18n/strings/`, 14/11/2026). Os maiores:
 
 | Chave | Palavras |
 | --- | --- |

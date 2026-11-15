@@ -6,7 +6,7 @@ import * as THREE from 'three';
  * articulações (docs/astronauta-chibi.md). As pernas usam IK de duas juntas para o pé seguir o círculo do pedal.
  *
  * As medidas abaixo são em relação ao QUADRIL do boneco, de lado (z = frente, y = cima). A bicicleta em
- * MarsBase é montada com elas, então pé, pedal e guidão sempre batem.
+ * src/scene/base/Habitat.ts é montada com elas, então pé, pedal e guidão sempre batem.
  */
 export const BIKE_FIT = {
   /** Altura do quadril do chibi em pé (articulações legL/legR do .glb). */

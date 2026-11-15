@@ -42,6 +42,17 @@ var JezeroSim = (function(exports) {
 			stormFactor: .5,
 			goal: 100
 		},
+		/**
+		* Tubos de amostra do rover (GDD, "Tubos de amostra"). O total é REAL: o Perseverance levou 43 tubos,
+		* 38 para amostras (docs/ciencia-marte.md, F14). O resto é regra do jogo (INTERPRETADO): todo sol com
+		* energia na ciência, o rover faz uma expedição e enche `perExpedition` tubos; sem tubos, ele só mede
+		* com os instrumentos e a ciência do dia vale `noTubeFactor`.
+		*/
+		samples: {
+			tubes: 38,
+			perExpedition: 3,
+			noTubeFactor: .5
+		},
 		dust: {
 			windCleanPerSol: 6,
 			max: 80,
@@ -447,8 +458,12 @@ var JezeroSim = (function(exports) {
 		const shieldDelta = plan.shield * CONFIG.shield.perBlock - CONFIG.shield.decay;
 		r.shield = clamp(r.shield + shieldDelta, 0, CONFIG.shield.max);
 		const roverStuck = failed.includes("roverStuck");
-		const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (stormClass ? CONFIG.science.stormFactor : 1);
+		const expedition = plan.science > 0 && !roverStuck;
+		const tubesUsed = expedition ? Math.min(CONFIG.samples.perExpedition, r.tubes) : 0;
+		const noTubes = expedition && tubesUsed === 0;
+		const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (stormClass ? CONFIG.science.stormFactor : 1) * (noTubes ? CONFIG.samples.noTubeFactor : 1);
 		r.science += sciGain;
+		r.tubes -= tubesUsed;
 		r.battery = Math.min(CONFIG.battery.max, r.battery + leftover * CONFIG.battery.perLeftoverBlock);
 		const nightCost = (_input$nightCost = input.nightCost) !== null && _input$nightCost !== void 0 ? _input$nightCost : CONFIG.battery.nightCost;
 		r.battery -= nightCost;
@@ -480,6 +495,9 @@ var JezeroSim = (function(exports) {
 			shieldDelta,
 			sciGain,
 			roverStuck,
+			expedition,
+			tubesUsed,
+			noTubes,
 			missing,
 			lifeLost,
 			stormDose: sd,
@@ -496,6 +514,19 @@ var JezeroSim = (function(exports) {
 	}
 	function round1$1(n) {
 		return Math.round(n * 10) / 10;
+	}
+	CONFIG.eva.maxOutside;
+	/** Este problema só se resolve lá fora (exige EVA)? */
+	function needsEva(kind) {
+		return PROBLEMS[kind].outside;
+	}
+	/**
+	* EVA proibida hoje: a Terra avisou que a tempestade chega esta noite.
+	* Sem o aviso (antena desalinhada), a tripulação não sabe, e a regra não vale.
+	* Recebe só as mensagens, para servir também ao estado que vem do servidor no modo em grupo.
+	*/
+	function isEvaBanned(state) {
+		return CONFIG.eva.banOnStormDay && state.messages.some((m) => m.kind === "stormToday");
 	}
 	// src/sim/mission.ts
 	/** Cartas substituídas pelos problemas da tripulação (GDD: "Eles substituem as cartas..."). */
@@ -569,7 +600,8 @@ var JezeroSim = (function(exports) {
 					shield: CONFIG.shield.start,
 					dose: CONFIG.dose.start,
 					science: 0,
-					dust: 0
+					dust: 0,
+					tubes: CONFIG.samples.tubes
 				},
 				blocks: CONFIG.energy.panelBlocks,
 				storms,
@@ -782,12 +814,9 @@ var JezeroSim = (function(exports) {
 				tone: "neutral"
 			}];
 		}
-		/**
-		* EVA proibida hoje: a Terra avisou que a tempestade chega esta noite (GDD, "EVA: sair da base").
-		* Sem o aviso (antena desalinhada), a tripulação não sabe, e a regra não vale.
-		*/
+		/** EVA proibida hoje (regra em src/sim/eva.ts, isEvaBanned). */
 		get evaBanned() {
-			return CONFIG.eva.banOnStormDay && this.state.messages.some((m) => m.kind === "stormToday");
+			return isEvaBanned(this.state);
 		}
 		problem(uid) {
 			const p = this.state.problems.find((x) => x.uid === uid);
@@ -887,6 +916,19 @@ var JezeroSim = (function(exports) {
 					gain: day.sciGain
 				},
 				tone: "good"
+			});
+			if (day.tubesUsed > 0) lines.push({
+				key: "report.tubes",
+				params: {
+					n: day.tubesUsed,
+					left: r.tubes,
+					total: CONFIG.samples.tubes
+				},
+				tone: r.tubes <= CONFIG.samples.perExpedition * 2 ? "bad" : "neutral"
+			});
+			else if (day.noTubes) lines.push({
+				key: "report.tubes.none",
+				tone: "bad"
 			});
 			if (day.leftover > 0) lines.push({
 				key: "report.battery.saved",
@@ -992,6 +1034,7 @@ var JezeroSim = (function(exports) {
 				if (s.sol === 1) lines.push(...this.factOnce("fact.battery"));
 				if (s.sol === s.dustStormSol) lines.push(...this.factOnce("fact.opportunity"));
 				if (roverStuckToday) lines.push(...this.factOnce("fact.spirit"));
+				if (day.tubesUsed > 0) lines.push(...this.factOnce("fact.tubes"));
 			}
 			const report = {
 				sol: s.sol,
@@ -1108,6 +1151,23 @@ var JezeroSim = (function(exports) {
 		const list = pool.length > 0 ? pool : missions;
 		return list.length > 0 ? createRng(seed ^ 2654435769).pick(list) : null;
 	}
+	// src/sim/actions.ts
+	/** Aplica uma ação à missão. Ação inválida (opção que não existe, plano acima dos blocos) lança erro. */
+	function applyAction(mission, action) {
+		switch (action.type) {
+			case "answerCard": return { lines: mission.answerCard(action.option) };
+			case "openProblem":
+				mission.openProblem(action.uid);
+				return {};
+			case "problemProgress":
+				mission.setProblemProgress(action.uid, action.progress);
+				return {};
+			case "resolveProblem":
+				mission.resolveProblem(action.uid);
+				return {};
+			case "endSol": return { report: mission.endSol(action.plan) };
+		}
+	}
 	// src/sim/bridge.ts
 	/**
 	* Ponte da simulação para o servidor coop em Go (ADR 0006, docs/servidor-coop.md).
@@ -1135,14 +1195,27 @@ var JezeroSim = (function(exports) {
 		const historical = JSON.parse(historicalJson);
 		mission = new Mission(seed >>> 0, flares, historical, location === "moon" ? "moon" : "mars");
 	}
+	/**
+	* Aplica qualquer interação (src/sim/actions.ts) e devolve o resultado em JSON.
+	* As funções abaixo (answerCard, endSol…) são atalhos dela que o servidor Go já chama.
+	*/
+	function apply(actionJson) {
+		return JSON.stringify(applyAction(current(), JSON.parse(actionJson)));
+	}
 	function answerCard(option) {
-		current().answerCard(option);
+		applyAction(current(), {
+			type: "answerCard",
+			option
+		});
 	}
 	function isPlanValid(planJson) {
 		return current().isPlanValid(JSON.parse(planJson));
 	}
 	function endSol(planJson) {
-		return JSON.stringify(current().endSol(JSON.parse(planJson)));
+		return JSON.stringify(applyAction(current(), {
+			type: "endSol",
+			plan: JSON.parse(planJson)
+		}).report);
 	}
 	/** Prévia do plano (a mesma conta do fim do sol). "null" se a carta ainda não foi respondida ou o plano é inválido. */
 	function previewSol(planJson) {
@@ -1151,7 +1224,7 @@ var JezeroSim = (function(exports) {
 		if (m.state.pendingCard || !m.isPlanValid(plan)) return "null";
 		return JSON.stringify(m.previewSol(plan));
 	}
-	/** EVA proibida hoje (tempestade avisada)? Regra em Mission.evaBanned. */
+	/** EVA proibida hoje (tempestade avisada)? Regra em src/sim/eva.ts. */
 	function evaBanned() {
 		return current().evaBanned;
 	}
@@ -1159,16 +1232,26 @@ var JezeroSim = (function(exports) {
 	function canResolve(uid) {
 		const m = current();
 		const p = m.state.problems.find((x) => x.uid === uid);
-		return !!p && !(m.evaBanned && PROBLEMS[p.kind].outside);
+		return !!p && !(m.evaBanned && needsEva(p.kind));
 	}
 	function openProblem(uid) {
-		current().openProblem(uid);
+		applyAction(current(), {
+			type: "openProblem",
+			uid
+		});
 	}
 	function setProblemProgress(uid, progress) {
-		current().setProblemProgress(uid, progress);
+		applyAction(current(), {
+			type: "problemProgress",
+			uid,
+			progress
+		});
 	}
 	function resolveProblem(uid) {
-		current().resolveProblem(uid);
+		applyAction(current(), {
+			type: "resolveProblem",
+			uid
+		});
 	}
 	/** Missões históricas: a mesma leitura e o mesmo sorteio do jogo solo. */
 	function parseMissionsJson(raw) {
@@ -1182,6 +1265,7 @@ var JezeroSim = (function(exports) {
 		return JSON.stringify(CONFIG);
 	}
 	exports.answerCard = answerCard;
+	exports.apply = apply;
 	exports.canResolve = canResolve;
 	exports.config = config;
 	exports.endSol = endSol;

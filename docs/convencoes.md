@@ -2,9 +2,10 @@
 
 ## Código
 
-- **TypeScript estrito.** `npm run typecheck` precisa passar antes de abrir PR.
+- **TypeScript estrito.** `npm run typecheck` e `npm test` precisam passar antes de abrir PR.
+- **Onde cada coisa mora** (regra, cenário, personagem, interação, texto): [estrutura-do-projeto.md](estrutura-do-projeto.md).
 - Identificadores (classes, funções, variáveis) **em inglês**; comentários e docs **em português**.
-- Um arquivo por classe principal, com nome igual à classe em `PascalCase` (`MarsBase.ts`).
+- Um arquivo por classe principal, com nome igual à classe em `PascalCase` (`BaseScene.ts`).
   Helpers soltos em `camelCase` (`toon.ts`).
 - Imports internos via alias `@/` (`@/core/Physics`), não `../../`.
 - Números mágicos de gameplay viram constantes nomeadas no topo do arquivo (`MOVE_SPEED`)

@@ -66,11 +66,11 @@ Os astronautas andam pela cena com física **em cada aparelho**. Para todos vere
 3. Nos outros aparelhos, o astronauta anda até o destino recebido, com o mesmo desvio de prédios (`moveRole`). Andando pelas setas, sem destino, ele segue as posições recebidas. Se estiver a mais de 6 m do lugar certo (ex.: acabou de entrar), é corrigido de uma vez.
 4. À noite, todos entram no habitat ou no abrigo do mesmo jeito em todas as telas, sem precisar de rede.
 
-Medido com duas abas (14/11/2026): depois de uma caminhada de ~10 m, a posição do astronauta ficou igual nas duas telas (diferença de 0,00 m). Código: `Game.coopCrewTick` e `Game.applyRemoteCrew` (cliente) e `server/internal/coop/crew.go`.
+Medido com duas abas (14/11/2026): depois de uma caminhada de ~10 m, a posição do astronauta ficou igual nas duas telas (diferença de 0,00 m). Código: `CoopMode.crewTick` e `CoopMode.applyRemoteCrew` (cliente, `src/core/coop/CoopMode.ts`) e `server/internal/coop/crew.go`.
 
 ## EVA no modo em grupo
 
-Desde o PR #21, saída é sempre **em dupla** (EVA), no máximo uma dupla por vez, e **proibida no dia de tempestade solar** (`Mission.evaBanned`). No modo em grupo:
+Desde o PR #21, saída é sempre **em dupla** (EVA), no máximo uma dupla por vez, e **proibida no dia de tempestade solar** (`Mission.evaBanned`, regra em `src/sim/eva.ts`). No modo em grupo:
 
 1. **Parceiro automático.** Quem manda um astronauta resolver um problema lá fora escolhe a dupla na hora: o jogo prefere um parceiro livre **do mesmo jogador**; se não houver, pega o de outro jogador. O cliente manda `eva` com `pair: [líder, parceiro]`.
 2. **Uma EVA por sala.** O servidor guarda a dupla ativa (`state.eva`: `pair` e `by`, o jogador que comanda). Se já houver uma, recusa com `eva_busy`; no dia de tempestade, `eva_banned`. Nos dois casos o cliente traz o astronauta de volta.
@@ -79,7 +79,7 @@ Desde o PR #21, saída é sempre **em dupla** (EVA), no máximo uma dupla por ve
 5. **Lugar visível para todos.** `crew_pos` leva `place` (`inside`, `airlock`, `outside`): nos outros aparelhos o astronauta entra ou sai do habitat junto.
 6. **Tempestade no servidor.** `problem_resolve` de problema lá fora é recusado (`eva_banned`) no dia de tempestade; a decisão vem de `Mission.evaBanned` em `src/sim`, rodada pelo goja (`EvaBanned`, `CanResolve` em `engine.go`).
 
-Medido com duas abas (14/11/2026): A com o Comandante, B com os outros três. A mandou o Comandante limpar painéis; o servidor registrou a dupla Comandante + Engenheiro comandada por A, B viu os dois saírem e voltarem, não conseguiu pegar o Engenheiro durante a EVA e o recebeu de volta no fim. Código: `server/internal/coop/eva.go`, `Game.ts` (`pickBuddy`, `onEvaEnd`, `applyRemoteCrew`) e `CrewTasks.setRemotePlace`.
+Medido com duas abas (14/11/2026): A com o Comandante, B com os outros três. A mandou o Comandante limpar painéis; o servidor registrou a dupla Comandante + Engenheiro comandada por A, B viu os dois saírem e voltarem, não conseguiu pegar o Engenheiro durante a EVA e o recebeu de volta no fim. Código: `server/internal/coop/eva.go`, `src/core/coop/CoopMode.ts` (`pickBuddy`, `evaEnded`, `applyRemoteCrew`), `CrewTasks.setRemotePlace` e as regras em `src/sim/eva.ts`.
 
 ## Protocolo (WebSocket, JSON)
 
@@ -203,6 +203,12 @@ flowchart LR
 1. Rode `npm run build` (ou só `npm run sim:bundle`).
 2. Commite o `server/internal/sim/simjs/sim.js` junto. O CI falha se ele estiver desatualizado.
 3. Pronto: não precisa mexer em Go.
+
+**Interações como dados.** As funções da ponte (`src/sim/bridge.ts`: `answerCard`, `endSol`, `openProblem`…) passam
+todas por `applyAction` (`src/sim/actions.ts`), a mesma função do jogo solo. A ponte também exporta `apply(actionJson)`,
+que aplica qualquer `MissionAction`: uma ação nova pode chegar ao servidor por ela, sem função nova na ponte.
+As regras da EVA ficam em `src/sim/eva.ts`; o Go guarda só que dupla está fora (`eva.go`, estado da sala).
+No cliente, o modo em grupo inteiro está em `src/core/coop/CoopMode.ts`.
 
 **Só precisa mexer em Go** se surgir campo novo em `src/sim/types.ts` que o servidor precise ler ou repassar aos jogadores.
 Acrescente o campo em `server/internal/sim/types.go`; o teste `TestStateRoundTrip` (150 partidas aleatórias) aponta qualquer campo que se perder entre o JS e o Go.

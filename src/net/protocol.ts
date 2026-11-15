@@ -1,5 +1,6 @@
 import type { Card, EnergyPlan, Flare, Message, Outcome, Problem, Resources, ScheduledStorm, SolReport } from '@/sim/types';
 import type { Mission } from '@/sim/mission';
+import { ROLES, ROLE_DEFS } from '@/sim/crew';
 
 /** Prévia do plano: o servidor calcula com as mesmas regras (Mission.previewSol). */
 export type PlanPreview = ReturnType<Mission['previewSol']>;
@@ -11,10 +12,12 @@ export type PlanPreview = ReturnType<Mission['previewSol']>;
 
 export type CoopRole = 'earth' | 'commander' | 'engineer' | 'medic' | 'scientist';
 export const COOP_ROLES: CoopRole[] = ['earth', 'commander', 'engineer', 'medic', 'scientist'];
-export const MARS_ROLES: CoopRole[] = ['commander', 'engineer', 'medic', 'scientist'];
+export const MARS_ROLES: CoopRole[] = [...ROLES];
 
-/** Qual papel mexe em qual parte do plano de energia. */
-export const BLOCK_ROLE: Record<keyof EnergyPlan, CoopRole> = { life: 'medic', shield: 'engineer', science: 'scientist' };
+/** Qual papel mexe em qual parte do plano de energia (fonte: src/sim/crew.ts, ROLE_DEFS; o Go tem a mesma tabela). */
+export const BLOCK_ROLE = Object.fromEntries(
+  ROLES.flatMap((r) => (ROLE_DEFS[r].block ? [[ROLE_DEFS[r].block, r]] : [])),
+) as Record<keyof EnergyPlan, CoopRole>;
 
 export type EarthOption = 'storm' | 'dust' | 'science' | 'life' | 'none';
 export const EARTH_OPTIONS: EarthOption[] = ['storm', 'dust', 'science', 'life', 'none'];

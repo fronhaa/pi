@@ -28,6 +28,7 @@
 | F11 | A rotina de uma tripulação em Marte | Na simulação CHAPEA: caminhadas em Marte, robôs, manutenção do habitat, exercício e cultivo | [NASA: CHAPEA Mission 2](https://www.nasa.gov/humans-in-space/chapea/chapea-mission-2/) e [NASA: missão 1 (2023)](https://www.nasa.gov/missions/analog-field-testing/chapea/first-chapea-crew-begins-378-day-mission/) | Tutorial do dia / guia do professor | Contexto (papéis) |
 | F12 | Andar com pouca gravidade é diferente | Menos força nos pés, passos mais lentos, menos tempo com o pé no chão; a pessoa passa a correr numa velocidade menor | [NASA Ames, ICES-2021-142 (2021)](https://ntrs.nasa.gov/api/citations/20210019591/downloads/ICES-2021-142.pdf), p. 5 | Astronautas andando dentro e fora da base | Contexto (gravidade) |
 | F13 | Na Lua, os astronautas pulavam como coelhos | O traje da Apollo dobrava pouco nas pernas; pular compensava. O próximo traje terá mais mobilidade nas pernas | [NASA APPEL, podcast Small Steps, Giant Leaps, ep. 20 (2019)](https://www.nasa.gov/podcasts/small-steps-giant-leaps/small-steps-giant-leaps-episode-20-exploration-spacesuit-design/) | Caminhada longa de traje; base lunar | Contexto (traje) |
+| F14 | O Perseverance tem poucos tubos de amostra | 43 tubos: 38 para amostras e 5 tubos-testemunha; cada tubo tem menos de 15,2 cm e menos de 57 g; a amostra é do tamanho de um giz | [JPL: A Martian Roundtrip (2020)](https://www.jpl.nasa.gov/news/a-martian-roundtrip-nasas-perseverance-rover-sample-tubes/) e [NASA: Mars Rock Samples](https://science.nasa.gov/mission/mars-2020-perseverance/mars-rock-samples/) | Contador "Tubos de amostra" e relatório do rover | 4. Jogar só no seguro também falha (ciência com escolhas) |
 | F8 | A poeira não pode entrar | Poeira fina; 0,3 a 0,5% de perclorato no solo (tireoide); entra pelos trajes e câmaras | [NASA/SP-20260005907, Martian Dust Exposure Limits (2026)](https://www.nasa.gov/wp-content/uploads/2026/07/martian-dust-exposure-limits-sp-20260005907.pdf) | Problema fora da base (câmara de descompressão, +1 de dose) | 2. Proteção custa |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
@@ -128,6 +129,14 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Criança (EN):** "On the Moon, astronauts hopped like bunnies. Their suits barely bent at the legs!"
 - **No jogo:** caminhada longa de traje (ex.: rover atolado) e na base lunar.
 - **Atenção:** a fonte diz que o novo traje **pretende** ter mais mobilidade; não diga que os astronautas de Marte "não vão mais pular".
+
+### F14. O Perseverance tem poucos tubos de amostra
+
+- **Fato:** o Perseverance levou **43 tubos** para Marte: **38** para amostras de rocha e solo e **5 "tubos-testemunha"**, que registram se o sistema de coleta está limpo. Cada tubo tem **menos de 15,2 cm** e pesa **menos de 57 g**; a amostra é **do tamanho de um giz**. ([JPL, 2020](https://www.jpl.nasa.gov/news/a-martian-roundtrip-nasas-perseverance-rover-sample-tubes/); [NASA: Mars Rock Samples](https://science.nasa.gov/mission/mars-2020-perseverance/mars-rock-samples/))
+- **Criança (PT):** "O rover Perseverance levou só 38 tubos para guardar amostras. Cada amostra é do tamanho de um giz."
+- **Criança (EN):** "The Perseverance rover carried only 38 tubes for samples. Each sample is the size of a piece of chalk."
+- **No jogo:** contador "Tubos de amostra" (começa em 38), relatório do sol e o primeiro relatório com expedição (`fact.tubes`, só em Marte).
+- **Atenção:** "3 tubos por expedição" e "sem tubos, ciência pela metade" são **regras do jogo** (INTERPRETADO); não existe um número oficial de tubos por expedição. Não diga "o Perseverance enche 3 tubos por viagem". Também não use o diâmetro do tubo nem gramas por amostra: não estão nas fontes. A página da NASA mostra o andamento da coleta (30 de 38 em 14/11/2026), mas o número muda; se for usar, confira de novo.
 
 ## Ligação com os objetivos de aprendizagem
 
@@ -275,6 +284,19 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
   - "That was actually compensating for the limited mobility of the pants, the lower torso assembly of the suit."
   - "the first flight spacesuit that we'll have actually incorporated that increased lower torso mobility"
 
+### 13. JPL: A Martian Roundtrip: NASA's Perseverance Rover Sample Tubes (21/12/2020) e NASA: Mars Rock Samples
+
+- **Links:** <https://www.jpl.nasa.gov/news/a-martian-roundtrip-nasas-perseverance-rover-sample-tubes/> e <https://science.nasa.gov/mission/mars-2020-perseverance/mars-rock-samples/> (lidos em 14/11/2026)
+- **Usado em:** F14
+- **Trechos:**
+  - JPL: "the 43 sample tubes headed to Mars must be lightweight and hardy enough to survive the demands of the round trip"
+  - JPL: "Of the tubes aboard Perseverance, up to 38 are destined to be filled with Martian rock and regolith."
+  - JPL: "The other five are "witness tubes" that have been loaded with materials geared to capture molecular and particulate contaminants."
+  - JPL: "They are less than 6 inches [15.2 centimeters] long" e "each sample tube weighs less than 2 ounces (57 grams)."
+  - JPL: "(about the size of a piece of chalk)"
+  - NASA: "Of the 43 tubes Perseverance brought to Mars, 38 are for collecting samples, and five are "witness tubes""
+- **Conferido e NÃO usado** (informações de outra IA que não batem com fontes oficiais): diâmetro de 1,3 cm e 15–20 g por amostra (não estão nas páginas); Sample Fetch Rover com 30–36 tubos e o registro "NTRS 20210018050" (a página não existe; o rover saiu da campanha Mars Sample Return); helicóptero com "1 tubo por voo" (a página oficial não diz).
+
 ### 9. Buscas feitas (para achar as fontes acima)
 
 | Busca | Domínios | Levou a |
@@ -297,7 +319,7 @@ Os números entraram a partir do **documento aberto**, não dos resumos das busc
 
 ## Próximos passos (para implementar)
 
-1. Cartões "Você sabia?" no jogo, um por momento da tabela de resumo, com os textos PT/EN acima nas chaves de `src/i18n/strings.ts`. Cada cartão aparece **uma vez por partida**, para não cansar.
+1. Cartões "Você sabia?" no jogo, um por momento da tabela de resumo, com os textos PT/EN acima nas chaves de `src/i18n/strings/nasa.ts`. Cada cartão aparece **uma vez por partida**, para não cansar.
 2. Ajuda "?" da dose e da blindagem com F4 e F5.
 3. Guia do professor ([publico-e-impacto.md](publico-e-impacto.md#guia-para-professor-1-página)) com as notas para adultos (F4: comparação com radiografia).
 4. Texto para os juízes ("A ciência por trás do jogo") a partir da tabela de resumo.

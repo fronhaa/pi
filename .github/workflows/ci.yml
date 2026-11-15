@@ -16,6 +16,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # Regras da simulação (src/sim): testes de unidade, sem navegador.
+      - run: npm test
       - run: npm run build
       # O servidor coop roda src/sim empacotado (ADR 0006). O npm run build regera o pacote.
       - name: Pacote das regras (sim.js) atualizado

@@ -8,9 +8,10 @@ import { CONFIG as SIM, doseFor3 } from '@/sim/config';
 export type PlanPreview = ReturnType<Mission['previewSol']>;
 import { formatDate, getLang, t, type StringKey } from '@/i18n';
 import type { MarsMessage } from '@/net/protocol';
+import type { Role } from '@/sim/crew';
 import { h, openDialog, patchChildren } from './dom';
 
-type RoleId = 'commander' | 'engineer' | 'medic' | 'scientist';
+type RoleId = Role;
 
 export interface DayView {
   remaining: number;
@@ -71,6 +72,8 @@ export class Hud {
   private state: GameState | null = null;
   private plan: EnergyPlan = { life: 3, shield: 1, science: 3 };
   private busy = false;
+  /** Amostras que o rover já coletou hoje (cena): os tubos do painel enchem ao vivo. */
+  private samplesToday = 0;
   /** Durante a noite, mostra o resultado do dia ainda com o número do sol que acabou. */
   private nightView: { res: Resources; sol: number } | null = null;
 
@@ -212,6 +215,8 @@ export class Hud {
       const k = invert ? 100 - v : v;
       return k >= 50 ? 'good' : k >= 25 ? 'warn' : 'bad';
     };
+    // Tubos: o que sobra, já descontando as amostras que o rover coletou hoje (ao vivo).
+    const tubesLeft = (r.tubes ?? CONFIG.samples.tubes) - (this.tubesPlan()?.filled ?? 0);
     patchChildren(this.resources, [
       h('h2', { id: 'res-title' }, 'Base'),
       resource('res.battery', 'help.battery', r.battery, CONFIG.battery.max, level(r.battery)),
@@ -219,7 +224,37 @@ export class Hud {
       resource('res.shield', 'help.shield', r.shield, CONFIG.shield.max, level(r.shield)),
       resource('res.dose', 'help.dose', r.dose, CONFIG.dose.max, r.dose >= doseBad ? 'bad' : r.dose >= doseWarn ? 'warn' : 'good', [doseWarn, doseBad]),
       resource('res.science', 'help.science', r.science, CONFIG.science.goal, 'sci', [], t('res.goal', { n: CONFIG.science.goal })),
+      // Tubos de amostra (regra em src/sim/day.ts): ficam amarelos/vermelhos quando faltam poucas expedições.
+      // Com energia na ciência, mostra já o que a expedição de hoje vai gastar ("−3 hoje"); o número cai na noite.
+      resource('res.tubes', 'help.tubes', tubesLeft, CONFIG.samples.tubes, level((tubesLeft / CONFIG.samples.tubes) * 100), [], this.tubesToday()),
     ]);
+  }
+
+  /** O que a expedição de hoje vai fazer com os tubos (pela prévia do plano), ou nada à noite e sem ciência. */
+  /** O rover coletou mais uma amostra (cena): atualiza os tubos do painel. */
+  setSamplesToday(n: number): void {
+    this.samplesToday = n;
+    this.renderResources();
+  }
+
+  /**
+   * Tubos de hoje pela prévia do plano: quantos a expedição vai encher e quantos o rover já encheu (ao vivo,
+   * uma amostra por parada de estudo). À noite, sem ciência ou sem prévia: nada (vale o número da regra).
+   */
+  private tubesPlan(): { used: number; filled: number; none: boolean } | null {
+    if (this.nightView || !this.state || this.plan.science === 0) return null;
+    const pv = this.cb.preview?.(this.getPlan());
+    if (!pv) return null;
+    const used = pv.tubesUsed ?? 0;
+    return { used, filled: Math.min(this.samplesToday, used), none: !!pv.noTubes };
+  }
+
+  private tubesToday(): string | undefined {
+    const p = this.tubesPlan();
+    if (!p) return undefined;
+    if (p.none) return t('res.tubes.none');
+    if (p.used === 0) return undefined;
+    return p.filled > 0 ? t('res.tubes.filled', { n: p.filled, total: p.used }) : t('res.tubes.today', { n: p.used });
   }
 
   private renderMessages(): void {
@@ -336,7 +371,11 @@ export class Hud {
       if (!pv) return null;
       if (k === 'life') return arrow(s.res.life, pv.after.life, t('preview.tonight'));
       if (k === 'shield') return arrow(s.res.shield, pv.after.shield, t('preview.tonight'));
-      return h('span', { class: `forecast ${pv.sciGain > 0 ? 'up' : 'same'}` }, pv.stormTonight && pv.sciGain > 0 ? t('preview.scienceStorm', { n: fmt(pv.sciGain) }) : `+${fmt(pv.sciGain)}`);
+      const gain = pv.stormTonight && pv.sciGain > 0 ? t('preview.scienceStorm', { n: fmt(pv.sciGain) }) : `+${fmt(pv.sciGain)}`;
+      // Custo em tubos de amostra (regra em src/sim/day.ts): a expedição de hoje gasta 3; sem tubos, a ciência cai.
+      // `tubesUsed` pode faltar na prévia de um servidor antigo (modo em grupo).
+      const tubes = pv.tubesUsed > 0 ? t('preview.tubes', { n: pv.tubesUsed }) : pv.noTubes ? t('preview.noTubes') : '';
+      return h('span', { class: `forecast ${pv.sciGain > 0 ? 'up' : 'same'}` }, tubes ? `${gain} · ${tubes}` : gain);
     };
     const warnings: { text: string; tone: 'bad' | 'warn' | 'info' }[] = [];
     if (pv) {
@@ -408,6 +447,7 @@ export class Hud {
     if (this.coop && !this.coop.editable.includes(k)) return;
     this.plan[k] += delta;
     this.renderPlan();
+    this.renderResources(); // o "−3 hoje" dos tubos acompanha a ciência
     this.cb.onPlanChange(this.getPlan());
   }
 

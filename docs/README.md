@@ -16,6 +16,7 @@ Ela vive junto com o código, então é versionada, revisada em PR e nunca fica 
 | [ciencia-marte.md](ciencia-marte.md) | Quem escreve texto educativo, ajuda "?" ou a apresentação. Fatos reais de Marte conferidos, com fonte, página e trecho original, e textos para a criança em PT/EN. |
 | [dados.md](dados.md) | Quem mexe nos dados reais da NASA: fontes, coleta e como atualizar. |
 | [arquitetura.md](arquitetura.md) | Todo mundo, no primeiro dia. Pastas, loop do jogo, quem é dono de quê. |
+| [estrutura-do-projeto.md](estrutura-do-projeto.md) | **Antes de mexer em qualquer parte.** As 6 áreas do time, mapa das pastas e receitas: cenário, personagem, interação, problema, carta, texto, modelo 3D. |
 | [fisica.md](fisica.md) | Quem vai criar objetos, personagens ou fases. |
 | [estilo-visual.md](estilo-visual.md) | Artistas e devs mexendo em materiais, modelos ou cores. |
 | [convencoes.md](convencoes.md) | Antes do primeiro PR. Código, branches, commits, assets. |
@@ -40,7 +41,7 @@ São quatro tipos de documento, cada um com seu papel:
 | Mudou uma regra do jogo (recursos, eventos, balanceamento, fluxo) | `game-design.md` |
 | Mudou como um sistema funciona (loop, física, input, render) | O guia correspondente |
 | Escolheu/trocou biblioteca, técnica ou padrão importante | Novo ADR (`npm run docs:adr -- "título"`) |
-| Criou uma pasta/módulo novo em `src/` | `arquitetura.md` (tabela de pastas) |
+| Criou uma pasta/módulo novo em `src/` | `arquitetura.md` (tabela de pastas) e `estrutura-do-projeto.md` (mapa) |
 | Mudou direção de arte (estilo, paleta, escala, materiais) | `art-bible.md`, com nova versão no registro de alterações |
 | Adicionou cor, material ou regra de arte no código | `estilo-visual.md` |
 | Mudou comando, dependência de sistema ou setup | `README.md` raiz |

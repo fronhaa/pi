@@ -62,6 +62,7 @@ type Resources struct {
 	Dose    float64 `json:"dose"`
 	Science float64 `json:"science"`
 	Dust    float64 `json:"dust"`
+	Tubes   float64 `json:"tubes"` // tubos de amostra vazios (src/sim/config.ts, CONFIG.samples)
 }
 
 type EnergyPlan struct {
