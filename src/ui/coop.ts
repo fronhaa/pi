@@ -2,6 +2,7 @@ import { t, type StringKey } from '@/i18n';
 import { DIFFICULTIES, type Difficulty } from '@/sim/config';
 import { COOP_ROLES, EARTH_OPTIONS, type CoopRole, type CoopState, type EarthOption } from '@/net/protocol';
 import { h, openDialog, patchChildren } from './dom';
+import { levelAria, levelContent } from './level';
 
 /**
  * Telas do modo em grupo (docs/servidor-coop.md): escolher o modo, a sala de espera
@@ -121,10 +122,10 @@ export class Lobby {
     const levelEl = me.host
       ? h('div', { class: 'actions row level-pick', role: 'group', 'aria-label': t('coop.level') },
           ...DIFFICULTIES.map((l) => h('button', {
-            class: `btn${l === level ? ' primary' : ''}`, type: 'button', 'aria-pressed': String(l === level),
-            onclick: () => this.cb.level(l),
-          }, t(`level.${l}` as StringKey))))
-      : h('p', {}, h('strong', {}, t(`level.${level}` as StringKey)));
+            class: `btn level-btn${l === level ? ' primary' : ''}`, type: 'button', 'aria-pressed': String(l === level),
+            'aria-label': levelAria(l), onclick: () => this.cb.level(l),
+          }, ...levelContent(l))))
+      : h('p', { class: 'level-chosen' }, ...levelContent(level));
 
     const footer: (HTMLElement | null)[] = [];
     if (me.host) {

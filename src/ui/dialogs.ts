@@ -4,6 +4,7 @@ import type { FlareSource } from '@/data/flares';
 import type { MissionSource } from '@/data/missions';
 import { formatDate, t, type StringKey } from '@/i18n';
 import { h, openDialog } from './dom';
+import { levelAria, levelContent } from './level';
 
 /** Tutorial de 3 passos (GDD, "Janelas"). */
 /**
@@ -46,7 +47,7 @@ export function showLevelChoice(preferred: Difficulty, onChoose: (level: Difficu
       ...DIFFICULTIES.map((l) => h('p', {}, t(`level.${l}.hint` as StringKey))),
       h('p', { class: 'source' }, h('small', {}, `🛰️ ${t('level.nasa')}`)),
     ],
-    actions: DIFFICULTIES.map((l) => ({ label: t(`level.${l}` as StringKey), primary: l === preferred, onClick: () => onChoose(l) })),
+    actions: DIFFICULTIES.map((l) => ({ label: levelAria(l), content: levelContent(l), primary: l === preferred, onClick: () => onChoose(l) })),
     row: true,
   });
 }
@@ -132,7 +133,7 @@ export function showEnd(state: GameState, onAgain: () => void): void {
       h('div', { class: 'stars', 'aria-label': t('end.stars', { n: stars }) },
         ...[1, 2, 3].map((i) => h('span', { class: i <= stars ? '' : 'off', 'aria-hidden': 'true' }, '★'))),
       // 3 estrelas no Fácil não são 3 estrelas no Difícil: o nível aparece junto.
-      h('p', { class: 'level-badge' }, t('end.level', { name: t(`level.${state.difficulty ?? 'medium'}` as StringKey) })),
+      h('p', { class: 'level-badge' }, t('end.level', { name: levelAria(state.difficulty ?? 'medium') })),
       h('ul', { class: 'criteria' }, ...criteria.map(([ok, key]) => h('li', {}, `${ok ? '✅' : '⬜'} ${t(key, { limit: doseFor3(state.location), goal })}`))),
       hist ? missionRecap(hist) : null,
       h('h3', {}, t('end.learned')),

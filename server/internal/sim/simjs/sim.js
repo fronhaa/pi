@@ -233,8 +233,8 @@ var JezeroSim = (function(exports) {
 		"hard"
 	];
 	/**
-	* Níveis da missão. O Médio é o jogo de sempre (os números do CONFIG acima). Fácil é para quem tem 7 a 9 anos e
-	* está na primeira missão; Difícil, para quem já entende o jogo (10 a 12 anos).
+	* Níveis da missão. O Médio é o jogo de sempre (os números do CONFIG acima). Idade recomendada, mostrada no botão
+	* (src/ui/level.ts): Fácil 7+ anos (e quem joga pela primeira vez), Médio 9+, Difícil 11+.
 	*
 	* NUNCA muda com o nível o que vem de dado real da NASA: a força de cada tempestade solar (classe da erupção do
 	* DONKI, `solarStorms.intensity`), o atraso real das mensagens, as datas das missões históricas e os fatos de

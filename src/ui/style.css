@@ -432,3 +432,9 @@ body.pre-mission #ui, body.pre-mission .crew-bubble, body.pre-mission .offscreen
 /* Reduzir movimento: a cena 3D fica parada no destino; aparece só o fato. */
 .launch-reduced .launch-fact, .launch-reduced .launch-source { animation: none; opacity: 1; }
 .launch-reduced .launch-note { display: none; }
+
+/* Botão de nível: nome da missão e, embaixo, a idade recomendada (src/ui/level.ts). */
+.level-btn, .place3d-level { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.15; }
+.level-name { font-weight: 700; }
+.level-age { font-size: 0.82em; font-weight: 700; opacity: 0.9; }
+.level-chosen { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }

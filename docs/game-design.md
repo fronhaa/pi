@@ -235,7 +235,8 @@ Qualquer mudança nos números deve manter essa forma: as duas estratégias extr
 No jogo solo, o nível é escolhido na mesma tela do lugar ("Para onde vamos?", planetas 3D): com o mouse em cima de
 Marte ou da Lua (ou com o foco do teclado), os 3 níveis aparecem embaixo do planeta; no celular, o primeiro toque no
 planeta abre os níveis. Tocar num nível escolhe o lugar e o nível juntos (`src/ui/PlaceChoice.ts`). Fica marcado o
-último nível jogado; na primeira partida, a Primeira missão. A dica de cada nível aparece ao parar o mouse no botão.
+último nível jogado; na primeira partida, a Primeira missão. Cada botão mostra o nome da missão e a idade recomendada
+(7+, 9+, 11+ anos; `src/ui/level.ts`); a dica de cada nível aparece ao parar o mouse no botão.
 Os números ficam em `src/sim/config.ts` (`DIFFICULTY`) e a escolha em `src/core/Game.ts` (`choosePlaceAndLevel`).
 No modo em grupo, o dono da sala escolhe no saguão e, ao jogar de novo, na janela "🎯 Escolha a missão"
 (`showLevelChoice`).
@@ -247,7 +248,7 @@ escala do jogo (INTERPRETADO): quanta energia, folga e pressa a tripulação tem
 
 | | 🌱 Primeira missão (Fácil) | 🚀 Missão normal (Médio) | 🔥 Missão expert (Difícil) |
 | --- | --- | --- | --- |
-| Para quem | 7 a 9 anos, primeira vez | quem já jogou | 10 a 12 anos, quer desafio |
+| Idade recomendada (aparece no botão) | 7+ anos (e quem joga pela primeira vez) | 9+ anos | 11+ anos |
 | Blocos por sol (Marte; na Lua, soma ao Sol pleno) | 12 | 10 | 9 |
 | Bateria / suporte de vida no começo | 70 / 80 | 50 / 70 | 40 / 70 |
 | Cartas de decisão | 2 | 4 | 5 |
