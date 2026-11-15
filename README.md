@@ -38,6 +38,7 @@ e clique em **Terminar o sol**. Leia as mensagens da Terra: elas avisam das temp
 Tudo fica em [`docs/`](docs/README.md). Comece por lá:
 
 - [Desafio](docs/desafio.md) e [Game design (GDD)](docs/game-design.md): o que estamos construindo
+- [App instalável (PWA)](docs/pwa.md): instalar pelo Chrome e jogar o modo solo sem internet
 - [Fontes da NASA](docs/fontes-nasa.md): quais dados o jogo usa e por quê (para juízes e professores)
 - [Dados da NASA](docs/dados.md): de onde vêm os dados reais e como atualizar
 - [Arquitetura](docs/arquitetura.md): como o código está organizado

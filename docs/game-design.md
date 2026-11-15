@@ -15,7 +15,7 @@ Mars Exploration: Missão Jezero é um jogo de navegador. Nele, uma criança de 
 | --- | --- |
 | Desafio | [Build a Junior Astronaut Mission Trainer](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/), NASA Space Apps Challenge 2026 (14 e 15 de novembro) |
 | Público | Crianças de 7 a 12 anos; também serve para pais e sala de aula |
-| Plataforma | Navegador, sem download e sem conta; computador e celular |
+| Plataforma | Navegador, sem download e sem conta; computador e celular. Pode ser instalado como app pelo Chrome, e o modo solo funciona sem internet depois da primeira visita ([pwa.md](pwa.md)) |
 | Local da missão | Cratera Jezero, Marte; ou polo sul da Lua, perto da cratera Shackleton ([Base lunar](#base-lunar), só no modo solo) |
 | Duração de uma partida | 15 sóis, cerca de 10 a 15 minutos |
 | Jogadores | 1 no modo solo; de 2 a 5 no modo cooperativo, no mesmo aparelho (planejado) ou **online, cada um no seu aparelho** (servidor Go e cliente prontos: [servidor-coop.md](servidor-coop.md)) |
