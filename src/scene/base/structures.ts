@@ -61,19 +61,29 @@ function materialsNamed(root: THREE.Object3D, name: string): THREE.MeshToonMater
   return [...out];
 }
 
+export type BatteryFlow = 'charge' | 'discharge' | 'idle';
+
+/** Célula da bateria do .glb, com a posição e a altura originais (para encher só na altura). */
+interface BatteryCell {
+  mesh: THREE.Mesh;
+  baseY: number;
+  height: number;
+  centerY: number;
+}
+
 /** O que muda a cada frame nos prédios. */
 export interface StructuresFrame {
   time: number;
   dt: number;
   /** Escuridão da cena (0 dia, 1 noite): as janelas da base de comunicação acendem. */
   darkness: number;
-  /** É noite no jogo (a bateria descarrega). */
-  night: boolean;
+  /** Energia andando na bateria: enchendo (pulsos das placas), gastando (pulsos para a base) ou parada. */
+  batteryFlow: BatteryFlow;
   /** Alerta ou noite de tempestade: a luz de alarme pisca. */
   alarmOn: boolean;
   /** Mensagem da Terra: a ponta da antena pisca. */
   earthMessage: boolean;
-  /** Carga da bateria (0–1). */
+  /** Carga mostrada da bateria (0–1). */
   battery: number;
   /** Direção do Sol (para o concentrador da estufa); abaixo do horizonte, ele fica virado para cima. */
   sunDir?: THREE.Vector3;
@@ -108,8 +118,14 @@ export class BaseStructures {
   private glbAntennaTip: THREE.MeshToonMaterial[] = [];
   private glbPanelCells: THREE.MeshToonMaterial[] = [];
   private readonly glbWindows: THREE.MeshToonMaterial[] = [];
-  private battery: { model: SceneryModel; level: THREE.AnimationAction | null } | null = null;
-  private batteryMode: 'charge' | 'discharge' | 'level' | null = null;
+  private battery: {
+    model: SceneryModel;
+    cells: BatteryCell[];
+    /** Só os pulsos que saem da bateria para a base (sem a luz laranja): tocam junto com a carga. */
+    toBase: THREE.AnimationAction | null;
+    flow: THREE.AnimationAction[];
+  } | null = null;
+  private batteryMode: BatteryFlow | null = null;
   /** Estufa: concentrador solar (gira para o Sol), fibra óptica e LEDs de cultivo. */
   private readonly collector = new THREE.Group();
   private readonly fiberMat = new THREE.MeshBasicMaterial({ color: FIBER_COLOR });
@@ -146,10 +162,6 @@ export class BaseStructures {
     for (const p of this.plants) p.material.color.copy(PLANT_DEAD).lerp(PLANT_OK, lifeK);
     const bags = Math.min(this.sandbags.length, Math.floor(r.shield / 8));
     this.sandbags.forEach((b, i) => (b.visible = i < bags));
-    const batK = r.battery / CONFIG.battery.max;
-    this.batteryMeter.scale.x = Math.max(0.02, batK);
-    this.batteryMeter.position.x = BATTERY_POSITION.x - (METER_WIDTH * (1 - this.batteryMeter.scale.x)) / 2;
-    this.batteryMeter.material.color.set(batK > 0.5 ? 0x5cc16b : batK > 0.25 ? 0xf2c14e : 0xe0503a);
   }
 
   /** Alarme piscando (alerta ou noite de tempestade), ponta da antena (mensagem da Terra), bateria e janelas. */
@@ -171,7 +183,7 @@ export class BaseStructures {
       mat.emissive.setHex(0xffd27a);
       mat.emissiveIntensity = ((mat.userData.dayEmissive as number) ?? 0) + f.darkness * 1.2;
     }
-    this.animateBattery(f.night, f.battery);
+    this.animateBattery(f.batteryFlow, f.battery);
     this.updateGreenhouse(f);
   }
 
@@ -218,8 +230,9 @@ export class BaseStructures {
 
   /**
    * Placas solares com bateria (solar-panels-battery.glb): feitas com o primeiro painel em (12; 2), deslocadas em
-   * SOLAR_MODEL_OFFSET para o lugar das placas simples. A poeira escurece as células; a bateria anima carga
-   * (dia), descarga (noite) ou mostra o nível (cheia). A tomada vai para OUTLET_LOCAL_X, encurtando o cabo.
+   * SOLAR_MODEL_OFFSET para o lugar das placas simples. A poeira escurece as células; as células da bateria
+   * mostram a carga (BaseScene: de dia enche até a prévia, à noite gasta até o resultado) e os pulsos/luzes mostram
+   * a energia entrando ou saindo. A tomada vai para OUTLET_LOCAL_X, encurtando o cabo.
    */
   useSolarField(m: SceneryModel): void {
     m.root.position.copy(SOLAR_MODEL_OFFSET);
@@ -229,11 +242,16 @@ export class BaseStructures {
     const from = 4.2;
     const end = 7.43; // ponta do cabo na bateria
     if (outlet) outlet.position.x = OUTLET_LOCAL_X;
+    // Escala o cabo em X a partir da ponta da bateria, para ele terminar na tomada nova.
+    const k = (end - OUTLET_LOCAL_X - 0.3) / (end - from - 0.3);
     if (cableOut) {
-      // Escala o cabo em X a partir da ponta da bateria, para ele terminar na tomada nova.
-      const k = (end - OUTLET_LOCAL_X - 0.3) / (end - from - 0.3);
       cableOut.scale.x = k;
       cableOut.position.x = end * (1 - k);
+    }
+    // Os pulsos de descarga correm pelo cabo antigo: aplica a mesma escala em X neles, para seguirem o cabo novo.
+    for (const track of m.clip('battery_discharge')?.tracks ?? []) {
+      if (!track.name.startsWith('energy_pulse_discharge_') || !track.name.endsWith('.position')) continue;
+      for (let i = 0; i < track.values.length; i += 3) track.values[i] = k * track.values[i] + end * (1 - k);
     }
     if (plug) plug.position.x += OUTLET_LOCAL_X - from;
     this.glbPanelCells = materialsNamed(m.root, 'panel_cells');
@@ -241,27 +259,58 @@ export class BaseStructures {
     this.root.add(m.root);
     this.panelsFallback.visible = false;
     this.batteryFallback.visible = false;
-    this.battery = { model: m, level: null };
+    // Os clipes de carga/descarga enchem e esvaziam as células em laço, sem ligar para a carga real: tira essas
+    // trilhas deles. As células seguem o nível do jogo, em código (o clipe battery_level encolhe a célula inteira,
+    // largura junto; aqui só a altura muda, enchendo de baixo para cima).
+    for (const name of ['battery_charge', 'battery_discharge']) {
+      const clip = m.clip(name);
+      if (clip) clip.tracks = clip.tracks.filter((t) => !t.name.startsWith('battery_cell_'));
+    }
+    const cells: BatteryCell[] = [];
+    for (let i = 0; ; i++) {
+      const mesh = m.root.getObjectByName(`battery_cell_${i}`) as THREE.Mesh | undefined;
+      if (!mesh) break;
+      mesh.geometry.computeBoundingBox();
+      const box = mesh.geometry.boundingBox!;
+      cells.push({ mesh, baseY: mesh.position.y, height: box.max.y - box.min.y, centerY: (box.max.y + box.min.y) / 2 });
+    }
+    // Carregando, a base continua gastando: os pulsos também vão da bateria até a tomada.
+    const discharge = m.clip('battery_discharge');
+    let toBase: THREE.AnimationAction | null = null;
+    if (discharge) {
+      const pulses = discharge.clone();
+      pulses.name = 'battery_to_base';
+      pulses.tracks = pulses.tracks.filter((t) => t.name.startsWith('energy_pulse_discharge_'));
+      toBase = m.mixer.clipAction(pulses);
+    }
+    this.battery = { model: m, cells, toBase, flow: [] };
     this.batteryMode = null;
     this.mixers.push(m.mixer);
   }
 
-  /** Bateria do .glb: dia carregando, noite descarregando, cheia mostrando o nível (clipe battery_level). */
-  private animateBattery(night: boolean, batK: number): void {
+  /** Bateria: células = carga mostrada (só a altura, de baixo para cima); pulsos e luz = energia entrando ou saindo. */
+  private animateBattery(mode: BatteryFlow, batK: number): void {
+    this.batteryMeter.scale.x = Math.max(0.02, batK);
+    this.batteryMeter.position.x = BATTERY_POSITION.x - (METER_WIDTH * (1 - this.batteryMeter.scale.x)) / 2;
+    this.batteryMeter.material.color.set(batK > 0.5 ? 0x5cc16b : batK > 0.25 ? 0xf2c14e : 0xe0503a);
     const b = this.battery;
     if (!b) return;
-    const mode = night ? 'discharge' : batK < 0.98 ? 'charge' : 'level';
     if (mode !== this.batteryMode) {
       this.batteryMode = mode;
-      b.model.mixer.stopAllAction();
-      b.level = null;
-      if (mode === 'level') b.level = b.model.play('battery_level', true);
-      else b.model.play(mode === 'charge' ? 'battery_charge' : 'battery_discharge');
+      for (const a of b.flow) a.stop();
+      const next: (THREE.AnimationAction | null)[] = [];
+      if (mode === 'discharge') next.push(b.model.play('battery_discharge'));
+      if (mode === 'charge') next.push(b.model.play('battery_charge'), b.toBase?.reset().play() ?? null);
+      b.flow = next.filter((a): a is THREE.AnimationAction => a !== null);
     }
-    if (b.level) {
-      b.level.timeScale = 0;
-      b.level.time = Math.min(0.999, batK);
-    }
+    const n = b.cells.length;
+    b.cells.forEach((c, i) => {
+      const fill = THREE.MathUtils.clamp(batK * n - i, 0, 1);
+      c.mesh.visible = fill > 0.01;
+      c.mesh.scale.set(1, Math.max(0.01, fill), 1);
+      // Mantém a base da célula no lugar: o centro da geometria desce junto com a altura.
+      c.mesh.position.y = c.baseY + (c.centerY - c.height / 2) * (1 - c.mesh.scale.y);
+    });
   }
 
   /**

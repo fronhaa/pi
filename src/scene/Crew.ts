@@ -72,6 +72,9 @@ export class Astronaut {
   private current: THREE.AnimationAction | null = null;
   private jumpLeft = 0;
   private working = false;
+  /** Plaquinha "🔧 Nome" sobre a cabeça enquanto trabalha (aparece até através do casco da base). */
+  private badge: THREE.Sprite | null = null;
+  private badgeText = '';
   private readonly ring: THREE.Mesh;
   private bobPhase = Math.random() * Math.PI * 2;
 
@@ -342,9 +345,23 @@ export class Astronaut {
     this.playChibi('jump');
   }
 
-  /** Consertando um problema: segura o tablet (clipe `interact`). */
-  setWorking(on: boolean): void {
+  /**
+   * Consertando um problema: segura o tablet (clipe `interact`) e mostra a plaquinha com o nome (`label`, já
+   * traduzido) na cor do papel. Lá dentro os astronautas ficam atrás do casco: sem ela, não dá para ver quem trabalha.
+   */
+  setWorking(on: boolean, label = ''): void {
     this.working = on;
+    if (on && label && label !== this.badgeText) {
+      this.badgeText = label;
+      if (this.badge) {
+        this.root.remove(this.badge);
+        this.badge.material.map?.dispose();
+        this.badge.material.dispose();
+      }
+      this.badge = makeBadge(label, ROLE_COLORS[this.role]);
+      this.root.add(this.badge);
+    }
+    if (this.badge) this.badge.visible = on;
   }
 
   private playChibi(next: ChibiAction | 'idle'): void {
@@ -433,4 +450,55 @@ export class Crew {
   update(dt: number): void {
     for (const a of Object.values(this.members)) a.idle(dt);
   }
+}
+
+/** Altura da plaquinha de trabalho (acima do capacete, ~1,85 m). */
+const BADGE_Y = 2.45;
+/** Altura da plaquinha no mundo (m); a largura acompanha o texto. */
+const BADGE_HEIGHT = 0.5;
+
+/** Plaquinha "🔧 Nome": pílula de papel com borda e bolinha na cor do papel, sempre por cima (depthTest desligado). */
+function makeBadge(text: string, accent: number): THREE.Sprite {
+  const c = document.createElement('canvas');
+  const g = c.getContext('2d')!;
+  const font = '600 44px Fredoka, ui-rounded, system-ui, sans-serif';
+  g.font = font;
+  const h = 84;
+  const dot = 64;
+  const w = Math.ceil(16 + dot + 14 + g.measureText(text).width + 26);
+  c.width = w;
+  c.height = h;
+  const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
+  const pill = (x: number, y: number, pw: number, ph: number) => {
+    g.beginPath();
+    g.roundRect(x, y, pw, ph, ph / 2);
+  };
+  pill(4, 4, w - 8, h - 8);
+  g.fillStyle = '#fbf4ec'; // --paper do HUD
+  g.fill();
+  g.lineWidth = 6;
+  g.strokeStyle = '#473c3a';
+  g.stroke();
+  g.beginPath();
+  g.arc(12 + dot / 2, h / 2, dot / 2 - 4, 0, Math.PI * 2);
+  g.fillStyle = hex(accent);
+  g.fill();
+  g.lineWidth = 4;
+  g.stroke();
+  g.textBaseline = 'middle';
+  g.textAlign = 'center';
+  g.font = '34px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+  g.fillText('🔧', 12 + dot / 2, h / 2 + 2);
+  g.font = font;
+  g.textAlign = 'left';
+  g.fillStyle = '#473c3a';
+  g.fillText(text, 12 + dot + 14, h / 2 + 3);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  sprite.scale.set((BADGE_HEIGHT * w) / h, BADGE_HEIGHT, 1);
+  sprite.position.y = BADGE_Y;
+  sprite.renderOrder = 8;
+  sprite.visible = false;
+  return sprite;
 }

@@ -1,6 +1,6 @@
 import { t, type StringKey } from '@/i18n';
 import { COOP_ROLES, EARTH_OPTIONS, type CoopRole, type CoopState, type EarthOption } from '@/net/protocol';
-import { h, openDialog } from './dom';
+import { h, openDialog, patchChildren } from './dom';
 
 /**
  * Telas do modo em grupo (docs/servidor-coop.md): escolher o modo, a sala de espera
@@ -120,7 +120,8 @@ export class Lobby {
       footer.push(h('p', { class: 'hint' }, t('coop.waitHost')));
     }
 
-    this.dialog.replaceChildren(
+    // A sala redesenha a cada estado do servidor: reaproveita os botões (recriar perde o clique, ver patchChildren).
+    patchChildren(this.dialog, [
       h('h2', { id: 'lobby-title' }, t('coop.room', { code: '' }), h('span', { class: 'room-code', 'aria-label': s.code.split('').join(' ') }, s.code)),
       h('p', { class: 'hint' }, t('coop.share')),
       this.errorEl(),
@@ -129,7 +130,7 @@ export class Lobby {
       h('p', { class: 'hint' }, `${t('coop.extraRoles')} ${owner('earth') ? '' : t('coop.autoEarth')}`),
       h('div', { class: 'actions' }, ...footer),
       h('div', { class: 'actions row' }, h('button', { class: 'btn', type: 'button', onclick: () => this.cb.leave() }, t('coop.leave'))),
-    );
+    ]);
     this.error = '';
   }
 
