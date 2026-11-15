@@ -140,7 +140,10 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   F15 a F19): casco de ~3,3 m de diâmetro, piso em `HABITAT_FLOOR_Y` (1,56 m) com ~2,7 m de altura livre (a NASA
   recomenda 2,4 m) e ~37 m³ por tripulante nos três módulos de moradia (mínimo da NASA: 29 m³ habitáveis). As janelas
   acendem à noite.
-- Túneis: raio `TUBE_RADIUS` (1,2 m), com ~2,1 m livres acima do piso: o astronauta (1,87 m) passa **em pé**. A cúpula
+- Túneis: raio `TUBE_RADIUS` (1,2 m), com ~2,1 m livres acima do piso: o astronauta (1,87 m) passa **em pé**.
+  Cada túnel **começa e termina dentro da estufa** (`TUBE_START`: onde até o alto dele fica sob a cúpula; nada sai
+  pelo casco da estufa) e vai até a porta do módulo. São do mesmo casco das cápsulas, translúcidos para a câmera
+  (dá para ver quem passa), com piso e um anel laranja em cada ponta. A cúpula
   tem 6 m de raio para a passarela ter altura até a boca dos túneis. Se um teto ficar baixo, ele se curva sozinho
   (`Astronaut.fitHeadroom`, altura em `headroomAt`).
 - Beliche: **1 m livre acima de cada colchão** (`BUNK_LEVELS`, como a NASA recomenda para sentar na cama), camas em

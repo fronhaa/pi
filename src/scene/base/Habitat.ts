@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PALETTE, seeThroughHull, toonMaterial, toonMesh } from '@/render/toon';
+import { HULL_COLORS, PALETTE, seeThroughHull, toonMaterial, toonMesh } from '@/render/toon';
 import type { SceneryModel } from '@/render/sceneryModel';
 import { BIKE_FIT } from '@/render/chibiPedal';
 import {
@@ -191,17 +191,28 @@ export class Habitat {
   /** Túneis pressurizados ligando a cúpula a cada módulo (vista superior do concept art). */
   private buildTubes(): void {
     this.buildWalkway();
+    // Túneis do mesmo casco das cápsulas, translúcidos para a câmera (dá para ver quem passa), com piso e um anel em
+    // cada ponta: na porta do módulo e dentro da estufa, onde o túnel termina.
+    const tubeMat = seeThroughHull(toonMaterial(HULL_COLORS.shell), 0.32);
     for (const t of TUBES) {
       const len = t.from.distanceTo(t.to);
-      const geo = new THREE.CylinderGeometry(TUBE_RADIUS, TUBE_RADIUS, len, 16);
-      const tube = toonMesh(geo, PALETTE.light, 0.03);
+      const dir = t.to.clone().sub(t.from).normalize();
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(TUBE_RADIUS, TUBE_RADIUS, len, 24, 1, true), tubeMat);
       tube.position.copy(t.from).add(t.to).multiplyScalar(0.5);
-      tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), t.to.clone().sub(t.from).normalize());
+      tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      tube.renderOrder = 1;
+      tube.castShadow = true;
       this.root.add(tube);
-      const ring = toonMesh(new THREE.CylinderGeometry(TUBE_RADIUS + 0.1, TUBE_RADIUS + 0.1, 0.16, 16), PALETTE.accent, 0);
-      ring.position.copy(t.to);
-      ring.quaternion.copy(tube.quaternion);
-      this.root.add(ring);
+      for (const end of [t.from, t.to]) {
+        const ring = toonMesh(new THREE.CylinderGeometry(TUBE_RADIUS + 0.1, TUBE_RADIUS + 0.1, 0.16, 24, 1, true), PALETTE.accent, 0);
+        ring.position.copy(end);
+        ring.quaternion.copy(tube.quaternion);
+        this.root.add(ring);
+      }
+      const alongX = Math.abs(dir.x) > Math.abs(dir.z);
+      const deck = toonMesh(new THREE.BoxGeometry(alongX ? len : WALKWAY_WIDTH, 0.08, alongX ? WALKWAY_WIDTH : len), PALETTE.tech, 0.02);
+      deck.position.set(tube.position.x, HABITAT_FLOOR_Y - 0.04, tube.position.z);
+      this.root.add(deck);
     }
   }
 

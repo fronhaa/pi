@@ -52,12 +52,16 @@ export const DOME_RADIUS = 6;
  */
 export const TUBE_Y = HABITAT_FLOOR_Y + 0.94;
 export const TUBE_RADIUS = 1.2;
+/** Onde o centro do túnel encontra o casco da estufa (distância ao centro da cúpula). */
+const TUBE_DOME_EXIT = Math.sqrt(DOME_RADIUS ** 2 - TUBE_Y ** 2);
 /**
- * Até onde o túnel entra na cúpula: ali a cúpula ainda tem a altura do centro do túnel.
- * O túnel vai daqui até a porta de acoplamento do módulo.
+ * O túnel começa e termina **dentro da estufa**: no ponto em que até o alto dele (TUBE_Y + TUBE_RADIUS) já fica sob
+ * a cúpula, então nada do túnel sai pelo casco da estufa. Antes ele começava onde a cúpula tem a altura do centro
+ * do túnel, e a metade de cima ficava para fora.
  */
-const TUBE_START = Math.sqrt(DOME_RADIUS ** 2 - TUBE_Y ** 2) - 0.05;
-const TUBE_LENGTH = 1.8;
+const TUBE_START = Math.sqrt(DOME_RADIUS ** 2 - (TUBE_Y + TUBE_RADIUS) ** 2) - 0.1;
+/** O túnel vai até a porta de acoplamento do módulo, 1,8 m fora da estufa (os módulos não mudaram de lugar). */
+const TUBE_END = TUBE_DOME_EXIT - 0.05 + 1.8;
 /** Porta de acoplamento de cada módulo: ±3,25 m do centro no modelo (em escala). */
 const PORT = 3.25;
 
@@ -65,7 +69,7 @@ const PORT = 3.25;
  * Laboratório, com a torre do airlock (a porta) virada para +Z, para o lado da câmera (research-base.glb,
  * docs/rover-e-base-de-pesquisa.md). O casco corre em X. Origem do modelo no chão.
  */
-export const HABITAT_POSITION = new THREE.Vector3(DOME_CENTER.x + TUBE_START + TUBE_LENGTH + PORT * HABITAT_SCALE, 0, DOME_CENTER.z);
+export const HABITAT_POSITION = new THREE.Vector3(DOME_CENTER.x + TUBE_END + PORT * HABITAT_SCALE, 0, DOME_CENTER.z);
 /** Porta do airlock no referencial do modelo: o astronauta anda até ela e some (doc do modelo). */
 export const HABITAT_DOOR_LOCAL_Z = 4.1;
 /** Abrigo de regolito (tempestade solar): à frente e à esquerda da base, longe do caminho do rover. */
@@ -125,7 +129,7 @@ export const POSTS: Record<Role, THREE.Vector3> = {
  * Depois de uma expedição o rover sobe a rampa, entrega as amostras e fica em revisão (src/scene/base/Rover.ts).
  */
 export const GARAGE_SCALE = 1;
-export const GARAGE_POSITION = new THREE.Vector3(DOME_CENTER.x, 0, DOME_CENTER.z + TUBE_START + TUBE_LENGTH + PORT * GARAGE_SCALE);
+export const GARAGE_POSITION = new THREE.Vector3(DOME_CENTER.x, 0, DOME_CENTER.z + TUBE_END + PORT * GARAGE_SCALE);
 /** Giro do módulo (o modelo corre em X; aqui corre em Z). */
 export const GARAGE_ROTATION_Y = Math.PI / 2;
 /** Piso da garagem: onde o rover fica (a rampa sobe até aqui). */
@@ -151,11 +155,11 @@ export const ROVER_DOCK = {
 
 export const TUBES: readonly { from: THREE.Vector3; to: THREE.Vector3 }[] = [
   // Leste: laboratório.
-  { from: new THREE.Vector3(DOME_CENTER.x + TUBE_START, TUBE_Y, DOME_CENTER.z), to: new THREE.Vector3(DOME_CENTER.x + TUBE_START + TUBE_LENGTH, TUBE_Y, DOME_CENTER.z) },
+  { from: new THREE.Vector3(DOME_CENTER.x + TUBE_START, TUBE_Y, DOME_CENTER.z), to: new THREE.Vector3(DOME_CENTER.x + TUBE_END, TUBE_Y, DOME_CENTER.z) },
   // Oeste: alojamento.
-  { from: new THREE.Vector3(DOME_CENTER.x - TUBE_START, TUBE_Y, DOME_CENTER.z), to: new THREE.Vector3(DOME_CENTER.x - TUBE_START - TUBE_LENGTH, TUBE_Y, DOME_CENTER.z) },
+  { from: new THREE.Vector3(DOME_CENTER.x - TUBE_START, TUBE_Y, DOME_CENTER.z), to: new THREE.Vector3(DOME_CENTER.x - TUBE_END, TUBE_Y, DOME_CENTER.z) },
   // Sul: garagem.
-  { from: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START), to: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START + TUBE_LENGTH) },
+  { from: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START), to: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_END) },
 ];
 /**
  * Altura (centro) das duas camas de cada beliche, acima do piso: **1 m livre acima de cada colchão**, como a NASA
