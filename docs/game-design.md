@@ -689,6 +689,7 @@ Uma vez por partida cada um ([regras dos fatos](ciencia-marte.md#regras-deste-do
 | Momento | Fato | Chave sugerida |
 | --- | --- | --- |
 | Primeira colheita na estufa | [F10](ciencia-marte.md#f10-a-estufa-dá-comida-fresca) | `fact.greenhouse` |
+| Primeira vez que alguém trabalha na estufa (colher ou consertar) | [F20](ciencia-marte.md#f20-a-estufa-da-nasa-para-a-lua-e-marte-é-inflável-não-de-vidro) | `fact.greenhouseInflatable` (implementado) |
 | Primeira vez que alguém se exercita | [F9](ciencia-marte.md#f9-astronautas-se-exercitam-todo-dia) | `fact.exercise` |
 | Primeiro dia em tempo real (dica) | [F11](ciencia-marte.md#f11-a-rotina-de-uma-tripulação-em-marte) | `fact.routine` |
 
@@ -840,7 +841,7 @@ O céu não tem cor na paleta oficial. De dia, ele segue a cor da poeira; no pô
 
 **Elementos da cena:**
 
-- base em estrela, como na vista superior do concept art ([conceito-bases-lunar-marciana.png](img/conceito-bases-lunar-marciana.png)): a cúpula geodésica com a estufa é o núcleo (5 m de raio, a maior peça da base, com canteiros dos dois lados de uma passarela que a cruza), e túneis a ligam ao laboratório (leste), ao alojamento e à academia (oeste) e à **garagem do rover** (sul, com rampa, virada para a câmera);
+- base em estrela, como na vista superior do concept art ([conceito-bases-lunar-marciana.png](img/conceito-bases-lunar-marciana.png)): a **estufa** é o núcleo (6 m de raio, a maior peça da base, com canteiros dos dois lados de uma passarela que a cruza): fechada e do mesmo material das cápsulas, não de vidro, com a luz das plantas vindo de dentro como no protótipo da NASA ([F20](ciencia-marte.md#f20-a-estufa-da-nasa-para-a-lua-e-marte-é-inflável-não-de-vidro)): concentrador solar com fibra óptica de dia, LEDs de cultivo à noite, e anel de regolito, e túneis a ligam ao laboratório (leste), ao alojamento e à academia (oeste) e à **garagem do rover** (sul, com rampa, virada para a câmera);
 - torre com antena e luz de alarme;
 - campo de painéis solares e bateria em contêiner;
 - abrigo de radiação de regolito, com sacos de terra em volta;
@@ -911,7 +912,7 @@ Os códigos e estados seguem a Art Bible ([seção 9](art-bible.md#9-categorias-
 | GEO-001 | Mesetas com camadas de rocha | INTERPRETADO | WIP |
 | GEO-002 | Rochas espalhadas e campo rochoso | INTERPRETADO | WIP |
 | ARC-001 | Habitat em módulos | FICCIONAL | WIP |
-| ARC-002 | Cúpula geodésica da estufa | FICCIONAL | WIP |
+| ARC-002 | Estufa fechada do mesmo material das cápsulas (regolito, concentrador solar, fibra óptica e LED), baseada no protótipo da NASA (F20) | INTERPRETADO | WIP |
 | ARC-003 | Torre com antena e alarme | FICCIONAL | WIP |
 | ARC-004 | Campo de painéis solares | FICCIONAL | WIP |
 | ARC-005 | Abrigo de radiação com sacos de regolito | FICCIONAL | WIP |

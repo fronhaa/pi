@@ -139,6 +139,9 @@ export class CrewRoutine {
   /** Primeira vez que alguém vai à academia (o jogo mostra o fato da NASA sobre exercício). */
   onFirstExercise: () => void = () => {};
   private exerciseShown = false;
+  /** Primeira vez que alguém chega para trabalhar na estufa (o jogo mostra o fato da estufa inflável da NASA). */
+  onFirstGreenhouse: () => void = () => {};
+  private greenhouseShown = false;
   private readonly walkers = Object.fromEntries(
     ROLES.map((r) => [r, { at: 'post', idle: 0, left: 0, station: 0, rested: true, pos: HABITAT_SPOTS[r].clone(), path: [], going: null, placed: false, wasInside: false, stepTime: 0 } as Walker]),
   ) as Record<Role, Walker>;
@@ -425,6 +428,10 @@ export class CrewRoutine {
         a.faceHeading(st.heading, dt);
         a.exercise(st.clip, st.speed, dt);
       } else if (WORK.includes(activity)) {
+        if ((activity === 'task' || activity === 'harvest') && !this.greenhouseShown) {
+          this.greenhouseShown = true;
+          this.onFirstGreenhouse();
+        }
         // Trabalhando: de frente para o trabalho (vazamento, plantas ou bancada), nunca para a câmera.
         a.setLying(false);
         a.root.position.copy(w.pos);

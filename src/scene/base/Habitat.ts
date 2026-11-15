@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PALETTE, toonMaterial, toonMesh } from '@/render/toon';
+import { PALETTE, seeThroughHull, toonMaterial, toonMesh } from '@/render/toon';
 import type { SceneryModel } from '@/render/sceneryModel';
 import { BIKE_FIT } from '@/render/chibiPedal';
 import {
@@ -37,22 +37,6 @@ import {
   type Obstacle,
 } from './layout';
 
-/**
- * Cabines transparentes: todas as peças do casco (casco, faixas, janelas, portas de acoplamento) ficam
- * translúcidas para a câmera, para ver a tripulação lá dentro sem nada opaco na frente. Para o sol continuam
- * metal: fazem sombra (o sol não entra) e cada cabine tem a sua luminária.
- */
-function glassMaterial<M extends THREE.Material>(mat: M, opacity: number): M {
-  const m = mat.clone();
-  m.transparent = true;
-  m.opacity = opacity;
-  m.depthWrite = false;
-  m.side = THREE.FrontSide;
-  // Sombra pelos dois lados: por padrão o three.js só desenha a face de trás na sombra, e num casco fechado
-  // ela fica atrás de quem está dentro; aí o sol "atravessava" o metal.
-  m.shadowSide = THREE.DoubleSide;
-  return m;
-}
 
 /** Força da luminária de cada cabine (PointLight, sem sombra). */
 const CABIN_LIGHT_INTENSITY = 6;
@@ -103,7 +87,7 @@ export class Habitat {
     const fb = this.fallback;
     const hullGeo = new THREE.CylinderGeometry(1.6, 1.6, 7.2, 20);
     hullGeo.rotateZ(Math.PI / 2);
-    const hull = new THREE.Mesh(hullGeo, glassMaterial(toonMaterial(PALETTE.light), 0.3));
+    const hull = new THREE.Mesh(hullGeo, seeThroughHull(toonMaterial(PALETTE.light), 0.3));
     hull.castShadow = true; // o sol não atravessa o metal
     hull.position.y = 2.65;
     fb.add(hull);
@@ -492,7 +476,7 @@ export class Habitat {
         const src = mesh.material as THREE.Material;
         let mat = cut.get(src);
         if (!mat) {
-          mat = glassMaterial(src, mesh.name === 'hull_shell' ? 0.28 : 0.5);
+          mat = seeThroughHull(src, mesh.name === 'hull_shell' ? 0.28 : 0.5);
           cut.set(src, mat);
         }
         mesh.material = mat;

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PALETTE, toonMesh } from '@/render/toon';
+import { HULL_COLORS, PALETTE, seeThroughHull, toonMaterial, toonMesh } from '@/render/toon';
 import { CONFIG } from '@/sim/config';
 import type { Resources } from '@/sim/types';
 import type { SceneryModel } from '@/render/sceneryModel';
@@ -23,8 +23,16 @@ import {
 } from './layout';
 
 const PANEL_CLEAN = new THREE.Color(PALETTE.panel);
+const UP = new THREE.Vector3(0, 1, 0);
 const PLANT_OK = new THREE.Color(PALETTE.plant);
 const PLANT_DEAD = new THREE.Color(PALETTE.plantDead);
+/** Estufa inflável: gomos da membrana, cor da fibra óptica (luz do Sol) e dos LEDs de cultivo, altura dos LEDs. */
+const DOME_GORES = 12;
+/** Caixas de colisão em volta do anel de regolito da estufa. */
+const DOME_BERM_BOXES = 24;
+const FIBER_COLOR = 0xffd27a;
+const LED_COLOR = 0xe08cff;
+const LED_HEIGHT = 2.7;
 /** Largura do medidor de bateria (m). */
 const METER_WIDTH = 1.8;
 
@@ -52,6 +60,8 @@ export interface StructuresFrame {
   earthMessage: boolean;
   /** Carga da bateria (0–1). */
   battery: number;
+  /** Direção do Sol (para o concentrador da estufa); abaixo do horizonte, ele fica virado para cima. */
+  sunDir?: THREE.Vector3;
 }
 
 /**
@@ -80,6 +90,12 @@ export class BaseStructures {
   private readonly glbWindows: THREE.MeshToonMaterial[] = [];
   private battery: { model: SceneryModel; level: THREE.AnimationAction | null } | null = null;
   private batteryMode: 'charge' | 'discharge' | 'level' | null = null;
+  /** Estufa: concentrador solar (gira para o Sol), fibra óptica e LEDs de cultivo. */
+  private readonly collector = new THREE.Group();
+  private readonly fiberMat = new THREE.MeshBasicMaterial({ color: FIBER_COLOR });
+  private readonly ledMat = new THREE.MeshBasicMaterial({ color: LED_COLOR });
+  private readonly ledLight = new THREE.PointLight(LED_COLOR, 2.5, 9, 1.4);
+  private readonly fiberLight = new THREE.PointLight(0xfff0d0, 0, 14, 1.2);
   /** Animações dos .glb (antena girando, bateria). */
   private readonly mixers: THREE.AnimationMixer[] = [];
 
@@ -132,6 +148,20 @@ export class BaseStructures {
       mat.emissiveIntensity = ((mat.userData.dayEmissive as number) ?? 0) + f.darkness * 1.2;
     }
     this.animateBattery(f.night, f.battery);
+    this.updateGreenhouse(f);
+  }
+
+  /** De dia a fibra óptica brilha com a luz do Sol; à noite as plantas ficam só com os LEDs, mais fortes. */
+  private updateGreenhouse(f: StructuresFrame): void {
+    const sun = f.sunDir && f.sunDir.y > 0.02 ? f.sunDir : UP;
+    const target = this.collector.position.clone().add(sun);
+    this.collector.lookAt(target);
+    const day = 1 - f.darkness;
+    this.fiberMat.color.setHex(FIBER_COLOR).multiplyScalar(0.35 + 0.65 * day * (sun === UP ? 0.3 : 1));
+    this.ledMat.color.setHex(LED_COLOR).multiplyScalar(0.7 + 0.5 * f.darkness);
+    this.ledLight.intensity = 1.2 + 2.3 * f.darkness;
+    // De dia, a luz do Sol entra pela fibra óptica (com o Sol abaixo do horizonte, quase nada).
+    this.fiberLight.intensity = 9 * day * (sun === UP ? 0.15 : 1);
   }
 
   /**
@@ -205,29 +235,63 @@ export class BaseStructures {
     }
   }
 
+  /**
+   * ARC-002: estufa fechada, do **mesmo material das cápsulas**, não de vidro (docs/ciencia-marte.md, F20). Como os
+   * módulos, ela aparece translúcida só para a câmera (para ver as plantas e a tripulação lá dentro); para o sol é
+   * casco e faz sombra. A luz das plantas vem de dentro, como no protótipo da NASA: de dia, o concentrador que segue o
+   * Sol manda a luz por fibra óptica; à noite, os LEDs de cultivo. Regolito em volta da base protege da radiação.
+   */
   private buildDome(): void {
-    // ARC-002: cúpula geodésica com a estufa dentro.
     const r = DOME_RADIUS;
     const center = DOME_CENTER;
+    // Casco: o mesmo das cápsulas (cor, translucidez e sombra), com faixas e nervuras nas cores das faixas delas.
     const shell = new THREE.Mesh(
-      new THREE.SphereGeometry(r, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2),
-      new THREE.MeshToonMaterial({ color: 0xdfeaf0, transparent: true, opacity: 0.28 }),
+      new THREE.SphereGeometry(r, 36, 14, 0, Math.PI * 2, 0, Math.PI / 2),
+      seeThroughHull(toonMaterial(HULL_COLORS.shell), 0.28),
     );
     shell.position.copy(center);
+    shell.renderOrder = 1;
+    // Faz sombra (o sol não entra: a sombra das nervuras e do concentrador não cai lá dentro) e recebe sombra
+    // por fora (a sombra do concentrador e das nervuras aparece em cima da estufa).
+    shell.castShadow = true;
+    shell.receiveShadow = true;
     this.root.add(shell);
-    const edges = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(r, 1)),
-      new THREE.LineBasicMaterial({ color: PALETTE.light }),
-    );
-    edges.position.copy(center);
-    // Só a metade de cima do icosaedro (corta no plano do chão via clipping simples por escala)
-    edges.scale.y = 1;
-    const clip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    (edges.material as THREE.LineBasicMaterial).clippingPlanes = [clip];
-    this.root.add(edges);
-    const base = toonMesh(new THREE.CylinderGeometry(r + 0.1, r + 0.2, 0.4, 24), PALETTE.tech);
+    const ribMat = seeThroughHull(toonMaterial(HULL_COLORS.bandDark), 0.5);
+    const orangeMat = seeThroughHull(toonMaterial(HULL_COLORS.bandOrange), 0.5);
+    // Faixas horizontais, como as das cápsulas: escura e laranja perto da base.
+    for (const [h, mat, order] of [[0.42, ribMat, 1.1], [0.62, orangeMat, 1.2]] as const) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(Math.sqrt(r * r - h * h * 4) + 0.02, 0.07, 6, 64).rotateX(Math.PI / 2), mat);
+      ring.position.set(center.x, center.y + h * 2, center.z);
+      ring.renderOrder = order;
+      ring.castShadow = true;
+      this.root.add(ring);
+    }
+    for (let i = 0; i < DOME_GORES; i++) {
+      // Meio gomo de defasagem: nenhuma nervura cruza a boca de um túnel (leste, oeste e sul).
+      const a = ((i + 0.5) / DOME_GORES) * Math.PI * 2;
+      const pts: THREE.Vector3[] = [];
+      for (let k = 0; k <= 16; k++) {
+        const phi = (k / 16) * (Math.PI / 2) * 0.97;
+        pts.push(new THREE.Vector3(Math.cos(phi) * Math.cos(a), Math.sin(phi), Math.cos(phi) * Math.sin(a)).multiplyScalar(r + 0.03).add(center));
+      }
+      const rib = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.06, 6), ribMat);
+      rib.renderOrder = 1.1;
+      rib.castShadow = true;
+      this.root.add(rib);
+    }
+    // Anel no topo, onde as nervuras se encontram, e a base com o anel de regolito (proteção contra radiação).
+    const crown = toonMesh(new THREE.TorusGeometry(r * 0.2, 0.12, 8, 24).rotateX(Math.PI / 2), HULL_COLORS.bandDark, 0.02);
+    crown.position.set(center.x, center.y + r * 0.98, center.z);
+    this.root.add(crown);
+    const base = toonMesh(new THREE.CylinderGeometry(r + 0.1, r + 0.2, 0.4, 32), PALETTE.tech);
     base.position.set(center.x, 0.2, center.z);
     this.root.add(base);
+    const berm = toonMesh(new THREE.TorusGeometry(r + 0.25, 0.32, 8, 48).rotateX(Math.PI / 2), PALETTE.rock, 0.03);
+    berm.scale.set(1, 0.7, 1); // mais baixo que largo
+    berm.position.set(center.x, 0.18, center.z);
+    this.root.add(berm);
+    this.buildSunCollector(r, center);
+    this.buildGrowLights(center);
     // Canteiros: mais plantas na cúpula maior, fora da passarela que cruza a estufa de leste a oeste.
     const rng = seededRandom(3);
     // Mais tentativas numa cúpula maior (a densidade de plantas fica parecida).
@@ -246,6 +310,58 @@ export class BaseStructures {
       this.root.add(plant);
     }
     addObstacle(this.obstacles, center.x, center.z, r * 0.8, r * 0.8);
+    // O anel de regolito vai além da caixa da cúpula: uma volta de caixas pequenas, sem fresta para passar.
+    for (let i = 0; i < DOME_BERM_BOXES; i++) {
+      const a = (i / DOME_BERM_BOXES) * Math.PI * 2;
+      addObstacle(this.obstacles, center.x + Math.cos(a) * (r + 0.25), center.z + Math.sin(a) * (r + 0.25), 0.55, 0.55, 0.4);
+    }
+  }
+
+  /** Concentrador solar no topo da estufa (segue o Sol) e cabos de fibra óptica descendo pela membrana. */
+  private buildSunCollector(r: number, center: THREE.Vector3): void {
+    const top = new THREE.Vector3(center.x, center.y + r, center.z);
+    const mast = toonMesh(new THREE.CylinderGeometry(0.07, 0.09, 1.1, 8), PALETTE.tech, 0.02);
+    mast.position.copy(top).add(new THREE.Vector3(0, 0.55, 0));
+    this.root.add(mast);
+    this.collector.position.copy(top).add(new THREE.Vector3(0, 1.15, 0));
+    // A "boca" do concentrador olha para +Z do grupo; o grupo gira para o Sol em update().
+    const dish = toonMesh(new THREE.SphereGeometry(0.75, 20, 8, 0, Math.PI * 2, 0, Math.PI / 3).rotateX(Math.PI / 2), PALETTE.light, 0.03);
+    dish.position.z = -0.35;
+    this.collector.add(dish);
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.35, 20), this.fiberMat);
+    lens.position.z = 0.02;
+    this.collector.add(lens);
+    this.root.add(this.collector);
+    // Três cabos: do pé do mastro, pela membrana, até o chão da estufa.
+    for (const a of [0.35, 2.45, 4.55]) {
+      const pts: THREE.Vector3[] = [];
+      for (let k = 0; k <= 14; k++) {
+        const phi = Math.PI / 2 - (k / 14) * (Math.PI / 2) * 0.92;
+        pts.push(new THREE.Vector3(Math.cos(phi) * Math.cos(a), Math.sin(phi), Math.cos(phi) * Math.sin(a)).multiplyScalar(r + 0.12).add(center));
+      }
+      this.root.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 28, 0.045, 6), this.fiberMat));
+    }
+  }
+
+  /** Luzes de LED de cultivo sobre os canteiros, uma de cada lado da passarela (longe das escadas). */
+  private buildGrowLights(center: THREE.Vector3): void {
+    for (const [dx, dz] of [[-2.4, -2.7], [2.4, 2.7]]) {
+      const x = center.x + dx;
+      const z = center.z + dz;
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.07, 0.3), this.ledMat);
+      bar.position.set(x, LED_HEIGHT, z);
+      this.root.add(bar);
+      for (const ox of [-1, 1]) {
+        const post = toonMesh(new THREE.CylinderGeometry(0.035, 0.035, LED_HEIGHT - 0.4, 6), PALETTE.tech, 0);
+        post.position.set(x + ox, (LED_HEIGHT + 0.4) / 2, z);
+        this.root.add(post);
+      }
+    }
+    this.ledLight.position.set(center.x, LED_HEIGHT + 0.5, center.z);
+    this.root.add(this.ledLight);
+    // Saída da fibra óptica lá dentro, no alto: a luz do Sol entra por ela (o casco faz sombra).
+    this.fiberLight.position.set(center.x, DOME_RADIUS * 0.8, center.z);
+    this.root.add(this.fiberLight);
   }
 
   private buildTower() {

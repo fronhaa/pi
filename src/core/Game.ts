@@ -121,6 +121,8 @@ export class Game {
     this.crew.setSheltered(true);
     this.routine = new CrewRoutine(this.crew);
     this.routine.onFirstExercise = () => this.hud.toast(t('fact.exercise'), t('fact.exercise.source'));
+    // Fato da estufa inflável da NASA para a Lua e Marte (F20), na primeira vez que alguém trabalha na estufa.
+    this.routine.onFirstGreenhouse = () => this.hud.toast(t('fact.greenhouseInflatable'), t('fact.greenhouseInflatable.source'));
 
     const uiRoot = document.createElement('div');
     uiRoot.id = 'ui';

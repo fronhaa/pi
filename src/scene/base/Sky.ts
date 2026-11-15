@@ -60,6 +60,9 @@ export class Sky {
     this.sun.shadow.mapSize.set(2048, 2048);
     Object.assign(this.sun.shadow.camera, { left: -36, right: 36, top: 36, bottom: -36, near: 1, far: 130 });
     this.sun.shadow.bias = -0.0005;
+    // Recomendado no doc dos modelos (docs/rover-e-base-de-pesquisa.md): evita manchas onde uma peça recebe a
+    // própria sombra (como o casco da estufa).
+    this.sun.shadow.normalBias = 0.05;
     root.add(this.sun);
 
     this.stars = buildStars();
@@ -103,6 +106,11 @@ export class Sky {
     const el = elevation[0] + (elevation[1] - elevation[0]) * Math.sin(Math.PI * THREE.MathUtils.clamp(t, 0, 1)) - (t > 1 ? (t - 1) * 1.5 : 0) - (t < 0 ? -t * 1.5 : 0);
     const dir = new THREE.Vector3(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
     return { dir, elevation: el };
+  }
+
+  /** Para onde está o Sol agora (vetor unitário a partir da base). */
+  get sunVector(): THREE.Vector3 {
+    return this.sun.position.clone().normalize();
   }
 
   private placeSun(): { elevation: number } {

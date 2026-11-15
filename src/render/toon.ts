@@ -6,6 +6,26 @@ import * as THREE from 'three';
  * - addOutline: contorno escuro e fino pela técnica "inverted hull".
  */
 
+/**
+ * Casco visto por dentro (cápsulas e estufa): todas as peças do casco ficam translúcidas para a câmera, para ver a
+ * tripulação lá dentro sem nada opaco na frente. Para o sol continuam metal: fazem sombra (o sol não entra) e a luz
+ * de dentro é das luminárias (na estufa, LED e fibra óptica).
+ */
+export function seeThroughHull<M extends THREE.Material>(mat: M, opacity: number): M {
+  const m = mat.clone();
+  m.transparent = true;
+  m.opacity = opacity;
+  m.depthWrite = false;
+  m.side = THREE.FrontSide;
+  // Sombra pelos dois lados: por padrão o three.js só desenha a face de trás na sombra, e num casco fechado
+  // ela fica atrás de quem está dentro; aí o sol "atravessava" o metal.
+  m.shadowSide = THREE.DoubleSide;
+  return m;
+}
+
+/** Cores do casco dos módulos (research-base.glb): painéis, faixa escura e faixa laranja. */
+export const HULL_COLORS = { shell: 0xf3f1ed, bandDark: 0x48444b, bandOrange: 0xe7782f } as const;
+
 /** Paleta oficial da Art Bible (7 cores) + cores de apoio documentadas em docs/estilo-visual.md. */
 export const PALETTE = {
   // Oficiais (Art Bible)
