@@ -96,6 +96,11 @@ export const pt = {
   'msg.noSignal': 'Sem sinal da Terra! A antena ficou desalinhada e os avisos de hoje se perderam.',
 
   'msg.title': 'Mensagens da Terra',
+  'msg.sunRecent.title': '☀️ O Sol ultimamente:',
+  'msg.sunRecent.active': '{n} erupções solares fortes nos últimos {days} dias.',
+  'msg.sunRecent.calm': 'Nenhuma erupção solar forte nos últimos {days} dias.',
+  'msg.sunRecent.latest': 'A última foi {cls} em {date}.',
+  'msg.sunRecent.tip': 'Erupção traz radiação. Cuide da proteção!',
   'msg.delay': 'A mensagem levou {n} min para chegar',
   'msg.stormAlert': 'Tempestade solar a caminho! Erupção classe {label}. O impacto é amanhã (sol {sol}). Reforcem a blindagem.',
   'msg.stormToday': 'A tempestade solar (classe {label}) chega hoje à noite. Última chance de reforçar a blindagem!',
@@ -234,6 +239,11 @@ export const en: Record<keyof typeof pt, string> = {
   'msg.noSignal': 'No signal from Earth! The antenna is out of alignment and today’s warnings were lost.',
 
   'msg.title': 'Messages from Earth',
+  'msg.sunRecent.title': '☀️ The Sun lately:',
+  'msg.sunRecent.active': '{n} strong solar flares in the last {days} days.',
+  'msg.sunRecent.calm': 'No strong solar flares in the last {days} days.',
+  'msg.sunRecent.latest': 'The latest was {cls} on {date}.',
+  'msg.sunRecent.tip': 'Flares bring radiation. Keep your shield up!',
   'msg.delay': 'This message took {n} min to arrive',
   'msg.stormAlert': 'Solar storm coming! Class {label} flare. Impact is tomorrow (sol {sol}). Reinforce the shielding.',
   'msg.stormToday': 'The solar storm (class {label}) arrives tonight. Last chance to reinforce the shielding!',

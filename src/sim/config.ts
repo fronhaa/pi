@@ -48,6 +48,11 @@ export const CONFIG = {
      */
     strengthClass: { weak: 'C', medium: 'M', strong: 'X' },
     commDelayMin: { min: 3, max: 22 },
+    /**
+     * Clima espacial atual (destaque do desafio): a PRIMEIRA tempestade da missão é sorteada entre as N erupções
+     * reais mais recentes do DONKI (as outras continuam sorteadas de todo o histórico). Valor de jogo.
+     */
+    recentPool: 5,
   },
 
   dustStorm: { firstSol: 4, lastSol: 12 },

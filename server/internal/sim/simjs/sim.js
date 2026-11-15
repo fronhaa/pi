@@ -88,7 +88,12 @@ var JezeroSim = (function(exports) {
 			commDelayMin: {
 				min: 3,
 				max: 22
-			}
+			},
+			/**
+			* Clima espacial atual (destaque do desafio): a PRIMEIRA tempestade da missão é sorteada entre as N erupções
+			* reais mais recentes do DONKI (as outras continuam sorteadas de todo o histórico). Valor de jogo.
+			*/
+			recentPool: 5
 		},
 		dustStorm: {
 			firstSol: 4,
@@ -677,6 +682,17 @@ var JezeroSim = (function(exports) {
 			};
 			this.startSol(1);
 		}
+		/**
+		* Erupções reais das tempestades: a primeira é uma das mais recentes (o Sol de agora, `recentPool`); as outras
+		* vêm de todo o histórico. Determinístico pela semente: o servidor do modo em grupo recebe a mesma lista.
+		*/
+		pickFlares(realFlares, count) {
+			const dated = realFlares.filter((f) => f.time).sort((a, b) => a.time < b.time ? 1 : a.time > b.time ? -1 : 0);
+			if (dated.length === 0) return this.rng.shuffle(realFlares).slice(0, count);
+			const recent = dated.slice(0, Math.min(CONFIG.solarStorms.recentPool, dated.length));
+			const first = recent[this.rng.int(0, recent.length - 1)];
+			return [first, ...this.rng.shuffle(realFlares.filter((f) => f !== first)).slice(0, count - 1)];
+		}
 		scheduleStorms(realFlares, moon = false) {
 			const { count, firstSol, lastSol, minGap, commDelayMin } = CONFIG.solarStorms;
 			let sols = [];
@@ -684,7 +700,7 @@ var JezeroSim = (function(exports) {
 				sols = this.rng.shuffle(range(firstSol, lastSol)).slice(0, count).sort((a, b) => a - b);
 				if (sols.every((s, i) => i === 0 || s - sols[i - 1] >= minGap)) break;
 			}
-			const flares = realFlares.length >= count ? this.rng.shuffle(realFlares).slice(0, count) : sols.map(() => this.simulatedFlare());
+			const flares = realFlares.length >= count ? this.pickFlares(realFlares, count) : sols.map(() => this.simulatedFlare());
 			return sols.map((sol, i) => ({
 				sol,
 				flare: flares[i],

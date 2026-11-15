@@ -92,6 +92,19 @@ export class Mission {
 
   // ---------- agenda ----------
 
+  /**
+   * Erupções reais das tempestades: a primeira é uma das mais recentes (o Sol de agora, `recentPool`); as outras
+   * vêm de todo o histórico. Determinístico pela semente: o servidor do modo em grupo recebe a mesma lista.
+   */
+  private pickFlares(realFlares: Flare[], count: number): Flare[] {
+    const dated = realFlares.filter((f) => f.time).sort((a, b) => (a.time! < b.time! ? 1 : a.time! > b.time! ? -1 : 0));
+    if (dated.length === 0) return this.rng.shuffle(realFlares).slice(0, count);
+    const recent = dated.slice(0, Math.min(CONFIG.solarStorms.recentPool, dated.length));
+    const first = recent[this.rng.int(0, recent.length - 1)];
+    const rest = this.rng.shuffle(realFlares.filter((f) => f !== first)).slice(0, count - 1);
+    return [first, ...rest];
+  }
+
   private scheduleStorms(realFlares: Flare[], moon = false): ScheduledStorm[] {
     const { count, firstSol, lastSol, minGap, commDelayMin } = CONFIG.solarStorms;
     let sols: number[] = [];
@@ -100,7 +113,7 @@ export class Mission {
       sols = this.rng.shuffle(range(firstSol, lastSol)).slice(0, count).sort((a, b) => a - b);
       if (sols.every((s, i) => i === 0 || s - sols[i - 1] >= minGap)) break;
     }
-    const flares = realFlares.length >= count ? this.rng.shuffle(realFlares).slice(0, count) : sols.map(() => this.simulatedFlare());
+    const flares = realFlares.length >= count ? this.pickFlares(realFlares, count) : sols.map(() => this.simulatedFlare());
     return sols.map((sol, i) => ({
       sol,
       flare: flares[i],

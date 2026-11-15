@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { recentSun } from '@/data/flares';
 import { QUALITY, applyQuality } from '@/render/quality';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import '@/ui/style.css';
@@ -174,6 +175,7 @@ export class Game {
       onToggleHull: () => this.base.setHullsOpen(!this.base.hullsOpen),
       hullsOpen: () => this.base.hullsOpen,
       nightCost: () => (this.coop || !this.mission ? CONFIG.battery.nightCost : this.mission.nightCost()),
+      recentSun: () => recentSun(this.flares),
     });
 
     // Treino dos sóis 1 a 3 (só solo): o guia na tela e o que a cena mostra junto.

@@ -2,10 +2,10 @@
   "source": "NASA DONKI (Space Weather Database Of Notifications, Knowledge, Information)",
   "sourceUrl": "https://ccmc.gsfc.nasa.gov/tools/DONKI/",
   "api": "https://api.nasa.gov/DONKI",
-  "fetchedAt": "2026-11-14T15:06:27.319Z",
+  "fetchedAt": "2026-11-15T13:15:53.072Z",
   "range": {
     "start": "2016-01-01",
-    "end": "2026-11-14"
+    "end": "2026-11-15"
   },
   "criteria": {
     "SEP": "todos os eventos de partículas solares (detectados por instrumentos perto da Terra e STEREO-A)",

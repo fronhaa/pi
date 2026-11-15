@@ -801,6 +801,8 @@ O passo do tutorial do sol 1 sobre energia passa a apontar para a estufa, não p
 
 ## Dados reais da NASA
 
+> **Clima espacial atual (15/11/2026):** a **primeira tempestade** da missão é sorteada entre as **5 erupções reais mais recentes** do DONKI (`CONFIG.solarStorms.recentPool`); as outras continuam sorteadas de todo o histórico. No **sol 1**, a mensagem "O Sol ultimamente" mostra quantas erupções fortes reais houve nos 30 dias antes do download, a mais recente (com data e link) e a dica da proteção, com o selo "dados reais baixados em…" (nunca "ao vivo"). Atualizar: `npm run fetch-data`.
+
 As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros conjuntos de dados entram aos poucos, e cada um mostra no jogo um selo honesto do seu estado.
 
 | Fonte | Uso no jogo | Estado no protótipo |
