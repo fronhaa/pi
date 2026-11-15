@@ -30,6 +30,11 @@
 | F13 | Na Lua, os astronautas pulavam como coelhos | O traje da Apollo dobrava pouco nas pernas; pular compensava. O próximo traje terá mais mobilidade nas pernas | [NASA APPEL, podcast Small Steps, Giant Leaps, ep. 20 (2019)](https://www.nasa.gov/podcasts/small-steps-giant-leaps/small-steps-giant-leaps-episode-20-exploration-spacesuit-design/) | Caminhada longa de traje; base lunar | Contexto (traje) |
 | F14 | O Perseverance tem poucos tubos de amostra | 43 tubos: 38 para amostras e 5 tubos-testemunha; cada tubo tem menos de 15,2 cm e menos de 57 g; a amostra é do tamanho de um giz | [JPL: A Martian Roundtrip (2020)](https://www.jpl.nasa.gov/news/a-martian-roundtrip-nasas-perseverance-rover-sample-tubes/) e [NASA: Mars Rock Samples](https://science.nasa.gov/mission/mars-2020-perseverance/mars-rock-samples/) | Contador "Tubos de amostra" e relatório do rover | 4. Jogar só no seguro também falha (ciência com escolhas) |
 | F8 | A poeira não pode entrar | Poeira fina; 0,3 a 0,5% de perclorato no solo (tireoide); entra pelos trajes e câmaras | [NASA/SP-20260005907, Martian Dust Exposure Limits (2026)](https://www.nasa.gov/wp-content/uploads/2026/07/martian-dust-exposure-limits-sp-20260005907.pdf) | Problema fora da base (câmara de descompressão, +1 de dose) | 2. Proteção custa |
+| F15 | A casa da simulação de Marte | CHAPEA: 1.700 pés² (~158 m²) para 4 pessoas, com quartos individuais, cozinha, área médica, academia e cultivo | [NASA: About CHAPEA](https://www.nasa.gov/humans-in-space/chapea/about-chapea/) e [NASA: Analogs & Mockups](https://www.nasa.gov/reference/jsc-analogs-mockups/) | Candidato a "Você sabia?"; referência do tamanho da base ([ADR 0009](decisoes/0009-modulos-da-base-em-100-de-escala-com-medidas-da-nasa.md)) | Contexto (vida na base) |
+| F16 | HERA, outro habitat de treino | 650 pés² (60 m²); dois andares e um mezanino onde a tripulação dorme; missões de até 45 dias | [NASA: HERA Crew Member in Close Quarters (2022)](https://www.nasa.gov/image-article/hera-crew-member-close-quarters/) e [NASA: HERA](https://www.nasa.gov/mission/hera/) | Referência do tamanho da base | Contexto |
+| F17 | Módulos e cabines da Estação Espacial | Destiny: 28 pés × 14 pés de diâmetro (~8,5 × 4,3 m); Harmony: 22 × 14 pés; cabine de dormir: 2,1 m³ | [NASA: Destiny](https://www.nasa.gov/international-space-station/destiny-laboratory-module/), [NASA: Harmony](https://www.nasa.gov/international-space-station/harmony-module/) e [NTRS 20130011142](https://ntrs.nasa.gov/api/citations/20130011142/downloads/20130011142.pdf) | Referência do tamanho dos módulos e da cama | Contexto |
+| F18 | Altura recomendada num habitat de superfície | 2,4 m para quase tudo; 1 m acima da cama para sentar; beliche é possível, mas quarto individual é muito recomendado | [NASA/Binera: Internal Layout of a Lunar Surface Habitat (2022)](https://ntrs.nasa.gov/api/citations/20220013669/downloads/Internal%20Layout%20of%20a%20Lunar%20Surface%20Habitat.pdf), p. 3, 5 e 9 | Medidas da base, do beliche e dos túneis | Contexto |
+| F19 | Espaço mínimo por tripulante | 28,96 m³ habitáveis por pessoa (4 pessoas, missões de 180 dias ou mais); habitat de Marte estudado: 7,2 m de diâmetro, 172 m³ para 4 | [NASA BVAD, NASA/TP-2015-218570 Rev2 (2022)](https://ntrs.nasa.gov/api/citations/20210024855/downloads/BVAD_2.15.22-final.pdf), tabela 3-8, e [NTRS 20180006797](https://ntrs.nasa.gov/api/citations/20180006797/downloads/20180006797.pdf), p. 3 | Volume da base | Contexto |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -138,6 +143,40 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **No jogo:** contador "Tubos de amostra" (começa em 38), relatório do sol e o primeiro relatório com expedição (`fact.tubes`, só em Marte).
 - **Atenção:** "3 tubos por expedição" e "sem tubos, ciência pela metade" são **regras do jogo** (INTERPRETADO); não existe um número oficial de tubos por expedição. Não diga "o Perseverance enche 3 tubos por viagem". Também não use o diâmetro do tubo nem gramas por amostra: não estão nas fontes. A página da NASA mostra o andamento da coleta (30 de 38 em 14/11/2026), mas o número muda; se for usar, confira de novo.
 
+### F15. A casa da simulação de Marte da NASA
+
+- **Fato:** na CHAPEA, a simulação de Marte da NASA em Houston, **quatro pessoas** vivem num habitat de **1.700 pés quadrados** (cerca de **158 m²**, conversão nossa), impresso em 3D, chamado Mars Dune Alpha. Ele tem **quartos individuais**, cozinha e áreas para medicina, lazer, exercício, trabalho e cultivo de plantas. ([NASA: About CHAPEA](https://www.nasa.gov/humans-in-space/chapea/about-chapea/); [NASA: Analogs & Mockups](https://www.nasa.gov/reference/jsc-analogs-mockups/))
+- **Criança (PT):** "Na simulação de Marte da NASA, 4 pessoas moram juntas por mais de um ano. Cada uma tem seu quarto."
+- **Criança (EN):** "In NASA's Mars simulation, 4 people live together for over a year. Each one has a room."
+- **No jogo:** candidato a "Você sabia?" dentro da base. Hoje é a **referência do tamanho da base** ([ADR 0009](decisoes/0009-modulos-da-base-em-100-de-escala-com-medidas-da-nasa.md)).
+- **Atenção:** a NASA não publica o tamanho de cada quarto, só a área total. "Mais de um ano" vem da F11 (missão de 378 dias). Não diga "casa térrea": essa comparação não foi conferida.
+
+### F16. HERA, um habitat de treino ainda menor
+
+- **Fato:** o HERA, outro habitat de treino da NASA em Houston, tem **cerca de 650 pés quadrados (60 m²)** de área de moradia, com **primeiro e segundo andar** e um **mezanino no alto, onde a tripulação dorme**. As missões duram **até 45 dias**. ([NASA, 2022](https://www.nasa.gov/image-article/hera-crew-member-close-quarters/); [NASA: HERA](https://www.nasa.gov/mission/hera/))
+- **No jogo:** referência de tamanho (não aparece para a criança).
+- **Atenção:** as páginas da NASA chamam o HERA de "dois andares" em umas e de "três andares" em outras (por causa do mezanino). Use "dois andares e um mezanino".
+
+### F17. Os módulos e as cabines de dormir da Estação Espacial
+
+- **Fato:** o laboratório **Destiny** da Estação Espacial tem **28 pés de comprimento e 14 pés de diâmetro** (~8,5 × 4,3 m, conversão nossa). O **Harmony** tem 22 × 14 pés. Cada **cabine de dormir** americana da Estação tem **2,1 m³** por dentro, a maior que os EUA já levaram ao espaço; as da Skylab iam de 0,7 × 0,96 × 1,98 m a 0,73 × 1,22 × 1,98 m. ([NASA: Destiny](https://www.nasa.gov/international-space-station/destiny-laboratory-module/); [NASA: Harmony](https://www.nasa.gov/international-space-station/harmony-module/); [NTRS 20130011142](https://ntrs.nasa.gov/api/citations/20130011142/downloads/20130011142.pdf); [NTRS 20210022283](https://ntrs.nasa.gov/api/citations/20210022283/downloads/Viability%20of%20Small%20Dimension%20Crew%20Quarters%20for%20Surface%20Habitation.pdf))
+- **Criança (PT):** "Na Estação Espacial, cada astronauta dorme numa cabine do tamanho de um armário."
+- **Criança (EN):** "On the Space Station, each astronaut sleeps in a cabin the size of a closet."
+- **No jogo:** referência do tamanho dos módulos e da cama.
+- **Atenção:** a Estação está em órbita, sem gravidade: lá se dorme em pé, preso a um saco de dormir. Em Marte há gravidade, então a cama é deitada. "Do tamanho de um armário" é comparação nossa para 2,1 m³.
+
+### F18. Quanto de altura um habitat precisa
+
+- **Fato:** no estudo de referência do habitat de superfície da Lua, a altura padrão para quase todas as atividades é **2,4 m**. Para dormir, basta **1 m acima da cama**, para conseguir sentar; isso permitiria **beliches**, mas **quartos individuais são muito recomendados**. Para vestir o traje, pelo menos 2,6 m. O habitat de referência tem parte inflável de **6,5 m de diâmetro × 5,2 m de altura** e cerca de **127 m³** para 2 pessoas. ([NASA/Binera, 2022 ASCEND](https://ntrs.nasa.gov/api/citations/20220013669/downloads/Internal%20Layout%20of%20a%20Lunar%20Surface%20Habitat.pdf), p. 3, 5 e 9)
+- **No jogo:** medidas da base (altura dos módulos, espaço entre as camas do beliche, túneis). Ver [ADR 0009](decisoes/0009-modulos-da-base-em-100-de-escala-com-medidas-da-nasa.md).
+- **Atenção:** o estudo é para a **Lua** (gravidade de 1/6) e é um projeto em estudo, não um habitat construído. Use como referência de medida, não como "o habitat da NASA em Marte".
+
+### F19. Espaço mínimo por tripulante
+
+- **Fato:** o documento de referência de suporte de vida da NASA calcula um **volume habitável mínimo de 28,96 m³ por tripulante** (115,83 m³ para 4 pessoas) em missões de 180 dias ou mais, somando o espaço de cada atividade: só a bicicleta ergométrica pede 6,12 m³ e a esteira 3,38 m³. Um habitat de Marte estudado pela NASA (Evolvable Mars Campaign) tinha **7,2 m de diâmetro e 172 m³** para **4 pessoas** por até 550 dias. ([NASA BVAD Rev2, 2022](https://ntrs.nasa.gov/api/citations/20210024855/downloads/BVAD_2.15.22-final.pdf), tabela 3-8; [NTRS 20180006797](https://ntrs.nasa.gov/api/citations/20180006797/downloads/20180006797.pdf), p. 3)
+- **No jogo:** referência do volume da base ([ADR 0009](decisoes/0009-modulos-da-base-em-100-de-escala-com-medidas-da-nasa.md)).
+- **Atenção:** "volume habitável" é o espaço livre onde a tripulação vive e trabalha, **sem** equipamentos, depósitos e vãos; não compare com o volume total de um casco.
+
 ## Ligação com os objetivos de aprendizagem
 
 | Objetivo ([GDD](game-design.md#objetivos-de-aprendizagem)) | Fatos que reforçam |
@@ -168,6 +207,9 @@ Ideias boas que só entram com link oficial aberto:
 - Proporção de tempo que a tripulação passa dentro e fora da base.
 - Duração das saídas e saídas sempre em dupla.
 - Composição exata do ar (95% CO₂) e pressão em relação à Terra (menos de 1%): a página de fatos da NASA só diz "fina" e "principalmente CO₂".
+- Tamanho de cada quarto da CHAPEA: a NASA só publica a área total (1.700 pés²). A comparação "do tamanho de uma casa térrea" aparece num podcast da NASA, mas não foi conferida no áudio nem na transcrição.
+- Largura mínima de corredor e tamanho de escotilha da NASA-STD-3001, vol. 2 (seções 8.3 e 8.4): o PDF não abriu na consulta de 14/11/2026. Até lá, o jogo usa a escotilha do próprio modelo (~1,96 m, [rover-e-base-de-pesquisa.md](rover-e-base-de-pesquisa.md)).
+- Diretrizes de cabine de dormir do NASA/TP-2020-220505 (*Deep Space Habitability Design Guidelines*): a busca citou "30 in × 30 in × 78 in", mas o número não foi achado no PDF lido.
 
 ## Fontes e evidências
 
@@ -297,6 +339,62 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
   - NASA: "Of the 43 tubes Perseverance brought to Mars, 38 are for collecting samples, and five are "witness tubes""
 - **Conferido e NÃO usado** (informações de outra IA que não batem com fontes oficiais): diâmetro de 1,3 cm e 15–20 g por amostra (não estão nas páginas); Sample Fetch Rover com 30–36 tubos e o registro "NTRS 20210018050" (a página não existe; o rover saiu da campanha Mars Sample Return); helicóptero com "1 tubo por voo" (a página oficial não diz).
 
+### 14. NASA: CHAPEA (About CHAPEA, Analogs & Mockups, Martians Wanted)
+
+- **Links:** <https://www.nasa.gov/humans-in-space/chapea/about-chapea/> (página atualizada em 18/11/2025); <https://www.nasa.gov/reference/jsc-analogs-mockups/>; <https://www.nasa.gov/news-release/martians-wanted-nasa-opens-call-for-simulated-yearlong-mars-mission/> (16/02/2024, release 24-026). Lidos em 14/11/2026.
+- **Usado em:** F15
+- **Trechos:**
+  - About CHAPEA: "Each mission will consist of four crew members living in the CHAPEA habitat, an isolated 1,700 square foot habitat."
+  - About CHAPEA: "The 1,700-square-foot CHAPEA habitat contains individual living quarters for four volunteer crew members."
+  - About CHAPEA: "The 3D printed habitat will include private crew quarters, a kitchen, and dedicated areas for medical," (continua com recreação, exercício, trabalho, cultivo, área técnica e dois banheiros)
+  - Analogs & Mockups: "Known as Mars Dune Alpha, the 3D printed structure will simulate a Mars habitat"; lista "Four private crew quarters", "Dimensions: 1,700 square feet", "Material: lavacrete".
+  - Martians Wanted: "a 1,700-square-foot, 3D-printed habitat based at NASA's Johnson Space Center in Houston"
+
+### 15. NASA: HERA
+
+- **Links:** <https://www.nasa.gov/image-article/hera-crew-member-close-quarters/> (28/07/2022); <https://www.nasa.gov/mission/hera/> (atualizada em 05/08/2026). Lidos em 14/11/2026.
+- **Usado em:** F16
+- **Trechos:**
+  - "With about 650 square feet (60 square meters) of living area, HERA's compact floor plan mimics the tight quarters..."
+  - "Crew members split their time between HERA's core, which includes a first and second floor, and a half-story loft at the top where they sleep."
+  - "HERA is a unique 650-square-foot habitat designed to serve as an analog for isolation, confinement, and remote conditions"; "Mission Duration: Up to 45 Days"
+
+### 16. NASA: módulos Destiny e Harmony e cabines de dormir da Estação
+
+- **Links:** <https://www.nasa.gov/international-space-station/destiny-laboratory-module/> e <https://www.nasa.gov/international-space-station/harmony-module/> (atualizadas em 27/09/2023); Schlesinger e Rodriguez, *International Space Station Crew Quarters On-Orbit Performance and Sustaining* (<https://ntrs.nasa.gov/api/citations/20130011142/downloads/20130011142.pdf>); Litaker e Howard, *Viability of Small Dimension Crew Quarters for Surface Habitation* (<https://ntrs.nasa.gov/api/citations/20210022283/downloads/Viability%20of%20Small%20Dimension%20Crew%20Quarters%20for%20Surface%20Habitation.pdf>). Lidos em 14/11/2026 (PDFs com `pdftotext`).
+- **Usado em:** F17
+- **Trechos:**
+  - Destiny: "Length: 28 feet", "Diameter: 14 feet". Harmony: "Length: 22 feet", "Diameter: 14 feet".
+  - Schlesinger e Rodriguez, p. 2: "The CQ provides 2.1 m[³] of interior volume equipped with radiation protection, acoustic absorbing materials, light, ventilation, laptop power, and internet connections" (o "³" se perde na extração do PDF; o artigo seguinte confirma a unidade).
+  - Litaker e Howard: "the ISS crew quarters are the largest US crew quarters flown to date, with a volume of 2.1m3 (74.2ft³)."
+  - Litaker e Howard: "The Skylab crew quarters ... were slightly uneven in size, varying from 0.7m by 0.96m by 1.98m (2.29 x 3.15 x 6.5ft) with a volume of 1.33m3 (47ft³) to 0.73m by 1.22m by 1.98m (2.4 x 4.0 x 6.5ft) with a volume of 1.76m3 (62.2ft³)." e "taller crew members complained of insufficient headroom."
+
+### 17. NASA/Binera: Internal Layout of a Lunar Surface Habitat (2022 ASCEND, AIAA)
+
+- **Link:** <https://ntrs.nasa.gov/api/citations/20220013669/downloads/Internal%20Layout%20of%20a%20Lunar%20Surface%20Habitat.pdf> (lido em 14/11/2026, com `pdftotext`)
+- **Usado em:** F18
+- **Trechos:**
+  - p. 3: "The inflatable portion of the habitat is approximately 6.5 meters in outer diameter and 5.2 meters in height with an inner core of 3.3 meters in diameter. The metallic portion is 2.6 meters in height and 4.4 meters in diameter."
+  - p. 5: "Based on these conditions, the standard height for most functional volumes is 2.4 meters. There are three exceptions: Sleep Accommodation (1 meter), Temporary EVA Items Stowage (1 meter), and Airlock Functions (2.6 meters)."
+  - p. 5: "Sleep Accommodation necessitates enough height above the sleeping platform for a crewmember to sit up comfortably, this would allow for the possibility of bunkbeds, however individual crew quarters is highly recommended."
+  - p. 9: "The habitat enclosure provides approximately 127 m3 habitable volume. For two crew, this is nearly 64 m3 of habitable volume per crewmember."
+
+### 18. NASA: Life Support Baseline Values and Assumptions Document (NASA/TP-2015-218570/REV2, fevereiro de 2022)
+
+- **Link:** <https://ntrs.nasa.gov/api/citations/20210024855/downloads/BVAD_2.15.22-final.pdf> (lido em 14/11/2026, com `pdftotext`)
+- **Usado em:** F19
+- **Trechos:**
+  - p. 27: "The net habitatable volume (NHV) ... is the volume that the crew and lives and works in. This is differentiated from the pressurized volume which consists of the NHV as well as the systems volume, storage volume, and voids."
+  - Tabela 3-8, p. 28: "Exercise: Cycle Ergometer 6.12", "Exercise: Treadmill 3.38", "Total Minimum Net Habitable Volume 115.83 170.14", "Minimum Net Habitable Volume per Crew Member 28.96 28.36" (colunas: 4 e 6 pessoas, em m³).
+
+### 19. NASA/Aerospace: Advantages of a Modular Mars Surface Habitat Approach (Rucker, Watts, Hoffman e Andrews)
+
+- **Link:** <https://ntrs.nasa.gov/api/citations/20180006797/downloads/20180006797.pdf> (lido em 14/11/2026, com `pdftotext`)
+- **Usado em:** F19
+- **Trechos:**
+  - p. 3: "that study settled on a 7.2 m diameter, 172 m3 pressurized volume monolithic habitat to support four crew for up to 550-day surface stays."
+  - p. 2: "4.27 m diameter ISS-type modules were proposed."
+
 ### 9. Buscas feitas (para achar as fontes acima)
 
 | Busca | Domínios | Levou a |
@@ -309,6 +407,14 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
 | "CHAPEA crew will grow vegetables exercise simulated spacewalks robotic operations NASA" | nasa.gov | Fonte 7 |
 | "NASA astronauts walking reduced gravity Moon Mars gait loping walk-run transition speed" | nasa.gov, ntrs.nasa.gov, science.nasa.gov | Fonte 11 |
 | "NASA Apollo astronauts bunny hop lunar surface why spacesuit" | nasa.gov, science.nasa.gov, ntrs.nasa.gov | Fonte 12 |
+| "CHAPEA Mars Dune Alpha habitat 1,700 square feet 3D printed crew quarters size" | nasa.gov | Fonte 14 |
+| "NASA HERA habitat analog dimensions two-story habitable volume" | nasa.gov | Fonte 15 |
+| "International Space Station module diameter length Destiny laboratory dimensions" | nasa.gov | Fonte 16 |
+| "ISS crew quarters size sleeping compartment phone booth dimensions" | nasa.gov | Fonte 16 |
+| "Artemis lunar surface habitat module diameter length NASA foundation surface habitat" | nasa.gov | Fonte 17 |
+| "NASA habitable volume per crew member long duration Mars mission net habitable volume m3 NTRS" | nasa.gov | Fonte 18 |
+| "Mars surface habitat concept dimensions Design Reference Architecture 5.0 habitat module diameter NTRS" | nasa.gov | Fonte 19 |
+| "NASA-STD-3001 translation path minimum width hatch size crew ceiling height habitat design" | nasa.gov | Nenhuma usada (ver Pendentes) |
 
 Os números entraram a partir do **documento aberto**, não dos resumos das buscas. Um exemplo: o resumo da busca dizia "0,4 a 0,5%" de perclorato, mas o PDF diz "0,3 a 0,5%" (p. 16), e é esse que está aqui.
 
