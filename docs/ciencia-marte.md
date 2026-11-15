@@ -38,6 +38,9 @@
 | F20 | A estufa da NASA para a Lua e Marte é inflável | Cilindro inflável de 18 pés × mais de 8 pés de diâmetro; provavelmente enterrado sob o regolito por causa da radiação; luz do Sol por concentradores que seguem o Sol e fibra óptica; também LED | [NASA: Lunar, Martian Greenhouses Designed to Mimic Those on Earth (2017)](https://www.nasa.gov/science-research/lunar-martian-greenhouses-designed-to-mimic-those-on-earth/) | Estufa da base (ARC-002) e "Você sabia?" na primeira vez na estufa (`fact.greenhouseInflatable`) | 2. Proteção custa |
 | F21 | Mars Ice Home: casa coberta de gelo | Conceito da NASA Langley: anel inflável coberto de gelo; o gelo reduz a radiação e deixa a luz passar | [NASA Langley 100: Sojourning to Mars (2017)](https://www.nasa.gov/centers-and-facilities/langley/nasalangley100-sojourning-to-mars/) | Referência (não usado no jogo) | Contexto |
 | F22 | Aerogel: translúcido e isolante | Deixa a luz visível passar e bloqueia o ultravioleta; 2 a 3 cm aqueceram o chão em até 65 °C num teste de laboratório | [JPL: Want to Colonize Mars? Aerogel Could Help (2019)](https://jpl.nasa.gov/news/news.php?feature=7456) | Referência (não usado no jogo) | Contexto |
+| F23 | O rover de ciência passa a noite onde está | O Perseverance não volta a uma base: dorme no lugar; o calor que sobra do gerador (MMRTG) aquece os eletrônicos nas noites frias; dirige de dia e "dorme" entre as atividades | [JPL: Perseverance, Power](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/) e blogs do Curiosity ([2023](https://science.nasa.gov/blog/sols-3882-3884-weekend-routine-for-a-red-rover/), [2024](https://science.nasa.gov/blog/sols-4193-4194-stay-overnight-no-touch-and-go/)) | Rover da base (comportamento à noite) | 1. Energia e noite |
+| F24 | Garagem para rover: a NASA não usa | Num estudo da NASA, uma garagem pressurizada para o rover tripulado "seria muito cara": a manutenção é feita em EVA. No acampamento base estudado, o rover tripulado se acopla a uma porta do habitat | [NASA JSC: Lunar Surface Scenarios (Anderson et al., 2008)](https://ntrs.nasa.gov/api/citations/20080026000/downloads/20080026000.pdf), p. 6, e [NASA JSC: Common Habitat Base Camp (Howard)](https://ntrs.nasa.gov/api/citations/20210020956/downloads/A%20Common%20Habitat%20Basecamp%20for%20Moon%20and%20Mars%20Surface%20Operations.pdf), p. 4 e 14 | Garagem do rover (ver Atenção) | Contexto |
+| F25 | Como o Perseverance coleta e guarda as amostras | A broca do braço tira um cilindro de rocha (~13 mm × 60 mm) dentro do tubo; o tubo vai para dentro do rover, é medido, fotografado, lacrado e guardado. As amostras ficam no rover; 10 tubos foram deixados no chão em Three Forks como reserva | [JPL: Perseverance Rover](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/perseverance_rover/), [NASA: depósito Three Forks (2023)](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-perseverance-rover-completes-mars-sample-depot/), [NASA: 33 tubos (2025)](https://science.nasa.gov/photojournal/the-33-sample-tubes-collected-by-perseverance/) | Rover e tubos de amostra | 4. Jogar só no seguro também falha |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -199,6 +202,28 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Fato:** o **aerogel de sílica** é translúcido: **deixa passar a luz visível e bloqueia o ultravioleta**, e é um ótimo isolante. Num teste de laboratório, **2 a 3 cm** de aerogel, sob uma lâmpada que imitava o Sol de Marte, aqueceram a superfície embaixo **em até 65 °C**. No inverno, a noite em Marte chega a **−90 °C**. ([JPL, 2019](https://jpl.nasa.gov/news/news.php?feature=7456))
 - **No jogo:** só referência, por enquanto.
 - **Atenção:** é um **teste de laboratório** (estudo liderado por Harvard), não uma estufa construída. A página diz que precisaria de muito aerogel e de pelo menos dois anos marcianos para criar água líquida embaixo.
+
+### F23. O rover de ciência passa a noite onde está
+
+- **Fato:** o Perseverance não tem uma base para onde voltar. A energia vem de um gerador de radioisótopo (MMRTG, ~110 watts no começo da missão), que **carrega duas baterias** usadas nas operações do dia; o **calor que sobra** circula num líquido pelo rover e **mantém os eletrônicos aquecidos nas noites frias** de Marte. Isso deixa o rover trabalhar "durante o dia e a noite", sem depender de painéis solares. O Curiosity segue uma rotina de **cochilos** entre as atividades, **dirige de dia** e **dorme à noite** no lugar onde parou. ([JPL, Perseverance Power](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/); [Curiosity, 2023](https://science.nasa.gov/blog/sols-3882-3884-weekend-routine-for-a-red-rover/); [Curiosity, 2024](https://science.nasa.gov/blog/sols-4193-4194-stay-overnight-no-touch-and-go/))
+- **Criança (PT):** "O rover não volta para casa à noite. Ele dorme onde parou, aquecido pelo próprio gerador."
+- **Criança (EN):** "The rover does not go home at night. It sleeps where it stopped, kept warm by its own generator."
+- **No jogo:** hoje o rover para onde estiver quando a noite chega (`src/scene/base/Rover.ts`), como os rovers da NASA. A volta à garagem depois de cada expedição **não** tem base na NASA (ver F24).
+- **Atenção:** os rovers da NASA não têm "garagem" nem "base". O Curiosity e o Perseverance são robôs operados da Terra; o horário de dirigir e dormir é planejado pela equipe, não é uma regra fixa de "só de dia".
+
+### F24. Garagem para rover: a NASA não usa
+
+- **Fato:** num estudo da NASA para um rover **tripulado e pressurizado** na Lua, "uma garagem pressurizada seria muito cara", então **a manutenção do rover é feita em EVA** (lá fora, de traje). No acampamento base estudado pela NASA para a Lua e Marte (*Common Habitat*), o rover pressurizado **se acopla a uma porta do habitat** (não entra numa garagem); se ele quebrar longe, outros veículos o trazem de volta ao acampamento para reparo. ([Anderson et al., 2008](https://ntrs.nasa.gov/api/citations/20080026000/downloads/20080026000.pdf), p. 6; [Howard, Common Habitat Base Camp](https://ntrs.nasa.gov/api/citations/20210020956/downloads/A%20Common%20Habitat%20Basecamp%20for%20Moon%20and%20Mars%20Surface%20Operations.pdf), p. 4 e 14)
+- **No jogo:** a garagem do rover com rampa (que veio do concept art do time) e a manutenção feita pelo cientista **dentro** dela não têm base na NASA. Decisão pendente do time.
+- **Atenção:** são **estudos de conceito**, não uma base aprovada. E falam de rover **tripulado**; o rover do jogo é um rover de ciência sem tripulação, como o Perseverance (F23).
+
+### F25. Como o Perseverance coleta e guarda as amostras
+
+- **Fato:** no fim do braço do Perseverance há uma **broca** que tira um **cilindro de rocha** (ou de solo) de cerca de **13 mm de diâmetro e 60 mm de comprimento**, que fica **dentro do tubo**. Um carrossel leva o tubo cheio **para dentro do rover**, onde ele é **medido, fotografado, lacrado e guardado**. **As amostras ficam no próprio rover:** ninguém as descarrega numa base. Em janeiro de 2023 ele deixou **10 tubos no chão**, no depósito de **Three Forks**, como **reserva**; a outra metade continua dentro dele. Em 24/07/2025, ele tinha 33 tubos usados (27 de rocha, 2 de solo, 1 de ar e 3 tubos-testemunha), e **23 continuavam a bordo**. ([JPL](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/perseverance_rover/); [NASA, 2023](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-perseverance-rover-completes-mars-sample-depot/); [NASA, 2025](https://science.nasa.gov/photojournal/the-33-sample-tubes-collected-by-perseverance/))
+- **Criança (PT):** "O rover guarda cada amostra num tubo lacrado, dentro dele mesmo. Alguns tubos ficaram no chão, como reserva."
+- **Criança (EN):** "The rover keeps each sample in a sealed tube inside itself. Some tubes were left on the ground as a backup."
+- **No jogo:** o contador "Tubos de amostra" (F14). A entrega das amostras na garagem e a manutenção pelo cientista **não** têm base na NASA (F24).
+- **Atenção:** os números mudam com a missão; confira de novo antes de usar. O plano para trazer as amostras à Terra (Mars Sample Return) está em revisão; não diga como nem quando elas virão.
 
 ## Ligação com os objetivos de aprendizagem
 
@@ -454,6 +479,42 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
   - "winter nighttime temperatures can be as cold as minus 130 degrees Fahrenheit (minus 90 degrees Celsius)."
   - "it would take lots of aerogel and at least two Mars years (or four Earth years) of warming"
 
+### 23. JPL: Perseverance Landing Press Kit, Power; NASA: blogs do Curiosity
+
+- **Links:** <https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/> (sem data na página); <https://science.nasa.gov/blog/sols-3882-3884-weekend-routine-for-a-red-rover/> (10/07/2023); <https://science.nasa.gov/blog/sols-4193-4194-stay-overnight-no-touch-and-go/> (22/05/2024). Lidos em 15/11/2026. A página antiga dos aquecedores do Spirit e do Opportunity (`mars.nasa.gov/mer/mission/sc_rover_temp_heaters.html`) responde 404.
+- **Usado em:** F23
+- **Trechos:**
+  - Power: "The MMRTG also charges two lithium-ion batteries, which are used during daily operations"
+  - Power: "will reliably produce about 110 watts (similar to a light bulb) at the start of Perseverance's mission"
+  - Power: "The MMRTG doesn't just power the rover; excess heat is collected in a fluid loop system."
+  - Power: "The warm fluid is routed around the vehicle to keep its sensitive electronics warm during the cold Martian nights."
+  - Power: "An MMRTG allows the rover to work free of limitations associated with solar panels" e "(e.g., communications, mobility, or science throughout the day and night)"
+  - Curiosity 2023: "After a leisurely mid-morning nap she'll start her first science activities"; "It's an early night for Curiosity, but she'll be awake in intermittently to send the sol's data to Earth"; "Then it's time to pack it up and drive away!"
+  - Curiosity 2024: "Curiosity finishes its first sol in this plan by driving away"; "Curiosity will call it a day (or sol, really) and head back to sleep for the rest of this plan"
+
+### 24. NASA JSC: Lunar Surface Scenarios (Anderson, Hanford, Howard e Toups, 2008) e Common Habitat Base Camp (Howard)
+
+- **Links:** <https://ntrs.nasa.gov/api/citations/20080026000/downloads/20080026000.pdf>; <https://ntrs.nasa.gov/api/citations/20210020956/downloads/A%20Common%20Habitat%20Basecamp%20for%20Moon%20and%20Mars%20Surface%20Operations.pdf>. Lidos em 15/11/2026 com `pdftotext`.
+- **Usado em:** F24
+- **Trechos:**
+  - Anderson et al., p. 6: "Vehicle maintenance is also a critical interface between the rover and the crew. Providing a pressurized garage space would be very expensive, so maintenance will be done during an EVA."
+  - Howard, p. 4: "One Pressurized Rover (PR) is docked to the 4x6 MGAAMA. A second PR is docked to the first"
+  - Howard, p. 14: "In the event of a PR failure, the ATHLETEs also have the ability to recover a failed PR and bring it back to the base camp for repair."
+
+### 25. JPL: Perseverance Rover (press kit); NASA: depósito Three Forks e os 33 tubos
+
+- **Links:** <https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/perseverance_rover/> (sem data); <https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-perseverance-rover-completes-mars-sample-depot/> (30/01/2023); <https://science.nasa.gov/photojournal/the-33-sample-tubes-collected-by-perseverance/> (imagem de 24/07/2025). Lidos em 15/11/2026.
+- **Usado em:** F25
+- **Trechos:**
+  - Press kit: "The turret contains the coring tool: a rotary-percussive device designed to acquire rock core and regolith samples."
+  - Press kit: "obtains a cylindrical sample about 0.5 inches (13 millimeters) in diameter and 2.4 inches (60 millimeters) long"
+  - Press kit: "the bit carousel transfers bits containing filled sample tubes from the coring tool into the belly of the rover."
+  - Press kit: "The stations measure the volume and take an image of the sample, install, and activate a tube seal," e "place the tube in storage."
+  - Depósito: "Ten sample tubes, capturing an amazing variety of Martian geology, have been deposited on Mars' surface"
+  - Depósito: "The depot samples will serve as a backup set while the other half remain inside Perseverance,"
+  - Depósito: "the sample depot was completed Jan. 28, 2023, the 690th day, or sol, of the mission."
+  - 33 tubos: "Perseverance has collected 27 rock cores, two samples of regolith" e "one atmospheric sample"; "The other 23 samples collected thus far remain aboard the rover."; "as of July 24, 2025, the 1,574th Martian day (or sol) of the mission."
+
 ### 9. Buscas feitas (para achar as fontes acima)
 
 | Busca | Domínios | Levou a |
@@ -477,6 +538,12 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
 | "NASA prototype lunar greenhouse University of Arizona Controlled Environment Agriculture Center inflatable fiber optic sunlight" | nasa.gov | Fonte 20 |
 | "NASA Mars Ice Home concept Langley inflatable ice shell radiation translucent" | nasa.gov | Fontes 21 e 22 |
 | "Mars surface atmospheric pressure less than 1 percent of Earth NASA facts" | nasa.gov | Nenhuma lida ainda (ver Pendentes) |
+| "Perseverance rover MMRTG power night operations sleep heaters keep warm Mars night" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 23 |
+| "Mars rover drives during daytime only night recharge batteries sleep Curiosity daily plan sol" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 23 |
+| "NASA rover garage habitat surface base concept pressurized rover docking hatch suitport maintenance shelter" | nasa.gov, ntrs.nasa.gov | Fonte 24 |
+| "NASA Mars surface field station garage for rovers maintenance pressurized garage" | nasa.gov, ntrs.nasa.gov | Fonte 24 |
+| "Perseverance how samples are collected coring drill sample tube sealed stored inside rover Adaptive Caching Assembly" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 25 |
+| "Perseverance Three Forks sample depot tubes left on surface Mars Sample Return retrieve" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 25 |
 
 Os números entraram a partir do **documento aberto**, não dos resumos das buscas. Um exemplo: o resumo da busca dizia "0,4 a 0,5%" de perclorato, mas o PDF diz "0,3 a 0,5%" (p. 16), e é esse que está aqui.
 
