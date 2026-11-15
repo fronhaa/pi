@@ -45,7 +45,7 @@ const SUSPENSION_DOWN = 0.15;
 const STEER_MAX = 0.9;
 /** Quão rápido a suspensão, a direção das rodas e a inclinação do corpo acompanham (1/s). */
 const SUSPENSION_SPEED = 12;
-const STEER_SPEED = 8;
+const STEER_SPEED = 16;
 const TILT_SPEED = 10;
 /** Na rampa, mais devagar perto do pé e do topo (onde a inclinação muda). */
 const RAMP_EASE = 0.5;
@@ -572,19 +572,31 @@ export class Rover {
       return;
     }
     this.animateTools(false, dt, time);
-    // Antes de entrar, vira parado de frente para a rampa.
+    // Antes de entrar: termina de chegar ao ponto de aproximação (vira para ele e anda reto, de frente ou de ré,
+    // sem deslizar de lado) e então vira parado de frente para a rampa.
     if (this.phase === 'dockIn' && this.dockS === 0) {
-      const diff = Math.atan2(Math.sin(ROVER_DOCK.heading - this.heading), Math.cos(ROVER_DOCK.heading - this.heading));
-      // Chegou perto do ponto de aproximação (até ~2 m): termina de chegar enquanto vira, sem pulo.
+      const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+      const turnTo = (target: number) => {
+        const turn = THREE.MathUtils.clamp(wrap(target - this.heading), -TURN_RATE * dt, TURN_RATE * dt);
+        this.heading += turn;
+        this.pose(p.x, p.z, dt, 0, turn / dt);
+        return Math.abs(wrap(target - this.heading)) < 0.02;
+      };
       const a = ROVER_DOCK.approach;
       const gap = Math.hypot(a.x - p.x, a.z - p.z);
-      if (Math.abs(diff) > 0.02 || gap > 0.01) {
-        const turn = THREE.MathUtils.clamp(diff, -TURN_RATE * dt, TURN_RATE * dt);
-        this.heading += turn;
-        const k = gap > 0 ? Math.min(1, (DOCK_SPEED * dt) / gap) : 1;
-        this.pose(p.x + (a.x - p.x) * k, p.z + (a.z - p.z) * k, dt, gap * k, turn / dt);
+      if (gap > 0.05) {
+        const toA = Math.atan2(-(a.z - p.z), a.x - p.x);
+        const backwards = Math.abs(wrap(toA - this.heading)) > Math.PI / 2; // atrás dele: vai de ré
+        const face = backwards ? toA + Math.PI : toA;
+        if (Math.abs(wrap(face - this.heading)) > 0.05) {
+          turnTo(face);
+          return;
+        }
+        const move = Math.min(gap, DOCK_SPEED * dt) * (backwards ? -1 : 1);
+        this.pose(p.x + Math.cos(this.heading) * move, p.z - Math.sin(this.heading) * move, dt, move, 0);
         return;
       }
+      if (!turnTo(ROVER_DOCK.heading)) return;
       this.heading = ROVER_DOCK.heading;
     }
     if (crew.some((c) => Math.hypot(c.x - p.x, c.z - p.z) < CREW_NEAR + 0.6)) {
@@ -754,7 +766,12 @@ export class Rover {
         w.steer += (steer - w.steer) * Math.min(1, STEER_SPEED * dt);
       }
       w.obj.rotation.y = w.steer;
-      w.obj.rotation.z -= forward / this.wheelRadius;
+      // Giro: cada roda rola com a velocidade do ponto onde ela está, na direção para onde ela aponta.
+      // Na curva, a de fora gira mais que a de dentro; girando parado, as do meio giram em sentidos opostos.
+      const vx = v + yawRate * w.z;
+      const vz = -yawRate * w.x;
+      const roll = (vx * Math.cos(w.steer) - vz * Math.sin(w.steer)) * dt;
+      w.obj.rotation.z -= roll / this.wheelRadius;
     });
   }
 }

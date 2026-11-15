@@ -221,8 +221,18 @@ export class Hud {
       resource('res.dose', 'help.dose', r.dose, CONFIG.dose.max, r.dose >= doseBad ? 'bad' : r.dose >= doseWarn ? 'warn' : 'good', [doseWarn, doseBad]),
       resource('res.science', 'help.science', r.science, CONFIG.science.goal, 'sci', [], t('res.goal', { n: CONFIG.science.goal })),
       // Tubos de amostra (regra em src/sim/day.ts): ficam amarelos/vermelhos quando faltam poucas expedições.
-      resource('res.tubes', 'help.tubes', r.tubes ?? CONFIG.samples.tubes, CONFIG.samples.tubes, level(((r.tubes ?? CONFIG.samples.tubes) / CONFIG.samples.tubes) * 100)),
+      // Com energia na ciência, mostra já o que a expedição de hoje vai gastar ("−3 hoje"); o número cai na noite.
+      resource('res.tubes', 'help.tubes', r.tubes ?? CONFIG.samples.tubes, CONFIG.samples.tubes, level(((r.tubes ?? CONFIG.samples.tubes) / CONFIG.samples.tubes) * 100), [], this.tubesToday()),
     ]);
+  }
+
+  /** O que a expedição de hoje vai fazer com os tubos (pela prévia do plano), ou nada à noite e sem ciência. */
+  private tubesToday(): string | undefined {
+    if (this.nightView || !this.state || this.plan.science === 0) return undefined;
+    const pv = this.cb.preview?.(this.getPlan());
+    if (!pv) return undefined;
+    if (pv.tubesUsed > 0) return t('res.tubes.today', { n: pv.tubesUsed });
+    return pv.noTubes ? t('res.tubes.none') : undefined;
   }
 
   private renderMessages(): void {
@@ -415,6 +425,7 @@ export class Hud {
     if (this.coop && !this.coop.editable.includes(k)) return;
     this.plan[k] += delta;
     this.renderPlan();
+    this.renderResources(); // o "−3 hoje" dos tubos acompanha a ciência
     this.cb.onPlanChange(this.getPlan());
   }
 

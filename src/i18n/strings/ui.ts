@@ -17,6 +17,8 @@ export const pt = {
   'res.dose': 'Dose de radiação',
   'res.science': 'Ciência',
   'res.tubes': 'Tubos de amostra',
+  'res.tubes.today': '−{n} hoje',
+  'res.tubes.none': 'acabaram',
   'res.dust': 'Poeira nos painéis',
   'res.goal': 'meta {n}',
 
@@ -137,6 +139,8 @@ export const en: Record<keyof typeof pt, string> = {
   'res.dose': 'Radiation dose',
   'res.science': 'Science',
   'res.tubes': 'Sample tubes',
+  'res.tubes.today': '−{n} today',
+  'res.tubes.none': 'none left',
   'res.dust': 'Dust on panels',
   'res.goal': 'goal {n}',
 
