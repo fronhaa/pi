@@ -7,6 +7,8 @@ type Place = 'mars' | 'moon';
 
 /** O que a tela de escolha precisa da cena 3D (src/scene/LaunchScene.ts). */
 export interface PlanetPicker {
+  /** true = mapa do Sistema Solar (computador): mostra os nomes do Sol e da Terra e o aviso de escala. */
+  readonly isMap: boolean;
   planetScreen(place: Place): { x: number; y: number; r: number };
   /** Sol e Terra no mapa: só para o nome por cima (não são botões). */
   bodyScreen(body: 'sun' | 'earth'): { x: number; y: number; r: number };
@@ -27,11 +29,11 @@ export function showPlaceChoice3D(
 ): void {
   const root = h('div', { class: 'place3d', role: 'dialog', 'aria-label': t('place.title') },
     h('div', { class: 'place3d-head' }, h('h2', {}, t('place.title')), h('p', {}, t('place.tap'))),
-    // Honestidade de dados: posições calculadas para hoje (não é ao vivo) e distâncias fora de escala.
-    h('p', { class: 'place3d-note' }, t('place.mapNote')),
+    // Honestidade de dados: posições calculadas para hoje (não é ao vivo) e distâncias fora de escala. Só no mapa.
+    picker.isMap ? h('p', { class: 'place3d-note' }, t('place.mapNote')) : null,
   );
-  // Nomes do Sol e da Terra no mapa (só texto; quem se escolhe são Marte e Lua).
-  const labels = (['sun', 'earth'] as const).map((body) => {
+  // Nomes do Sol e da Terra no mapa (só texto; quem se escolhe são Marte e Lua). Na tela clássica, não há.
+  const labels = (picker.isMap ? (['sun', 'earth'] as const) : []).map((body) => {
     const el = h('span', { class: `place3d-label place3d-label-${body}`, 'aria-hidden': 'true' }, t(`place.${body}` as StringKey));
     root.append(el);
     return { body, el };

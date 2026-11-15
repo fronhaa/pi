@@ -315,7 +315,7 @@ Cartões de foto que passam ao lado do foguete na intro (`src/scene/LaunchScene.
 - **Valores usados (Tabela 1):** EM Bary a = 1,00000261 ua, e = 0,01671123, I = −0,00001531°, L = 100,46457166°, ϖ = 102,93768193°, Ω = 0°; Marte a = 1,52371034 ua, e = 0,09339410, I = 1,84969142°, L = −4,55343205°, ϖ = −23,94362959°, Ω = 49,55953891°; mais as taxas por século da mesma tabela (em `src/scene/solarSystem.ts`).
 - **Criança (PT):** "🛰️ Posições de hoje, calculadas com dados da NASA. Distâncias fora de escala."
 - **Criança (EN):** "🛰️ Today’s positions, calculated with NASA data. Distances not to scale."
-- **No jogo:** tela de escolha (`src/scene/LaunchScene.ts`): Sol no meio, órbitas da Terra e de Marte e Marte onde está hoje; o foguete sai rumo à direção de verdade do destino.
+- **No jogo:** tela de escolha no computador (`src/scene/LaunchScene.ts`; no celular fica a tela clássica, sem mapa): Sol no meio, órbitas da Terra e de Marte e Marte onde está hoje; o foguete sai rumo à direção de verdade do destino.
 - **Atenção:** é cálculo, não "ao vivo". As distâncias e os tamanhos ficam fora de escala (Marte fica a mais de 100 vezes a distância da Lua). A altura fora do plano da eclíptica (menos de 2° em Marte) fica de fora. Depois de 2050 a tabela não vale: o código usa a última data válida.
 - Conferido em 15/11/2026.
 
