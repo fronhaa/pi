@@ -389,41 +389,59 @@ body.guiding .toast { top: 250px; }
 /* "O Sol ultimamente" (sol 1): erupções reais recentes do DONKI, ligadas à proteção. */
 .msg.sun-recent { border-color: #e0a52a; background: #fff8e8; }
 
-/* ---------- Intro da viagem (src/ui/LaunchIntro.ts): ~8 s, só visual, botão Pular ---------- */
+/* ---------- Intro da viagem (src/ui/LaunchIntro.ts): ~9 s, só visual, botão Pular ----------
+ * Linha do tempo: 0–1,5 s contagem 3-2-1 (foguete na base) · 1,5 s Liftoff! · 1,8–4 s decolagem (o chão desce, o céu
+ * escurece) · 3,6–7,6 s viagem (linhas de velocidade, a Terra fica para trás, o destino cresce, o fato) · 7,6–9 s o
+ * foguete voa até o destino. Movimento devagar; nada pisca mais de 3 vezes por segundo. */
 .launch-intro { position: fixed; inset: 0; z-index: 60; background: #1B1630; overflow: hidden; font-family: var(--font); color: var(--ink); transition: opacity 0.4s; }
 .launch-intro.launch-out { opacity: 0; pointer-events: none; }
 .launch-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .launch-svg g { transform-box: fill-box; transform-origin: center; }
-.launch-space { opacity: 0; animation: launch-fade-in 1.6s ease 1.6s both; }
-.launch-stars { opacity: 0; animation: launch-fade-in 1s ease 2.4s both; }
-.launch-earth { transform-origin: 50% 0%; animation: launch-earth-away 2.6s ease-in 1.3s both; }
-.launch-smoke { opacity: 0; transform-origin: 50% 100%; animation: launch-smoke 2s ease-out 0.4s both; }
-.launch-rocket { transform-origin: 50% 50%; animation: launch-rocket 8.2s ease-in-out both; }
-.launch-flame { transform-origin: 50% 0%; animation: launch-flame 0.35s ease-in-out infinite alternate; }
-.launch-dest { opacity: 0; animation: launch-dest 5.2s ease-in-out 2.6s both; }
+.launch-space { opacity: 0; animation: launch-fade-in 1.6s ease 2.4s both; }
+.launch-stars { opacity: 0; animation: launch-fade-in 1s ease 3.2s both; }
+.launch-ground { animation: launch-ground-away 2.2s ease-in 1.8s both; }
+.launch-smoke { opacity: 0; transform-origin: 50% 100%; animation: launch-smoke 2.4s ease-out 1.4s both; }
+.launch-globe { opacity: 0; transform-origin: 50% 100%; animation: launch-globe 4.4s ease-in-out 3.4s both; }
+.launch-streaks { opacity: 0; animation: launch-streaks-show 4.4s linear 3.4s both; }
+.launch-streaks line { animation: launch-streak 0.7s linear infinite; }
+.launch-rocket { animation: launch-rocket 9s ease-in-out both; }
+.launch-flame { transform-origin: 50% 0%; animation: launch-flame-on 0.4s ease-out 1.2s both, launch-flame 0.35s ease-in-out 1.6s infinite alternate; }
+.launch-dest { opacity: 0; animation: launch-dest 4.6s ease-out 3.6s both; }
 
-.launch-text { position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%); width: min(880px, calc(100% - 32px)); text-align: center; }
+.launch-count { position: absolute; left: 0; right: 0; top: 16%; height: 1px; text-align: center; }
+.launch-count span { position: absolute; left: 0; right: 0; font-size: clamp(72px, 16vw, 140px); font-weight: 700; color: #FBF4EC; text-shadow: 0 6px 0 rgba(27, 22, 48, 0.55); opacity: 0; animation: launch-count 0.5s ease-out both; }
+.launch-count span:nth-child(1) { animation-delay: 0s; }
+.launch-count span:nth-child(2) { animation-delay: 0.5s; }
+.launch-count span:nth-child(3) { animation-delay: 1s; }
+.launch-liftoff { position: absolute; left: 0; right: 0; top: 16%; margin: 0; text-align: center; font-size: clamp(44px, 10vw, 88px); font-weight: 700; color: #FBF4EC; text-shadow: 0 6px 0 rgba(27, 22, 48, 0.55); opacity: 0; animation: launch-pop 1.6s ease 1.5s both; }
+.launch-text { position: absolute; left: 50%; bottom: max(24px, 6%); transform: translateX(-50%); width: min(720px, calc(100% - 32px)); text-align: center; }
 .launch-text p { margin: 0; }
-.launch-liftoff { font-size: clamp(36px, 7vw, 72px); font-weight: 700; color: #FBF4EC; text-shadow: 0 4px 0 rgba(27, 22, 48, 0.6); opacity: 0; animation: launch-blink-text 2.4s ease 0.3s both; }
-.launch-fact { margin-top: 8px; font-size: clamp(20px, 3.4vw, 32px); font-weight: 700; background: var(--paper); border: var(--border); border-radius: var(--radius); padding: 14px 20px; box-shadow: 0 4px 0 rgba(71, 60, 58, 0.35); opacity: 0; animation: launch-fade-in 0.8s ease 3.2s both; }
-.launch-source { margin-top: 8px; font-size: 14px; color: #C9BFD6; opacity: 0; animation: launch-fade-in 0.8s ease 3.4s both; }
-.launch-skip { position: absolute; top: 16px; right: 16px; z-index: 2; }
+.launch-fact { font-size: clamp(19px, 3vw, 28px); line-height: 1.3; font-weight: 700; background: var(--paper); border: var(--border); border-radius: var(--radius); padding: 12px 18px; box-shadow: 0 4px 0 rgba(71, 60, 58, 0.35); opacity: 0; animation: launch-rise-in 0.8s ease 4.4s both; }
+.launch-source { margin-top: 6px; font-size: 13px; color: #C9BFD6; opacity: 0; animation: launch-fade-in 0.8s ease 4.6s both; }
+.launch-skip { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; z-index: 2; }
 
 @keyframes launch-fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes launch-blink-text { 0% { opacity: 0; transform: scale(0.9); } 15% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes launch-earth-away { from { transform: translateY(0) scale(1); } to { transform: translateY(900px) scale(0.6); } }
-@keyframes launch-smoke { 0% { opacity: 0; transform: scale(0.6); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(80px) scale(1.7); } }
+@keyframes launch-rise-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes launch-count { 0% { opacity: 0; transform: scale(1.4); } 25% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(0.9); } }
+@keyframes launch-pop { 0% { opacity: 0; transform: scale(0.8); } 15% { opacity: 1; transform: scale(1.05); } 25% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes launch-ground-away { from { transform: translateY(0); } to { transform: translateY(800px); } }
+@keyframes launch-smoke { 0% { opacity: 0; transform: scale(0.5); } 20% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: translateY(260px) scale(1.8); } }
+@keyframes launch-globe { 0% { opacity: 0; transform: translateY(320px); } 25% { opacity: 1; transform: translateY(0); } 100% { opacity: 1; transform: translateY(260px) scale(0.55); } }
+@keyframes launch-streaks-show { 0% { opacity: 0; } 15% { opacity: 0.55; } 85% { opacity: 0.55; } 100% { opacity: 0; } }
+@keyframes launch-streak { from { transform: translateY(-1000px); } to { transform: translateY(1000px); } }
 @keyframes launch-rocket {
-  0% { transform: translateY(260px); }
-  7% { transform: translateY(260px); }
-  22% { transform: translateY(0); }
-  76% { transform: translateY(-30px); }
-  95% { transform: translateY(-330px) scale(0.2); opacity: 1; }
-  100% { transform: translateY(-340px) scale(0.15); opacity: 0; }
+  0% { transform: translateY(90px); }
+  20% { transform: translateY(90px); }
+  25% { transform: translateY(80px) rotate(0.5deg); }
+  44% { transform: translateY(30px); }
+  84% { transform: translateY(20px); }
+  96% { transform: translateY(-230px) scale(0.3); opacity: 1; }
+  100% { transform: translateY(-240px) scale(0.25); opacity: 0; }
 }
-@keyframes launch-flame { from { transform: scaleY(1); } to { transform: scaleY(1.3); } }
-@keyframes launch-dest { 0% { opacity: 0; transform: scale(0.15); } 20% { opacity: 1; } 100% { opacity: 1; transform: scale(1.35); } }
+@keyframes launch-flame-on { from { opacity: 0; transform: scaleY(0.2); } to { opacity: 1; transform: scaleY(1); } }
+@keyframes launch-flame { from { transform: scaleY(1); } to { transform: scaleY(1.35); } }
+@keyframes launch-dest { 0% { opacity: 0; transform: scale(0.25); } 20% { opacity: 1; } 100% { opacity: 1; transform: scale(1.25); } }
 
 /* Reduzir movimento: só o espaço, o destino e o fato, sem animação. */
 .launch-reduced .launch-space, .launch-reduced .launch-stars, .launch-reduced .launch-dest, .launch-reduced .launch-fact, .launch-reduced .launch-source { animation: none; opacity: 1; }
-.launch-reduced .launch-rocket, .launch-reduced .launch-earth, .launch-reduced .launch-smoke, .launch-reduced .launch-liftoff { display: none; }
+.launch-reduced .launch-rocket, .launch-reduced .launch-ground, .launch-reduced .launch-globe, .launch-reduced .launch-smoke, .launch-reduced .launch-streaks, .launch-reduced .launch-count, .launch-reduced .launch-liftoff { display: none; }
