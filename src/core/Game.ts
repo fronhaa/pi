@@ -21,7 +21,7 @@ import type { CrewMotion } from '@/scene/crewMotion';
 import { Hud } from '@/ui/Hud';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CrewBubble } from '@/ui/CrewBubble';
-import { showCard, showEnd, showMissionStart, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
+import { showCard, showEnd, showMissionStart, showReport, showTutorial } from '@/ui/dialogs';
 import { playLaunchIntro, prefersReducedMotion } from '@/ui/LaunchIntro';
 import { LaunchScene } from '@/scene/LaunchScene';
 import { showPlaceChoice3D } from '@/ui/PlaceChoice';
@@ -164,9 +164,9 @@ export class Game {
     this.crew.setSheltered(true);
     this.routine = new CrewRoutine(this.crew);
     // Fatos da NASA num balão em cima de quem está fazendo aquilo (src/ui/CrewBubble.ts).
-    this.routine.onFirstExercise = (role) => this.bubbleOver([role], 'fact.exercise', t('fact.exercise.source'));
+    this.routine.onFirstExercise = (role) => this.bubbleOver([role], 'fact.exercise');
     // Fato da estufa inflável da NASA para a Lua e Marte (F20), na primeira vez que alguém trabalha na estufa.
-    this.routine.onFirstGreenhouse = (role) => this.bubbleOver([role], 'fact.greenhouseInflatable', t('fact.greenhouseInflatable.source'));
+    this.routine.onFirstGreenhouse = (role) => this.bubbleOver([role], 'fact.greenhouseInflatable');
 
     const uiRoot = document.createElement('div');
     uiRoot.id = 'ui';
@@ -187,12 +187,11 @@ export class Game {
         this.updateScene();
         this.coop?.sendPlan(plan);
       },
-      onNasaData: () => showNasaData(this.flares, this.missions, this.mission.state.historical),
       onToggleLang: () => {
         setLang(getLang() === 'pt' ? 'en' : 'pt');
         this.hud.render();
       },
-      onHowTo: () => showTutorial(() => {}, 1, () => showNasaData(this.flares, this.missions, this.mission.state.historical)),
+      onHowTo: () => showTutorial(() => {}),
       onToggleHull: () => this.base.setHullsOpen(!this.base.hullsOpen),
       hullsOpen: () => this.base.hullsOpen,
       nightCost: () => (this.coop || !this.mission ? CONFIG.battery.nightCost : this.mission.nightCost()),
@@ -226,7 +225,7 @@ export class Game {
     this.tasks.onEvaStart = ([a, b]) => {
       const names = { a: t(`crew.${a}` as StringKey), b: t(`crew.${b}` as StringKey) };
       // Primeira EVA: o fato real da NASA sobre quanto tempo se passa lá fora.
-      if (!this.evaFactShown) this.bubbleOver([a, b], 'eva.fact', t('eva.fact.source'));
+      if (!this.evaFactShown) this.bubbleOver([a, b], 'eva.fact');
       else this.hud.toast(t('eva.start', names));
       this.evaFactShown = true;
       this.coop?.evaStarted([a, b]);
@@ -344,7 +343,7 @@ export class Game {
       this.beginSol();
       return;
     }
-    showMissionStart(t('mission.start', { id: h.id, date: formatDate(h.startUtc) }), t('mission.source'), () => this.beginSol());
+    showMissionStart(t('mission.start', { date: formatDate(h.startUtc) }), () => this.beginSol());
   }
 
   /** Troca o lugar da base: textos, cena e gravidade (as regras vêm da Mission criada depois). */
@@ -437,7 +436,7 @@ export class Game {
           this.hud.setCrew('ready', role);
           this.refreshDayHud();
         },
-        onFirstJump: (role) => this.bubbleOver([role], 'crew.fact.gravity', t('crew.fact.source')),
+        onFirstJump: (role) => this.bubbleOver([role], 'crew.fact.gravity'),
         // Em grupo, cada jogador só controla o astronauta do(s) próprio(s) papel(is).
         canControl: (role) => this.canControl(role),
       });
@@ -490,10 +489,10 @@ export class Game {
     });
   }
 
-  /** Fato da NASA num balão em cima de quem está fazendo aquilo (com dois, no meio da dupla). */
-  private bubbleOver(roles: Role[], key: 'fact.exercise' | 'fact.greenhouseInflatable' | 'crew.fact.gravity' | 'eva.fact', source?: string): void {
+  /** Fato da NASA num balão em cima de quem está fazendo aquilo (com dois, no meio da dupla). A fonte fica em docs/ciencia-marte.md. */
+  private bubbleOver(roles: Role[], key: 'fact.exercise' | 'fact.greenhouseInflatable' | 'crew.fact.gravity' | 'eva.fact'): void {
     const at = new THREE.Vector3();
-    this.bubble.show(t(`${key}.title`), t(key), source, () => {
+    this.bubble.show(t(`${key}.title`), t(key), () => {
       at.set(0, 0, 0);
       for (const r of roles) at.add(this.crew.members[r].root.getWorldPosition(BUBBLE_TMP));
       return at.divideScalar(roles.length).add(BUBBLE_ABOVE_HEAD);

@@ -48,7 +48,6 @@ export interface HudCallbacks {
   onEndDay(): void;
   onSelect(role: RoleId): void;
   onPlanChange(plan: EnergyPlan): void;
-  onNasaData(): void;
   onToggleLang(): void;
   onHowTo(): void;
   /** Fecha ou abre o casco das cápsulas (só visual). */
@@ -57,7 +56,7 @@ export interface HudCallbacks {
   hullsOpen(): boolean;
   /** Bateria que a base gasta até amanhã (Marte: a noite; Lua: descanso ou noite fria da sombra). */
   nightCost?(): number;
-  /** Erupções reais recentes (DONKI, do download), para a mensagem "O Sol ultimamente" do sol 1. */
+  /** Erupções reais recentes (DONKI, do download), para a mensagem "O Sol antes da viagem" do sol 1. */
   recentSun?(): RecentSun | null;
 }
 
@@ -600,13 +599,12 @@ export function flareBadge(f: Flare): HTMLElement {
   if (!f.real) return h('span', {}, h('span', { class: 'badge sim' }, t('flare.simulated')));
   return h('span', {},
     h('span', { class: 'badge real' }, t(f.source === 'cme' ? 'flare.real.cme' : 'flare.real', { date: formatDate(f.time!) })),
-    f.link ? h('a', { href: f.link, target: '_blank', rel: 'noopener noreferrer' }, t('flare.link')) : null,
   );
 }
 
 /** Texto do aviso: erupção (classe) ou nuvem de plasma de missão histórica (força e velocidade). */
 function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
-  // Força em palavra (fraca, média, forte): a classe real (M, X, R…) fica no selo e no link do DONKI ("modo cientista").
+  // Força em palavra (fraca, média, forte): a classe real (M, X, R…) não aparece para a criança; a fonte fica em docs/fontes-nasa.md.
   const strength = t(`storm.strength.${f.cls}` as StringKey);
   if (f.source !== 'cme') {
     return when === 'alert' ? t('msg.stormAlert', { strength, sol: sol ?? 0 }) : t('msg.stormToday', { strength });
@@ -616,8 +614,9 @@ function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
 }
 
 /**
- * "O Sol ultimamente": erupções fortes reais nos últimos 30 dias e a dica da proteção (2 frases, padrão ~400L). A mais
- * recente, com a classe (ex.: M6.4), é detalhe do "modo cientista": fica na dica do mouse e no link do DONKI.
+ * "O Sol antes da viagem": erupções fortes reais nos 30 dias antes do download e a dica da proteção (2 frases, padrão
+ * ~400L). Sem selo de data na tela: o texto diz "antes da viagem", então o dado baixado não parece ao vivo. A mais
+ * recente, com a classe (ex.: M6.4), é detalhe para adultos: fica só na dica do mouse.
  */
 function recentSunEl(r: RecentSun): HTMLElement {
   const latest = r.latest;
@@ -626,8 +625,6 @@ function recentSunEl(r: RecentSun): HTMLElement {
     h('strong', {}, t('msg.sunRecent.title')), ' ',
     r.count > 0 ? t('msg.sunRecent.active', { n: r.count, days: r.days }) : t('msg.sunRecent.calm', { days: r.days }), ' ',
     t('msg.sunRecent.tip'),
-    // Sem a data de download aqui (não faz sentido no jogo); ela continua na tela "Dados da NASA".
-    latest?.link ? h('span', { class: 'meta' }, h('a', { href: latest.link, target: '_blank', rel: 'noopener noreferrer' }, t('flare.link'))) : null,
   );
 }
 

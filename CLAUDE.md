@@ -49,12 +49,14 @@ Da raiz do repositório, já na `main` atualizada:
 
 ```bash
 git archive main | coder ssh devs -- 'rm -rf ~/jezero-coop.new && mkdir ~/jezero-coop.new && tar -x -C ~/jezero-coop.new && rm -rf ~/jezero-coop && mv ~/jezero-coop.new ~/jezero-coop'
-coder ssh devs -- 'cd ~/jezero-coop/server && COOP_BIND=0.0.0.0 COOP_PORT=18095 ALLOWED_ORIGINS="*.trycloudflare.com,localhost:*" docker compose up -d --build --no-deps jezero-coop'
+coder ssh devs -- 'cd ~/jezero-coop/server && COOP_BIND=0.0.0.0 COOP_PORT=18095 ALLOWED_ORIGINS="fronhaa.github.io,*.trycloudflare.com,localhost:*" docker compose up -d --build --no-deps jezero-coop'
 coder ssh devs -- 'docker logs jezero-coop-tunnel 2>&1 | grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" | tail -1'   # link do jogo
 ```
 
+- O `ALLOWED_ORIGINS` precisa ter `fronhaa.github.io`: sem ele, o jogo do GitHub Pages leva 403 ao conectar.
 - Use sempre `--no-deps jezero-coop`: recria só o servidor e **o link do Cloudflare continua o mesmo**. Reiniciar o `jezero-coop-tunnel` troca o link, e o time precisa ser avisado do novo.
 - Confira com `curl <link>/healthz` (deve trazer `realFlares` e `historicalMissions` maiores que zero).
+- **Link novo do túnel?** Atualize a variável `COOP_URL` do repositório (`gh variable set COOP_URL --body wss://<link>/ws`) e rode de novo o workflow do Pages (`gh workflow run pages.yml`). Até lá, o jogo funciona com `?coop=wss://<link>` na URL.
 - **Não mexa** no `nginx-staging`, no `webjasper-cloudflare` nem em outros containers daquele Docker: são o staging compartilhado da Web Jasper. A porta 8080 já é do `nginx-staging`.
 
 ## Git e PRs

@@ -26,7 +26,11 @@ jobs:
       - run: npm ci
       # O Pages publica o build do Vite (dist/), não a raiz do repositório:
       # o index.html da raiz aponta para /src/main.ts, que o navegador não roda.
+      # COOP_URL (variável do repositório, wss://…/ws) liga o botão "Jogar em grupo" ao servidor coop.
+      # Vazia: o jogo sai só com o modo solo (ou ?coop=wss://… na URL). Ver docs/servidor-coop.md.
       - run: npm run build
+        env:
+          VITE_COOP_URL: ${{ vars.COOP_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

@@ -32,7 +32,6 @@ export function playLaunchIntro(place: 'mars' | 'moon', onDone: () => void, depa
     <p class="launch-note launch-burn"><strong>${t('launch.burn.title')}</strong> ${t(place === 'mars' ? 'launch.burn.mars' : 'launch.burn.moon')}</p>
     <div class="launch-text">
       <p class="launch-fact">${t(place === 'mars' ? 'launch.fact.mars' : 'launch.fact.moon')}</p>
-      <p class="launch-source">${t(place === 'mars' ? 'launch.source.mars' : 'launch.source.moon')}</p>
     </div>
     <button type="button" class="btn launch-skip">${t('launch.skip')}</button>`;
 
