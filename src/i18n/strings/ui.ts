@@ -4,7 +4,7 @@
  * Parâmetros entre chaves: {n}. Toda chave precisa existir nos dois idiomas (o TypeScript confere).
  */
 export const pt = {
-  'game.title': 'Missão Jezero',
+  'game.title': 'Artemis Quest',
   'game.subtitle': 'Mars Exploration · Cratera Jezero, Marte',
   'top.sol': 'Sol {sol} de {total}',
   'top.nasaData': 'Dados da NASA',
@@ -147,7 +147,7 @@ export const pt = {
 } as const;
 
 export const en: Record<keyof typeof pt, string> = {
-  'game.title': 'Mission Jezero',
+  'game.title': 'Artemis Quest',
   'game.subtitle': 'Mars Exploration · Jezero Crater, Mars',
   'top.sol': 'Sol {sol} of {total}',
   'top.nasaData': 'NASA data',

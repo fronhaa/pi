@@ -1,4 +1,6 @@
-# Mars Exploration: Missão Jezero: documento de design do jogo (GDD)
+# Artemis Quest: documento de design do jogo (GDD)
+
+> **Nome do jogo:** Artemis Quest (desde 15/11/2026, com o logotipo em `public/assets/ui/artemis-quest-logo.png`). Antes: "Mars Exploration: Missão Jezero"; a missão continua na cratera Jezero, em Marte (e no polo sul da Lua).
 
 > Documento vivo. Origem: GDD do time ("Tab 1"), versão de 14/11/2026, que substitui o rascunho "Base Marte Pi" (ver o histórico do git).
 > Requisitos do desafio: [desafio.md](desafio.md). Mudou uma regra do jogo? Atualize aqui no mesmo PR; todo número real precisa de fonte.

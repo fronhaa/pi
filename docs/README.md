@@ -10,7 +10,7 @@ Ela vive junto com o código, então é versionada, revisada em PR e nunca fica 
 | [desafio.md](desafio.md) | Todo mundo, antes de tudo. O que o desafio da NASA pede, em checklist. |
 | [publico-e-impacto.md](publico-e-impacto.md) | **Todo mundo, antes de mexer em texto, interface ou mecânica.** Pilar crítico: crianças de 7 a 12 anos, simplicidade, impacto, pendências. |
 | [linguagem-e-ui-criancas.md](linguagem-e-ui-criancas.md) | **Todo mundo que escreve texto, botão ou alerta.** As 6 regras de ouro de redação para 7–12 anos (frases de 8 a 12 palavras, ícone + negrito, imperativo, termo da NASA explicado, modo cientista) e a tabela de exemplos. |
-| [game-design.md](game-design.md) | Todo mundo. GDD da Missão Jezero: loop, recursos, cartas, cooperativo, dados da NASA, backlog. |
+| [game-design.md](game-design.md) | Todo mundo. GDD do Artemis Quest (antes Missão Jezero): loop, recursos, cartas, cooperativo, dados da NASA, backlog. |
 | [art-bible.md](art-bible.md) | Artistas e quem gera concept art. Direção de arte oficial: estilo, paleta, escala, códigos de asset, aprovação. |
 | [apis-nasa.md](apis-nasa.md) | Quem vai buscar dados reais. Quais APIs da NASA usar, CORS, formato da resposta e uso no jogo. |
 | [servidor-coop.md](servidor-coop.md) | Quem mexe no coop online ou no VPS. Servidor Go, regras do coop, protocolo, deploy e como as regras de `src/sim` rodam no servidor. |
