@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import type { MissionPort } from './session';
 import { CONFIG } from '@/sim/config';
-import { taskTime } from '@/sim/problems';
+import { PROBLEMS, taskBattery, taskTime } from '@/sim/problems';
 import { needsEva, planEva } from '@/sim/eva';
-import type { Problem } from '@/sim/types';
+import type { Problem, ProblemKind } from '@/sim/types';
 import type { Crew } from '@/scene/Crew';
 import { ROLES, type Role } from '@/sim/crew';
 import type { CrewMotion } from '@/scene/crewMotion';
@@ -36,7 +36,7 @@ const DOOR = ENTRANCES.habitat;
 type Place = 'inside' | 'airlockOut' | 'outside' | 'returning' | 'airlockIn';
 /** O que a interface mostra. */
 export type CrewPlace = 'inside' | 'airlock' | 'outside';
-export type SendResult = 'ok' | 'storm' | 'full' | 'nobody';
+export type SendResult = 'ok' | 'storm' | 'full' | 'nobody' | 'noPower';
 
 interface Assignment {
   uid: number;
@@ -132,6 +132,13 @@ export class CrewTasks {
     return this.assignments.has(role);
   }
 
+  /** Tipo da tarefa de dentro que este astronauta está fazendo (vazamento, colheita, análise), se houver. */
+  insideTaskKind(role: Role): ProblemKind | undefined {
+    const a = this.assignments.get(role);
+    const p = a && this.mission().state.problems.find((x) => x.uid === a.uid);
+    return p && !PROBLEMS[p.kind].outside ? p.kind : undefined;
+  }
+
   /** Está cuidando de um problema de dentro (a estufa)? A cena usa para mostrar onde ele está. */
   onInsideTask(role: Role): boolean {
     const a = this.assignments.get(role);
@@ -159,6 +166,8 @@ export class CrewTasks {
   assign(role: Role, uid: number): SendResult {
     const p = this.mission().state.problems.find((x) => x.uid === uid);
     if (!p || p.status !== 'open') return 'ok';
+    // Tarefa opcional gasta bateria: sem bateria suficiente, ninguém vai (o botão já aparece apagado).
+    if (this.mission().state.res.battery < taskBattery(p.kind)) return 'noPower';
     return needsEva(p.kind) ? this.assignOutside(role, p) : this.assignInside(role, p);
   }
 

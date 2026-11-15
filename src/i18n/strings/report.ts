@@ -5,6 +5,8 @@
  */
 export const pt = {
   'report.problem.fixed': '{problem}: resolvido.',
+  'report.task.harvest': 'Colheita na estufa: suporte de vida +{life}, bateria −{battery}.',
+  'report.task.analysis': 'Análise no laboratório: ciência +{science}, bateria −{battery}.',
   'report.problem.fixedOutside': '{problem}: resolvido lá fora (dose +{dose}).',
   'report.problem.failed.dustyPanels': 'Ninguém limpou os painéis: poeira +{dust}%. Amanhã vem menos energia.',
   'report.problem.failed.greenhouseLeak': 'O vazamento na estufa continuou: suporte de vida −{lifeLeak}.',
@@ -60,6 +62,8 @@ export const pt = {
 
 export const en: Record<keyof typeof pt, string> = {
   'report.problem.fixed': '{problem}: fixed.',
+  'report.task.harvest': 'Greenhouse harvest: life support +{life}, battery −{battery}.',
+  'report.task.analysis': 'Lab analysis: science +{science}, battery −{battery}.',
   'report.problem.fixedOutside': '{problem}: fixed outside (dose +{dose}).',
   'report.problem.failed.dustyPanels': 'Nobody cleaned the panels: dust +{dust}%. Less energy tomorrow.',
   'report.problem.failed.greenhouseLeak': 'The greenhouse kept leaking: life support −{lifeLeak}.',

@@ -1,6 +1,6 @@
 import { CONFIG } from '@/sim/config';
 import type { EnergyPlan, Flare, GameState, ProblemKind, Resources } from '@/sim/types';
-import { PROBLEMS } from '@/sim/problems';
+import { PROBLEMS, taskBattery } from '@/sim/problems';
 import type { Mission } from '@/sim/mission';
 import { CONFIG as SIM, doseFor3 } from '@/sim/config';
 
@@ -277,7 +277,7 @@ export class Hud {
   private renderDay(v: DayView): void {
     const name = (role?: string) => (role ? t(`crew.${role}` as StringKey) : '');
     const focusedLabel = (document.activeElement as HTMLElement | null)?.getAttribute?.('aria-label');
-    const items = v.problems.map((p) => {
+    const item = (p: DayView['problems'][number]): HTMLElement => {
       const def = PROBLEMS[p.kind];
       const problem = t(`problem.${p.kind}` as StringKey);
       const status =
@@ -290,20 +290,27 @@ export class Hud {
       let action: HTMLElement | null = null;
       if (p.status === 'open' && !p.worker) {
         const banned = def.outside && v.evaBanned;
-        const label = banned ? t('eva.bannedShort') : def.outside ? t('eva.send') : t('day.fixInside');
-        const aria = def.outside ? t('eva.sendAria', { problem }) : t('day.fixInsideAria', { problem });
-        action = h('button', { class: 'btn', type: 'button', 'aria-label': aria, disabled: v.paused || banned, onclick: () => this.cb.onSendProblem(p.uid) }, label);
+        const noPower = def.optional && (this.state?.res.battery ?? 0) < taskBattery(p.kind);
+        const label = banned ? t('eva.bannedShort') : noPower ? t('day.noPower') : def.outside ? t('eva.send') : def.optional ? t('day.sendTask') : t('day.fixInside');
+        const aria = def.outside ? t('eva.sendAria', { problem }) : def.optional ? t('day.sendTaskAria', { problem }) : t('day.fixInsideAria', { problem });
+        action = h('button', { class: 'btn', type: 'button', 'aria-label': aria, disabled: v.paused || banned || noPower, onclick: () => this.cb.onSendProblem(p.uid) }, label);
       }
-      return h('div', { class: `problem ${p.status === 'done' ? 'done' : ''}` },
+      const icon = p.status === 'done' ? '✅' : p.kind === 'harvest' ? '🌱' : p.kind === 'analysis' ? '🔬' : '⚠️';
+      return h('div', { class: `problem ${p.status === 'done' ? 'done' : ''} ${def.optional ? 'optional' : ''}` },
         h('div', { class: 'name' },
-          `${p.status === 'done' ? '✅' : '⚠️'} ${problem}`,
+          `${icon} ${problem}`,
           h('small', {}, `${t(`problem.${p.kind}.where` as StringKey)} · ${def.outside ? t('problem.outside') : t('problem.inside')}`),
+          def.optional ? h('small', { class: 'task-cost' }, t(`day.taskGain.${p.kind}` as StringKey, { battery: taskBattery(p.kind), gain: p.kind === 'harvest' ? CONFIG.indoorTasks.harvest.life : CONFIG.indoorTasks.analysis.science })) : null,
           h('small', { class: 'status' }, status),
           p.progress > 0 && p.status !== 'done' ? h('div', { class: 'bar good' }, h('i', { style: `width:${Math.round(p.progress * 100)}%` })) : null,
         ),
         action,
       );
-    });
+    };
+    // Problemas primeiro; as tarefas opcionais (colher, analisar) numa subseção "Se sobrar tempo:".
+    const problems = v.problems.filter((p) => !PROBLEMS[p.kind].optional).map(item);
+    const optional = v.problems.filter((p) => PROBLEMS[p.kind].optional).map(item);
+    const items = [...problems, ...(optional.length ? [h('p', { class: 'day-optional' }, t('day.optional')), ...optional] : [])];
     const placeIcon = { inside: '🏠', airlock: '🚪', outside: '👩‍🚀' } as const;
     const crewRow = h('div', { class: 'crew-row', role: 'group', 'aria-label': t('eva.crewTitle') },
       h('span', { class: 'crew-row-title' }, 'EVA', helpButton('help.eva', 'EVA')),

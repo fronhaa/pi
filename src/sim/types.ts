@@ -94,7 +94,8 @@ export type Outcome =
   | { status: 'lost'; reason: 'life' | 'dose'; sol: number }
   | { status: 'won'; stars: 1 | 2 | 3 };
 
-export type ProblemKind = 'dustyPanels' | 'greenhouseLeak' | 'antenna' | 'roverStuck' | 'tornBag';
+/** Problemas da base e, por último, as tarefas opcionais de dentro (harvest, analysis). */
+export type ProblemKind = 'dustyPanels' | 'greenhouseLeak' | 'antenna' | 'roverStuck' | 'tornBag' | 'harvest' | 'analysis';
 
 export interface Problem {
   uid: number;
