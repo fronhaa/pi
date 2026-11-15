@@ -229,7 +229,15 @@ export class Rover {
     }
     this.wheelRadius = 0.34;
     this.setupWheels();
-    this.warning.position.set(0, 2.62, 0);
+    // O .glb já tem a própria luz de aviso, em cima da cabeça do mastro: ela passa a piscar (âmbar/verde) e a
+    // bolinha do modelo simples some (ficava flutuando sobre o rover). Sem a luz no .glb, a bolinha fica.
+    const glbLight = m.root.getObjectByName('warning_light') as THREE.Mesh | undefined;
+    if (glbLight) {
+      glbLight.material = this.warning.material;
+      this.warning.visible = false;
+    } else {
+      this.warning.position.set(0, 2.62, 0);
+    }
     this.root.add(m.root);
     this.model = m;
     this.mixer = m.mixer;
