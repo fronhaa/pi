@@ -47,11 +47,10 @@
 | F29 | Camundongos no espaço perderam músculo e osso | Camundongos que passaram 33 dias na Estação Espacial perderam massa muscular e óssea | [OSDR: OSD-342 (missão RR-19)](https://osdr.nasa.gov/bio/repo/data/studies/OSD-342) | Tela de fontes (Data sources), item do OSDR | Contexto (saúde) |
 | F30 | A viagem até Marte leva meses | O Perseverance pousou depois de uma viagem de 203 dias e 472 milhões de km | [NASA (2021)](https://www.nasa.gov/news-release/touchdown-nasas-mars-perseverance-rover-safely-lands-on-red-planet/) | Intro da viagem (Marte) | Contexto (distância) |
 | F31 | A viagem até a Lua leva dias | A Apollo 11 saiu da Terra em 16/07/1969 e pisou na Lua em 20/07/1969 | [NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/) | Intro da viagem (Lua) | Contexto (distância) |
-| F32 | Foto real: lançamento do Perseverance | Atlas V levando o Perseverance decola da Flórida em 30/07/2020 | [NASA Image Library: KSC-20200730-PH-FMX01_0042](https://images.nasa.gov/details/KSC-20200730-PH-FMX01_0042) | Cartão de foto na viagem (Marte) | Foto (crédito NASA/Frank Michaux) |
-| F33 | Foto real: lançamento da Apollo 11 | Saturn V da Apollo 11 decola em 16/07/1969 | [NASA Image Library: S69-39961](https://images.nasa.gov/details/S69-39961) | Cartão de foto na viagem (Lua) | Foto (crédito NASA) |
 | F34 | Foto real: a Terra vista do espaço | A Terra fotografada pela Apollo 17 a caminho da Lua, em 07/12/1972 | [NASA Image Library: AS17-148-22727](https://images.nasa.gov/details/as17-148-22727) | Cartão de foto na viagem (Marte e Lua) | Foto (crédito NASA) |
 | F35 | Foto real: Marte inteiro | Mosaico de cerca de 1000 imagens das sondas Viking | [NASA Photojournal: PIA00407](https://photojournal.jpl.nasa.gov/catalog/PIA00407) | Cartão de foto na viagem (Marte) | Foto (crédito NASA/JPL/USGS) |
 | F36 | Foto real: a Lua cheia | A Lua fotografada pela Apollo 11 na volta para a Terra, em 21/07/1969 | [NASA Image Library: AS11-44-6667](https://images.nasa.gov/details/as11-44-6667) | Cartão de foto na viagem (Lua) | Foto (crédito NASA) |
+| F37 | O foguete entra em órbita antes de ir | Apollo 11 e Perseverance: primeiro uma órbita da Terra (de espera), depois o motor liga de novo e a nave sai rumo ao destino | [NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/); [NASA (2020)](https://www.nasa.gov/news-release/nasa-ula-launch-mars-2020-perseverance-rover-mission-to-red-planet/) | Tela de escolha (em órbita) e saída da órbita | Contexto (como se viaja) |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -284,15 +283,11 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **No jogo:** intro da viagem, depois de escolher a Lua (`src/ui/LaunchIntro.ts`, cena em `src/scene/LaunchScene.ts`).
 - **Atenção:** "4 dias" é do lançamento até o passo na Lua (16 a 20 de julho), não só o voo até a órbita. Conferido em 15/11/2026.
 
-### F32 a F36. Fotos reais na trajetória da viagem
+### F34 a F36. Fotos reais na trajetória da viagem
 
 Cartões de foto que passam ao lado do foguete na intro (`src/scene/LaunchScene.ts`, `PHOTOS`). Arquivos em
 `public/assets/images/` (versão "small" da biblioteca da NASA). Legenda no jogo: `launch.photo.*` em `src/i18n/strings/ui.ts`.
 
-- **F32:** **"the launch of the United Launch Alliance Atlas V 541 rocket from Space Launch Complex 41 at Cape Canaveral Air Force Station in Florida on July 30, 2020. The Atlas V carried NASA’s Mars Perseverance rover"**. Crédito: NASA/Frank Michaux. ([KSC-20200730-PH-FMX01_0042](https://images.nasa.gov/details/KSC-20200730-PH-FMX01_0042))
-  - Criança: "Perseverance decola rumo a Marte (2020)" / "Perseverance lifts off to Mars (2020)".
-- **F33:** **"The huge, 363-feet tall Apollo 11 (Spacecraft 107/Lunar Module S/Saturn 506) space vehicle is launched from Pad A, Launch Complex 39, Kennedy Space Center (KSC), at 9:32 a.m. (EDT), July 16, 1969."** ([S69-39961](https://images.nasa.gov/details/S69-39961))
-  - Criança: "Apollo 11 decola rumo à Lua (1969)" / "Apollo 11 lifts off to the Moon (1969)".
 - **F34:** **"This view of Earth was seen by the Apollo 17 crew as they traveled toward the moon"** (7 Dec. 1972). ([AS17-148-22727](https://images.nasa.gov/details/as17-148-22727))
   - Criança: "A Terra vista pela Apollo 17 (1972)" / "Earth seen by Apollo 17 (1972)". Aparece nas duas viagens: é a mesma Terra que fica para trás.
 - **F35:** **"About 1000 Viking Orbiter red- and violet-filter images have been processed to provide global color coverage of Mars"**. Crédito: NASA/JPL/USGS. ([PIA00407](https://photojournal.jpl.nasa.gov/catalog/PIA00407))
@@ -301,6 +296,16 @@ Cartões de foto que passam ao lado do foguete na intro (`src/scene/LaunchScene.
 - **F36:** **"This outstanding view of the whole full moon was photographed from the Apollo 11 spacecraft during its trans-Earth journey homeward."** ([AS11-44-6667](https://images.nasa.gov/details/as11-44-6667))
   - Criança: "A Lua vista pela Apollo 11 (1969)" / "The Moon seen by Apollo 11 (1969)".
 - Conferido na API da biblioteca de imagens da NASA (`images-api.nasa.gov`) em 15/11/2026.
+
+### F37. O foguete entra em órbita da Terra antes de partir
+
+- **Fato (Lua):** a Apollo 11 foi lançada **"into an initial Earth-orbit of 114 by 116 miles"**. **"Two hours, 44 minutes and one-and-a-half revolutions after launch, the S-IVB stage reignited for a second burn of five minutes, 48 seconds, placing Apollo 11 into a translunar orbit."** ([NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/))
+- **Fato (Marte):** **"The ULA Atlas V's Centaur upper stage initially placed the Mars 2020 spacecraft into a parking orbit around Earth. The engine fired for a second time and the spacecraft separated from the Centaur as expected."** ([NASA, 2020](https://www.nasa.gov/news-release/nasa-ula-launch-mars-2020-perseverance-rover-mission-to-red-planet/))
+- **Criança (PT):** "Estamos em órbita da Terra. Toque num planeta!" e "🔥 Motor ligado! Saímos da órbita da Terra rumo a Marte/à Lua."
+- **Criança (EN):** "We are in orbit around Earth. Tap a planet!" e "🔥 Engine on! We leave Earth orbit for Mars/the Moon."
+- **No jogo:** o foguete começa em órbita na tela de escolha e sai dela ao escolher (`src/scene/LaunchScene.ts`, `rocketPath`); textos em `src/ui/PlaceChoice.ts` e `src/ui/LaunchIntro.ts`.
+- **Atenção:** a cena é cartoon: a órbita é bem mais alta que a real e a decolagem não aparece (o jogo começa com a nave já em órbita). Não dizer que a órbita "pega carona na gravidade": as fontes só dizem que a nave fica numa órbita de espera e depois liga o motor de novo.
+- Conferido em 15/11/2026.
 
 ## Ligação com os objetivos de aprendizagem
 

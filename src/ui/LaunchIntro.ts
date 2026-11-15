@@ -1,15 +1,16 @@
 import { t } from '@/i18n';
 
 /**
- * Intro da viagem (depois de escolher Marte ou Lua): contagem regressiva, o foguete decola da base de lançamento,
- * a Terra fica para trás e ele chega ao destino, com o tempo de viagem REAL (docs/ciencia-marte.md, F30 e F31).
- * Só visual: não muda regra. ~9 s, com botão "Pular" sempre visível (e Esc).
+ * Viagem (depois de escolher Marte ou Lua): o foguete já está em órbita da Terra; o motor liga, ele sai da órbita
+ * (F37) e chega ao destino, com o tempo de viagem REAL (docs/ciencia-marte.md, F30 e F31). Só visual: não muda regra.
+ * ~7 s, com botão "Pular" sempre visível (e Esc).
  *
- * Este arquivo é só o texto por cima (contagem, "Liftoff!", fato, "Pular"). O desenho é a cena 3D cartoon
- * src/scene/LaunchScene.ts, que o jogo desenha por trás (fundo transparente aqui).
- * Com "reduzir movimento" no sistema, a cena fica parada no destino e aparece só o fato.
+ * Este arquivo é só o texto por cima ("Motor ligado!", fato, "Pular"). O desenho é a cena 3D cartoon
+ * src/scene/LaunchScene.ts, que o jogo desenha por trás (fundo transparente aqui). Os tempos do CSS (".launch-*" em
+ * src/ui/style.css) seguem os da cena (T_BURN).
+ * Com "reduzir movimento" no sistema, a cena fica parada perto do destino e aparece só o fato.
  */
-const DURATION_MS = 9000;
+const DURATION_MS = 7200;
 const REDUCED_MS = 2500;
 
 export function prefersReducedMotion(): boolean {
@@ -23,8 +24,7 @@ export function playLaunchIntro(place: 'mars' | 'moon', onDone: () => void): voi
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-label', t('launch.title'));
   root.innerHTML = `
-    <div class="launch-count" aria-hidden="true"><span>3</span><span>2</span><span>1</span></div>
-    <p class="launch-liftoff">${t('launch.liftoff')}</p>
+    <p class="launch-note launch-burn"><strong>${t('launch.burn.title')}</strong> ${t(place === 'mars' ? 'launch.burn.mars' : 'launch.burn.moon')}</p>
     <div class="launch-text">
       <p class="launch-fact">${t(place === 'mars' ? 'launch.fact.mars' : 'launch.fact.moon')}</p>
       <p class="launch-source">${t(place === 'mars' ? 'launch.source.mars' : 'launch.source.moon')}</p>

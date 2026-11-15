@@ -173,24 +173,26 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   eixo Y para cima, em metros, com cores sólidas; ao carregar, trocar os materiais por `toonMaterial(cor)`.
   Coloque em `public/assets/models/` com nome em `kebab-case`.
 
-## Intro da viagem (`src/scene/LaunchScene.ts`)
+## Escolha e viagem (`src/scene/LaunchScene.ts`)
 
-- Depois de escolher Marte ou Lua: foguete cartoon (primitivas com `toonMesh` e contorno) decola da base na Terra,
-  passa pelas nuvens, a Terra fica para trás e ele chega ao destino. ~9 s, só visual.
-- **Tela de escolha (Marte ou Lua):** "palco" no espaço da mesma cena: o foguete flutuando no meio, Marte e Lua em 3D
-  (lado a lado em cima no celular; dos lados no computador) e a Terra embaixo. A criança toca no planeta: botões de
-  verdade (`src/ui/PlaceChoice.ts`) do tamanho do planeta, com nome e dica curta; o planeta cresce sob o dedo ou o mouse.
-  Ao escolher, a câmera mergulha olhando a Terra até a base (~1,6 s) e começa a contagem.
+- **O foguete já está no espaço**, em órbita da Terra (órbita de espera, F37): não há decolagem nem base de lançamento.
+- **Tela de escolha (Marte ou Lua):** câmera de longe: a Terra embaixo, a órbita tracejada e o foguete dando a volta
+  com o motor desligado (maior que o real, para não virar um pontinho). Marte e Lua em 3D presos à câmera, no alto
+  (lado a lado no celular; dos lados no computador). A criança toca no planeta: botões de verdade
+  (`src/ui/PlaceChoice.ts`) do tamanho do planeta, com nome e dica curta; o planeta cresce sob o dedo ou o mouse.
+- **Viagem (~7 s, só visual):** ao escolher, os planetas da escolha somem, o motor liga ("Motor ligado!") e o foguete
+  sai da órbita pela tangente, de onde estiver. A câmera vai para trás dele (o "para cima" da tela vira a direção da
+  viagem), aparecem linhas de velocidade e o destino crescendo, e ele entra no planeta.
 - **Sem HUD até a nave chegar:** a classe `pre-mission` no `body` esconde o HUD (`#ui`), balões, setas, guia e avisos
   na tela de escolha e na viagem. Sai quando o foguete chega (`Game.playLaunch`).
-- Usa o renderizador do jogo: enquanto passa, o quadro desenha só a intro (a base não é desenhada, não pesa no celular).
-- O texto por cima (contagem, "Liftoff!", fato real F30/F31, "Pular") é HTML em `src/ui/LaunchIntro.ts`.
-- O destino é "trapaça de cinema": fica sempre acima e atrás do foguete e cresce. Exceção à regra "planeta gigante
+- Usa o renderizador do jogo: enquanto passa, o quadro desenha só esta cena (a base não é desenhada, não pesa no celular).
+- O texto por cima ("Motor ligado!", fato real F30/F31, "Pular") é HTML em `src/ui/LaunchIntro.ts`.
+- O destino é "trapaça de cinema": fica sempre à frente e atrás do foguete e cresce. Exceção à regra "planeta gigante
   no céu" abaixo, que vale para a cena da base.
-- **Fotos reais na trajetória:** 3 cartões de foto da NASA (decolagem, Terra, destino) presos à câmera passam ao lado
-  do foguete, fora do meio da tela. Papel claro com contorno escuro, selo "FOTO REAL", legenda e crédito desenhados num
-  canvas. Fontes: F32 a F36 em `docs/ciencia-marte.md`.
-- "Reduzir movimento" no sistema: a cena fica parada na chegada.
+- **Fotos reais na trajetória:** 2 cartões de foto da NASA (a Terra e o destino) presos à câmera passam ao lado do
+  foguete, fora do meio da tela. Papel claro com contorno escuro, selo "FOTO REAL", legenda e crédito desenhados num
+  canvas. Fontes: F34 a F36 em `docs/ciencia-marte.md`.
+- "Reduzir movimento" no sistema: a cena fica parada perto da chegada.
 
 ## O que não usar
 

@@ -23,7 +23,7 @@ import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CrewBubble } from '@/ui/CrewBubble';
 import { showCard, showEnd, showMissionStart, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
 import { playLaunchIntro, prefersReducedMotion } from '@/ui/LaunchIntro';
-import { LAUNCH_ZOOM_SECONDS, LaunchScene } from '@/scene/LaunchScene';
+import { LaunchScene } from '@/scene/LaunchScene';
 import { showPlaceChoice3D } from '@/ui/PlaceChoice';
 import { IntroGuide } from '@/ui/IntroGuide';
 import { IntroDirector } from './intro';
@@ -289,22 +289,18 @@ export class Game {
     const launch = this.showLaunchPad();
     const reduced = prefersReducedMotion();
     launch.begin(place, reduced);
-    // O texto (contagem, fato, "Pular") entra quando a câmera termina de descer até a base.
-    window.setTimeout(
-      () =>
-        playLaunchIntro(place, () => {
-          launch.dispose();
-          if (this.launch === launch) this.launch = null;
-          // A nave chegou: só agora aparecem o HUD e o resto da interface do jogo.
-          document.body.classList.remove('pre-mission');
-          this.startMission();
-        }),
-      reduced ? 0 : LAUNCH_ZOOM_SECONDS * 1000,
-    );
+    // O foguete já está em órbita: o motor liga na hora e o texto ("Motor ligado!", fato, "Pular") entra junto.
+    playLaunchIntro(place, () => {
+      launch.dispose();
+      if (this.launch === launch) this.launch = null;
+      // A nave chegou: só agora aparecem o HUD e o resto da interface do jogo.
+      document.body.classList.remove('pre-mission');
+      this.startMission();
+    });
   }
 
   /**
-   * Tela de escolha (Marte ou Lua) em 3D: o foguete no espaço e os dois planetas para tocar, sem HUD
+   * Tela de escolha (Marte ou Lua) em 3D: o foguete em órbita da Terra e os dois planetas para tocar, sem HUD
    * (classe `pre-mission` no body). A mesma cena vira a viagem em `playLaunch`.
    */
   private showLaunchPad(): LaunchScene {
