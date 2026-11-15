@@ -279,7 +279,7 @@ mais, do dia curto e da conta sem prévia, que o robô do `balance` não sente.
 
 ## Base lunar
 
-Antes da missão solo, a criança escolhe **Marte** ou **Lua** (tela "Para onde vamos?"; aparece de novo em "Jogar de novo").
+Ao entrar, a criança escolhe primeiro **Marte** ou **Lua** (tela 3D "Para onde vamos?"; aparece de novo em "Jogar de novo"). Depois, se o jogo tem servidor de grupo, escolhe **sozinho** ou **em grupo**: só em Marte, porque o servidor de grupo roda só Marte (na Lua vai direto para o modo sozinho). Em seguida vem a viagem; no grupo, a sala de espera abre quando o foguete chega. Quem recarrega a página no meio de uma partida em grupo volta direto para ela (`Game.chooseMode`).
 A Lua é a "Missão Shackleton": a base fica no polo sul da Lua, a região que o programa Artemis estuda.
 O loop, os recursos e as cartas são os mesmos; mudam só as regras abaixo, cada uma ligada a uma diferença real.
 A ideia é a criança **comparar os dois lugares**: o mesmo plano que funciona em Marte pode falhar na Lua, e vice-versa.

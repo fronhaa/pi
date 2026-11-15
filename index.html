@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Artemis Quest</title>
     <!-- App instalável (docs/pwa.md): o manifesto e o registerSW.js são injetados pelo vite-plugin-pwa no build. -->
     <meta name="theme-color" content="#473c3a" />
@@ -14,6 +14,10 @@
     <style>
       :root { --ink: #473c3a; --sky: #e8b98c; --accent: #e8792b; }
       html, body { margin: 0; height: 100%; overflow: hidden; background: var(--sky); }
+      /* Celular: a página nunca rola nem "estica" (iOS e Android), nem dá zoom com toque duplo. Só painéis com
+         conteúdo longo rolam por dentro (src/ui/style.css), sem arrastar a página junto. */
+      html, body { position: fixed; inset: 0; width: 100%; overscroll-behavior: none; touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+      canvas { touch-action: none; }
       canvas { display: block; }
 
 

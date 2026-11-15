@@ -193,13 +193,23 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   (`src/ui/PlaceChoice.ts`) do tamanho do planeta, com nome e dica curta; o planeta cresce sob o dedo ou o mouse.
   Com o mouse em cima (ou foco do teclado, ou o primeiro toque no celular), os 3 níveis da missão aparecem embaixo
   do planeta, em botões empilhados (nome da missão e, embaixo, a idade recomendada: Marte 7+, 9+, 11+; Lua 7+, 10+, 12+); o botão do planeta não sai da tela (16 px de margem).
-- **Viagem (~7 s, só visual), igual no celular e no computador:** ao escolher, o foguete **ganha velocidade dando a volta na Terra** (o motor acende em `T_BURN`, "Motor ligado!") (pelo menos meia volta, cada vez mais rápido),
-  com a câmera ainda de longe. No ponto em que a reta tangente à órbita passa pelo destino (`tangentDeparture`; sair na direção Terra → planeta erraria por um raio de órbita, e a Lua fica perto) (no mapa, onde a Lua ou Marte estão
-  hoje; na clássica, o ponto da tela onde o planeta aparece, levado para o plano da Terra, porque lá os planetas
-  ficam em profundidades diferentes), ele sai em linha reta com a velocidade que ganhou (`T_LEAVE`), que cai até a de cruzeiro (`TRIP`: a viagem até a Lua é bem mais calma que a de Marte), e na chegada para na superfície do planeta (`ARRIVE_K`), sem entrar nele. O planeta que não foi escolhido some
-  logo que a criança escolhe, para ficar claro para onde o foguete vai;
-  sempre se afastando da Terra. A câmera desce até ele, sem corte: o planeta escolhido VIRA o destino (começa onde estava na escolha, do mesmo tamanho na tela, e desliza até a frente do foguete, `destStart`) e o Sol e as órbitas do mapa somem aos poucos (`mapFade`) e vai para trás dele (o "para cima" da tela vira a direção da
-  viagem), aparecem linhas de velocidade e o destino crescendo, e ele entra no planeta.
+- **Viagem (~13 a 15 s, só visual, devagar para a criança ler), igual no celular e no computador:** ao escolher,
+  o motor liga ("Motor ligado!" já no toque) e o foguete **ganha velocidade dando a volta na Terra** (curva de
+  Hermite: começa no ritmo da órbita, corre no meio e chega à saída com `OMEGA_DEPART`, moderada; 0,8 a 2,6 s), com a
+  câmera ainda de longe. O ponto de saída é onde a reta tangente à órbita passa pelo destino (`tangentDeparture`;
+  no mapa, onde a Lua ou Marte estão hoje; na clássica, o ponto da tela onde o planeta aparece, levado para o plano
+  da Terra): ele sai apontando para o planeta, sempre se afastando da Terra, e acelera devagar (`TRIP`: até a Lua,
+  mais calmo que até Marte). O tempo da viagem conta da saída (`begin` devolve quanto falta; o texto por cima usa
+  `--go`). O planeta que não foi escolhido some logo; o escolhido VIRA o destino, sem corte (começa onde estava, do
+  mesmo tamanho na tela, e desliza até a frente do foguete, `destStart`), e o Sol e as órbitas do mapa somem aos
+  poucos (`mapFade`). A câmera desce até o foguete e gira para ele subir na tela: no celular, no máximo 75° (`MAX_ROLL`:
+  de ponta-cabeça ficava ruim; lá os planetas ficam acima da Terra); no mapa, gira tudo enquanto desce. Aparecem as linhas de velocidade e o destino crescendo, e na chegada o
+  foguete para na superfície do planeta (`ARRIVE_K`), sem entrar nele.
+- **Sem engasgo no toque (celular):** tudo fica pronto na tela de carregamento (`Game.prepare`): modelos 3D da base
+  e da tripulação, física, shaders da base (`compileAsync`) e a cena da escolha e da viagem montada e preparada
+  (`LaunchScene.warmUp`: mostra por um instante o que fica escondido, espera os shaders e desenha uma vez). Na tela de
+  escolha, chama, linhas de velocidade e cartões continuam desenhados (invisíveis/minúsculos). Preparar um shader na
+  primeira vez que ele aparece travava a viagem por quase 1 s no celular.
 - **Sem HUD até a nave chegar:** a classe `pre-mission` no `body` esconde o HUD (`#ui`), balões, setas, guia e avisos
   na tela de escolha e na viagem. Sai quando o foguete chega (`Game.playLaunch`).
 - Usa o renderizador do jogo: enquanto passa, o quadro desenha só esta cena (a base não é desenhada, não pesa no celular).
@@ -221,6 +231,10 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 - O inverted hull falha em quinas agudas e malhas abertas. Alternativa futura: detecção de bordas em pós-processamento (via ADR).
 
 ## Desempenho no celular
+
+- **Sem rolar a página:** `html` e `body` fixos, sem "esticar" (`overscroll-behavior: none`) e sem zoom de toque
+  duplo (`touch-action: manipulation`), em `index.html`. Só painéis longos (diálogo, mensagens, plano) rolam por
+  dentro, com `overscroll-behavior: contain` para não arrastar a página junto.
 
 Perfil de qualidade em [`src/render/quality.ts`](../src/render/quality.ts) (`QUALITY`): no celular (toque como ponteiro
 principal ou sistema móvel; `?quality=high|low` força), densidade de pixels até 1,5 com **resolução dinâmica** (baixa um

@@ -67,6 +67,8 @@ const BEDTIME_DAY_FRACTION = 0.7;
  */
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
+  /** Modelos 3D da base e da tripulação (carregados no construtor; `prepare` espera). */
+  private readonly modelsReady: Promise<unknown>;
   /** Tela de escolha ou intro da viagem: o quadro desenha só ela (a base fica parada por trás). */
   private launch: LaunchScene | null = null;
   private readonly scene = new THREE.Scene();
@@ -155,9 +157,11 @@ export class Game {
     this.base = new BaseScene(this.scene);
     // Depois de cada carga de modelos, aplica o perfil de qualidade (luzes extras, sombra e contorno das peças pequenas).
     const optimize = () => applyQuality(this.scene, [this.crew.root]);
-    void this.base.loadModels().then(optimize, optimize);
     this.scene.add(this.crew.root);
-    void this.crew.loadChibi().then(optimize, optimize);
+    this.modelsReady = Promise.allSettled([
+      this.base.loadModels().then(optimize, optimize),
+      this.crew.loadChibi().then(optimize, optimize),
+    ]);
     optimize();
     // A tripulação fica dentro da base por padrão; só aparece lá fora numa EVA (GDD).
     this.crew.setSheltered(true);
@@ -258,10 +262,23 @@ export class Game {
     return game;
   }
 
+  /**
+   * Ainda na tela de carregamento: espera os modelos 3D e a física e prepara o desenho da base. Antes, isso terminava
+   * no meio da tela de escolha ou da viagem e travava a animação no celular.
+   */
+  async prepare(): Promise<void> {
+    await this.modelsReady;
+    await this.loadMotion();
+    // Prepara de uma vez os shaders da base (no celular, preparar na primeira vez que aparece trava o quadro).
+    await this.renderer.compileAsync(this.scene, this.camera);
+    // A tela de escolha 3D e a viagem também já ficam montadas e preparadas aqui (menos ao voltar para uma partida
+    // em grupo já começada: aí o jogo vai direto para ela).
+    if (!this.resumingCoop()) await this.ensureLaunchScene().warmUp(this.renderer);
+  }
+
   start(): void {
     this.renderer.setAnimationLoop((t) => this.frame(t));
     this.chooseMode();
-    void this.loadMotion();
   }
 
   /** A missão vista agora: a local (solo) ou a do servidor (grupo). */
@@ -277,39 +294,44 @@ export class Game {
   // ---------- modo e lugar ----------
 
   /** Solo: escolhe Marte ou Lua, cria a missão do lugar e começa o treino dos sóis 1 a 3 (o guia ensina na hora). */
-  private startSolo(): void {
-    this.choosePlaceAndLevel();
+  /** Sozinho: cria a missão do lugar e faz a viagem; a missão começa quando o foguete chega. */
+  private startSolo(place: Location): void {
+    this.setLocation(place);
+    this.newMission();
+    this.playLaunch(place, () => this.startMission());
   }
 
-  /**
-   * Lugar e nível na mesma tela (planetas 3D com os níveis embaixo), e a viagem até a base. Usado ao começar e ao
-   * jogar de novo. A missão é criada com o nível antes da viagem; ela começa quando o foguete chega.
-   */
-  private choosePlaceAndLevel(): void {
-    // Os níveis aparecem embaixo de cada planeta (mouse em cima, foco ou toque): um toque escolhe lugar e nível.
-    showPlaceChoice3D(this.showLaunchPad(), preferredLevel(), (place, level) => {
-      this.setLocation(place);
-      this.difficulty = level;
-      saveLevel(level);
-      this.newMission();
-      // Viagem da Terra até a base (só visual, dá para pular); a missão começa quando o foguete chega.
-      this.playLaunch(place);
-    });
+  /** Em grupo (só Marte, por enquanto): faz a viagem até Marte e, na chegada, abre a sala de espera. */
+  private startGroupTrip(url: string): void {
+    this.setLocation('mars');
+    this.playLaunch('mars', () => this.startCoop(url));
+  }
+
+  /** Partida em grupo já começada nesta página (recarregou no meio): volta direto para ela, sem escolha nem viagem. */
+  private resumingCoop(): { url: string; saved: { code: string; token: string } } | null {
+    const url = coopServerUrl();
+    const saved = url ? new CoopClient(url).savedSession() : null;
+    return url && saved ? { url, saved } : null;
   }
 
   /** Viagem da Terra até a base em 3D cartoon (src/scene/LaunchScene.ts) com o texto por cima; depois, a missão. */
-  private playLaunch(place: Location): void {
+  private playLaunch(place: Location, onArrive: () => void): void {
     const launch = this.showLaunchPad();
     const reduced = prefersReducedMotion();
-    launch.begin(place, reduced);
-    // O foguete já está em órbita: o motor liga na hora e o texto ("Motor ligado!", fato, "Pular") entra junto.
-    playLaunchIntro(place, () => {
-      launch.dispose();
-      if (this.launch === launch) this.launch = null;
-      // A nave chegou: só agora aparecem o HUD e o resto da interface do jogo.
-      document.body.classList.remove('pre-mission');
-      this.startMission();
-    });
+    // O foguete já está em órbita: o motor liga na hora e ele acelera até o ponto de saída. O texto entra já no toque
+    // ("Motor ligado!"); o fato vem depois da saída (tempos em src/ui/style.css, com --go).
+    const toDeparture = launch.begin(place, reduced);
+    playLaunchIntro(
+      place,
+      () => {
+        launch.dispose();
+        if (this.launch === launch) this.launch = null;
+        // A nave chegou: só agora aparecem o HUD e o resto da interface do jogo.
+        document.body.classList.remove('pre-mission');
+        onArrive();
+      },
+      toDeparture,
+    );
   }
 
   /**
@@ -318,6 +340,10 @@ export class Game {
    */
   private showLaunchPad(): LaunchScene {
     document.body.classList.add('pre-mission');
+    return this.ensureLaunchScene();
+  }
+
+  private ensureLaunchScene(): LaunchScene {
     if (!this.launch) {
       this.launch = new LaunchScene();
       this.launch.resize(window.innerWidth, window.innerHeight);
@@ -344,19 +370,32 @@ export class Game {
     this.hud.render();
   }
 
-  /** Com servidor coop configurado, pergunta: sozinho ou em grupo. Sem servidor, vai direto ao solo. */
+  /**
+   * Entrada do jogo: 1º Marte ou Lua (tela 3D); 2º, se há servidor de grupo, sozinho ou em grupo. O grupo só existe
+   * em Marte (o servidor roda só Marte), então na Lua vai direto para o modo sozinho.
+   */
   private chooseMode(): void {
-    const url = coopServerUrl();
-    if (!url) {
-      this.startSolo();
+    const resume = this.resumingCoop();
+    if (resume) {
+      this.startCoop(resume.url, resume.saved); // recarregou a página no meio de uma partida em grupo
       return;
     }
-    const saved = new CoopClient(url).savedSession();
-    if (saved) {
-      this.startCoop(url, saved); // recarregou a página no meio de uma partida em grupo
-      return;
-    }
-    showModeChoice(() => this.startSolo(), () => this.startCoop(url));
+    this.pickPlace(true);
+  }
+
+  /**
+   * Tela 3D de escolha: Marte ou Lua, com os níveis embaixo de cada planeta (um toque escolhe lugar e nível; o nível
+   * vale para o modo sozinho, no grupo quem escolhe é o dono da sala). Com servidor de grupo e Marte, pergunta
+   * sozinho ou em grupo. `allowGroup` = false no "Jogar de novo" do modo sozinho.
+   */
+  private pickPlace(allowGroup: boolean): void {
+    const url = allowGroup ? coopServerUrl() : null;
+    showPlaceChoice3D(this.showLaunchPad(), preferredLevel(), (place, level) => {
+      this.difficulty = level;
+      saveLevel(level);
+      if (url && place === 'mars') showModeChoice(() => this.startSolo(place), () => this.startGroupTrip(url));
+      else this.startSolo(place);
+    });
   }
 
   private startCoop(url: string, saved?: { code: string; token: string }): void {
@@ -777,7 +816,7 @@ export class Game {
     markPlayed();
     this.hud.setState(this.mission.state);
     // Jogar de novo: escolhe o lugar e o nível outra vez (dá para comparar Marte e Lua, ou subir de nível).
-    showEnd(this.mission.state, () => this.choosePlaceAndLevel());
+    showEnd(this.mission.state, () => this.pickPlace(false));
   }
 
   /** Bateria prevista para depois da noite (a mesma prévia do plano; solo ou servidor). Só para a cena, de dia. */

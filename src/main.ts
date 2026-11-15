@@ -1,4 +1,5 @@
 import { LoadingScreen } from '@/ui/LoadingScreen';
+import { watchAppUpdates } from '@/ui/appUpdate';
 
 /**
  * Ponto de entrada. Este arquivo é propositalmente pequeno: o jogo (Three.js + Rapier, ~1,7 MB)
@@ -13,6 +14,9 @@ async function boot(): Promise<void> {
 
     loading.setStatus('Starting the physics…');
     const game = await Game.create(document.body);
+    // Modelos 3D e física prontos ainda aqui: a escolha e a viagem não travam no celular.
+    loading.setStatus('Building the base…');
+    await game.prepare();
 
     game.start();
     loading.hide();
@@ -22,4 +26,6 @@ async function boot(): Promise<void> {
   }
 }
 
+// Mantém a cópia para jogar sem internet em dia (a versão nova já abre direto da rede: docs/pwa.md).
+watchAppUpdates();
 boot();

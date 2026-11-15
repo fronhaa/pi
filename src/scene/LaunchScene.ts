@@ -32,25 +32,26 @@ const R = 40; // raio da Terra no desenho
 const ORBIT_R = R + 16;
 /** Volta na Terra devagar (rad/s): dá para ver o foguete andando em volta. */
 const OMEGA = 0.35;
-/** Momentos da viagem (s, a partir da escolha): motor liga, destino aparece, chega ao destino. */
-const T_BURN = 0.6;
-/** O motor liga em T_BURN e o foguete ganha velocidade dando a volta na Terra; em T_LEAVE sai rumo ao destino. */
-const T_LEAVE = 1.6;
-const T_DEST = 2.0;
-const T_ARRIVE = 5.4;
-export const LAUNCH_SECONDS = 7;
 /**
- * Depois de sair da órbita: a velocidade que ganhou na volta cai até a de cruzeiro (unidades/s) em ~`ease` segundos
- * e o motor segue acelerando devagar (`accel`, unidades/s²); `streaks` = ritmo das linhas de velocidade. Sem a queda
- * o foguete disparava e passava direto pelo destino. A Lua é perto (4 dias, F31): viagem bem mais calma que a de
- * Marte.
+ * Momentos da viagem (s, contados da SAÍDA da órbita; antes disso, tempo negativo: o foguete ganha velocidade em volta
+ * da Terra até o ponto de saída). Devagar de propósito: a criança precisa de tempo para ler o aviso, as fotos e o fato
+ * (7 a 12 anos). Destino aparece, chega ao destino, fim.
+ */
+const T_DEST = 1;
+const T_ARRIVE = 10;
+export const LAUNCH_SECONDS = 12.2;
+/** Velocidade (rad/s na órbita) na hora da saída: moderada, para a câmera acompanhar e o foguete não disparar. */
+const OMEGA_DEPART = 0.6;
+/**
+ * Depois da saída: aceleração do motor (unidades/s²) e ritmo das linhas de velocidade. A Lua é perto (4 dias, F31):
+ * viagem mais calma que a de Marte.
  */
 const TRIP = {
-  mars: { cruise: 40, accel: 22, ease: 0.35, streaks: 60 },
-  moon: { cruise: 22, accel: 8, ease: 0.2, streaks: 33 },
+  mars: { accel: 12, streaks: 35 },
+  moon: { accel: 6, streaks: 25 },
 } as const;
-/** Lua: velocidade máxima (rad/s na órbita) ao sair da volta; Marte sai com toda a que ganhou. */
-const MOON_LEAVE_OMEGA = 2.2;
+/** Celular: quanto a câmera pode girar (rad) para o foguete subir na tela; mais que isso ficaria de ponta-cabeça. */
+const MAX_ROLL = THREE.MathUtils.degToRad(75);
 /** Na chegada o foguete vai até a superfície do destino, não até o meio (fração do caminho até o centro). */
 const ARRIVE_K = 0.66;
 const DEST_Z = -60;
@@ -112,13 +113,14 @@ type PhotoId = keyof typeof PHOTOS;
 
 /** Quando cada cartão passa (segundos da viagem) e de que lado da tela. */
 const PHOTO_TIMES: { from: number; to: number; side: 1 | -1 }[] = [
-  { from: 1.3, to: 3.3, side: -1 },
-  { from: 3.2, to: 5.4, side: 1 },
+  { from: 1, to: 5.2, side: -1 },
+  { from: 5, to: 9.6, side: 1 },
 ];
 const CARD_W = 512;
 const CARD_H = 560;
 
 interface PhotoCard {
+  id: PhotoId;
   mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   from: number;
   to: number;
@@ -169,10 +171,10 @@ export class LaunchScene {
   private readonly view = { x: 0, y: 0, dist: 300 };
   /** Quanto o foguete anda na órbita (rad) até o ponto de saída, entre a escolha e o motor ligar. */
   private thetaSweep = 0;
-  /** Velocidade (unidades/s) com que o foguete sai da órbita: a que ganhou dando a volta. */
-  private vLeave = 0;
-  /** Velocidade angular na saída da volta (rad/s): a curva da volta termina nela (ver rocketPath). */
-  private omegaLeave = 0;
+  /** Segundos da escolha até a saída da órbita (o foguete ganha velocidade em volta da Terra até o ponto de saída). */
+  private tGo = 0;
+  /** Destinos prontos desde o começo (montar na hora do toque travava o celular). */
+  private destPlanets!: Record<Place, THREE.Group>;
   /** Ritmo da viagem depois da saída (TRIP[destino]). */
   private trip: (typeof TRIP)[Place] = TRIP.mars;
   /** Planeta escolhido (o outro some logo, para ficar claro para onde o foguete vai). */
@@ -220,6 +222,7 @@ export class LaunchScene {
       moon: { pos: new THREE.Vector3(earthW.x + Math.cos(moonA) * MOON_DIST, earthW.y + Math.sin(moonA) * MOON_DIST, 0), r: MOON_R },
     };
     this.planets = { mars: makePlanet('mars'), moon: makePlanet('moon') };
+    this.buildTravel();
     if (!this.isMap) {
       const light = new THREE.DirectionalLight(0xfff0dc, 2.2);
       light.position.set(6, 10, 8);
@@ -245,6 +248,24 @@ export class LaunchScene {
     this.update();
   }
 
+  /**
+   * Prepara TODOS os desenhos da escolha e da viagem antes de aparecer (na tela de carregamento): mostra por um
+   * instante o que fica escondido, espera os shaders ficarem prontos de verdade e desenha uma vez (envia texturas e
+   * formas para a placa de vídeo). No celular, preparar um shader na primeira vez que ele aparece travava a viagem.
+   */
+  async warmUp(renderer: THREE.WebGLRenderer): Promise<void> {
+    const hidden: THREE.Object3D[] = [];
+    this.scene.traverse((o) => {
+      if (!o.visible) {
+        hidden.push(o);
+        o.visible = true;
+      }
+    });
+    await renderer.compileAsync(this.scene, this.camera);
+    renderer.render(this.scene, this.camera);
+    for (const o of hidden) o.visible = false;
+  }
+
   /** Planeta sob o dedo ou o mouse (cresce um pouco). */
   setHover(place: Place | null): void {
     this.hover = place;
@@ -268,41 +289,43 @@ export class LaunchScene {
     return { x: ((c.x + 1) / 2) * w, y: ((1 - c.y) / 2) * this.height, r: Math.abs(e.y - c.y) * (this.height / 2) };
   }
 
-  /** Escolheu: o motor liga e o foguete sai da órbita, de onde estiver, rumo ao destino. */
-  begin(place: Place, reduced = false): void {
-    if (this.started !== null) return;
+  /**
+   * Escolheu: o motor liga, o foguete ganha velocidade em volta da Terra até o ponto de saída e sai da órbita
+   * apontando para o destino. Devolve quantos segundos faltam para a saída (o texto por cima entra nessa hora).
+   */
+  begin(place: Place, reduced = false): number {
+    if (this.started !== null) return 0;
     this.thetaStart = this.idleTheta();
     this.chosen = place;
+    this.trip = TRIP[place];
     // Alvo no plano da Terra (z = 0): no mapa, onde a Lua ou Marte estão hoje.
     const target = this.isMap ? this.tmpC.copy(this.bodies[place].pos) : this.screenTargetOnPlane(place, this.tmpC);
-    // Ganhar velocidade: da escolha até T_LEAVE (o motor acende em T_BURN), o foguete acelera em volta da Terra
-    // até o ponto de saída e dali vai em linha reta. O ponto de saída é onde a reta TANGENTE à órbita passa pelo
-    // alvo: assim o foguete sai apontando para o planeta (sair na direção Terra → planeta erraria por um raio de
-    // órbita, e a Lua fica perto). Ponto de saída muito perto: dá mais uma volta (senão teria que frear).
     // O destino começa onde o planeta está agora, do mesmo tamanho na tela (ver destStart).
     this.destStart.copy(target);
     this.destStartScale = this.isMap
       ? this.bodies[place].r / PLANET_R
       : (this.planetScreenR[place] * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.position.z) / PLANET_R;
+    // Ponto de saída: onde a reta TANGENTE à órbita passa pelo alvo; assim o foguete sai apontando para o planeta
+    // (sair na direção Terra → planeta erraria por um raio de órbita, e a Lua fica perto).
     const depart = this.tangentDeparture(target);
     this.dir.copy(target).sub(this.orbitPoint(depart, this.tmpA)).setZ(0).normalize();
-    let sweep = (((depart - this.thetaStart) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-    // Lua: só dá a volta extra se precisasse frear (a viagem até ela é calma); Marte: com folga, para ganhar embalo.
-    if (sweep < OMEGA * T_LEAVE * (place === 'moon' ? 1.05 : 1.6)) sweep += 2 * Math.PI;
-    this.trip = TRIP[place];
-    this.thetaSweep = sweep;
-    // Velocidade na saída: a de "acelerar o tempo todo" (Marte). Na Lua, limitada (viagem calma) e sem passar de
-    // 2,7 × a média da volta, para a curva nunca andar para trás.
-    let omegaLeave = OMEGA + (2 * (sweep - OMEGA * T_LEAVE)) / T_LEAVE;
-    if (place === 'moon') omegaLeave = Math.min(omegaLeave, MOON_LEAVE_OMEGA, (2.7 * sweep) / T_LEAVE);
-    this.omegaLeave = omegaLeave;
-    this.vLeave = ORBIT_R * omegaLeave;
     this.right.set(this.dir.y, -this.dir.x, 0);
-    this.buildDestination(place);
-    this.buildPhotoCards(['earth', place]);
+    // Volta até lá: ponto de saída muito perto, dá mais uma volta (a curva não pode andar para trás). A duração cresce
+    // com o tanto que falta girar (0,8 a 2,6 s).
+    let sweep = (((depart - this.thetaStart) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    if (sweep < 0.9) sweep += 2 * Math.PI;
+    this.thetaSweep = sweep;
+    this.tGo = reduced ? 0 : Math.min(2.6, Math.max(0.8, sweep / 2.2));
+    if (reduced) this.thetaStart = depart - sweep;
+    this.destPlanets[place].visible = true;
+    for (const c of this.cards) {
+      const slot = c.id === 'earth' ? PHOTO_TIMES[0] : c.id === place ? PHOTO_TIMES[1] : null;
+      Object.assign(c, slot ?? { from: -1, to: -1 });
+    }
     this.reduced = reduced;
     this.hover = null;
     this.started = performance.now();
+    return this.tGo;
   }
 
   /** Tamanho da tela: no celular em pé, ângulo maior. */
@@ -387,25 +410,24 @@ export class LaunchScene {
   }
 
   /**
-   * Posição do foguete: da escolha até o ponto de saída (T_LEAVE), acelera em volta da Terra (sem tranco na largada
-   * nem na saída); dali, em linha reta rumo ao destino: sai com a velocidade que ganhou,
-   * que cai até a de cruzeiro, e o motor segue acelerando devagar (TRIP).
+   * Posição do foguete. `t` conta da SAÍDA da órbita: antes da escolha, órbita devagar; da escolha à saída (t < 0),
+   * ganha velocidade em volta da Terra (curva de Hermite: começa no ritmo da órbita, corre no meio e chega à saída
+   * com OMEGA_DEPART, sem tranco); da saída em diante, em linha reta rumo ao destino, com o motor acelerando devagar.
    */
   private rocketPath(t: number, out: THREE.Vector3): THREE.Vector3 {
     if (this.started === null) return this.orbitPoint(this.idleTheta() + t * OMEGA, out);
-    if (t < T_LEAVE) {
-      // Curva de Hermite: sai do ritmo da órbita (OMEGA) e chega ao ponto de saída com `omegaLeave`. Para Marte é a
-      // mesma parábola de "acelerar o tempo todo"; para a Lua acelera e chega mais manso.
-      const k = t / T_LEAVE;
+    const T = this.tGo;
+    if (t < 0 && T > 0) {
+      const k = Math.min(1, Math.max(0, (t + T) / T));
       const h10 = k ** 3 - 2 * k ** 2 + k;
       const h01 = -2 * k ** 3 + 3 * k ** 2;
       const h11 = k ** 3 - k ** 2;
-      const theta = this.thetaStart + T_LEAVE * OMEGA * h10 + this.thetaSweep * h01 + T_LEAVE * this.omegaLeave * h11;
-      return this.orbitPoint(theta, out);
+      // Antes do toque (só nas contas da direção do foguete): segue no ritmo da órbita.
+      const turn = t + T < 0 ? OMEGA * (t + T) : T * OMEGA * h10 + this.thetaSweep * h01 + T * OMEGA_DEPART * h11;
+      return this.orbitPoint(this.thetaStart + turn, out);
     }
-    const u = t - T_LEAVE;
-    const { cruise, accel, ease } = this.trip;
-    const along = cruise * u + (this.vLeave - cruise) * ease * (1 - Math.exp(-u / ease)) + accel * u * u;
+    const u = Math.max(0, t);
+    const along = OMEGA_DEPART * ORBIT_R * u + this.trip.accel * u * u;
     return this.orbitPoint(this.thetaStart + this.thetaSweep, out).addScaledVector(this.dir, along);
   }
 
@@ -416,14 +438,14 @@ export class LaunchScene {
   update(at?: number): void {
     const idle = this.started === null && at === undefined;
     const elapsed = this.started === null ? 0 : (performance.now() - this.started) / 1000;
-    const t = idle ? 0 : (at ?? (this.reduced ? 4.6 : Math.min(LAUNCH_SECONDS, elapsed)));
+    const t = idle ? 0 : (at ?? (this.reduced ? 8 : Math.min(LAUNCH_SECONDS, elapsed - this.tGo)));
     const path = this.rocketPath(t, this.path);
     /** 0 = vista de longe (Terra e órbita), 1 = câmera atrás do foguete, olhando o destino. */
     // A câmera fica de longe enquanto o foguete ganha velocidade em volta da Terra; desce até ele na saída.
-    const chase = idle ? 0 : this.isMap ? smooth((t - T_LEAVE + 0.4) / 1.4) : smooth((t - T_LEAVE + 0.2) / 1);
+    const chase = idle ? 0 : this.isMap ? smooth((t + 0.4) / 2) : smooth(t / 1.8);
 
     // Foguete: aponta para onde vai; no fim entra no destino, diminuindo.
-    const arrive = smooth((t - T_ARRIVE) / 1.4);
+    const arrive = smooth((t - T_ARRIVE) / 1.8);
     const destH = destHeight(t);
     this.rocket.position
       .copy(path)
@@ -436,31 +458,33 @@ export class LaunchScene {
     const boost = this.isMap ? Math.max(ORBIT_BOOST, this.view.dist / 160) : ORBIT_BOOST;
     this.rocket.scale.setScalar((1 - arrive * 0.6) * (1 + (boost - 1) * (1 - chase)));
 
-    // Chama: apagada na órbita (só dá a volta); acende forte para sair dela.
-    const fire = idle ? 0 : smooth((t - (T_BURN - 0.3)) / 0.3) * (1 + 0.4 * (1 - smooth((t - (T_LEAVE + 1)) / 0.6)));
-    this.flame.visible = fire > 0.01;
-    this.flame.scale.set(fire, fire * (1 + 0.25 * Math.sin(t * 40 + elapsed)), fire);
+    // Chama: apagada na órbita (só dá a volta); acende forte quando a criança escolhe (ganhar velocidade).
+    const fire = idle ? 0 : smooth((t + this.tGo) / 0.25) * (1 + 0.4 * (1 - smooth((t - 1) / 0.6)));
+    // Sempre desenhada (bem pequena na escolha): o celular prepara o desenho dela antes do toque, sem engasgo.
+    this.flame.visible = true;
+    if (fire < 0.01) this.flame.scale.setScalar(0.001);
+    else this.flame.scale.set(fire, fire * (1 + 0.25 * Math.sin(t * 40 + elapsed)), fire);
 
     // Órbita tracejada em volta da Terra, enquanto a câmera está longe.
     (this.orbitLine.material as THREE.LineDashedMaterial).opacity = 0.7 * (1 - chase);
     this.orbitLine.visible = chase < 0.98;
 
-    // Destino: sempre à frente e atrás do foguete, crescendo enquanto ele "se aproxima".
     // Destino: começa no lugar do planeta escolhido (sem corte) e vai, junto com a câmera, para a posição "de cinema",
     // sempre à frente e atrás do foguete, crescendo enquanto ele se aproxima.
     this.dest.visible = !idle;
     this.tmpB.copy(path).addScaledVector(this.dir, destH).addScaledVector(this.right, DEST_X).setZ(DEST_Z);
     this.dest.position.copy(this.destStart).lerp(this.tmpB, chase);
-    const cinemaScale = 0.35 + 0.95 * smooth((t - T_DEST) / 4.4);
+    const cinemaScale = 0.35 + 0.95 * smooth((t - T_DEST) / (T_ARRIVE - T_DEST));
     this.dest.scale.setScalar(this.destStartScale + (cinemaScale - this.destStartScale) * chase);
     this.dest.rotation.y = t * 0.15;
     // Na escolha o planeta fica "em pé"; inclina aos poucos para o ângulo da chegada (sem tranco).
     this.dest.rotation.z = 0.35 * chase;
 
     // Linhas de velocidade depois de sair da órbita (no referencial da viagem).
-    const speed = smooth((t - T_LEAVE) / 0.6) * (1 - smooth((t - T_ARRIVE) / 0.8));
-    this.streaks.visible = speed > 0.01;
-    if (this.streaks.visible) this.moveStreaks(t, path, speed);
+    const speed = idle ? 0 : smooth(t / 1) * (1 - smooth((t - T_ARRIVE) / 0.8));
+    // Na escolha ficam desenhadas, mas invisíveis (opacidade 0): o mesmo "preparo" da chama.
+    this.streaks.visible = idle || speed > 0.01;
+    this.moveStreaks(t, path, speed);
 
     // Câmera: de longe (mapa do Sistema Solar, ou a Terra embaixo na clássica) -> atrás do foguete, olhando o destino.
     if (this.isMap) {
@@ -479,18 +503,19 @@ export class LaunchScene {
     this.camera.position.lerp(this.tmpB, chase);
     this.tmpB.copy(path).addScaledVector(this.dir, 9);
     this.tmpA.lerp(this.tmpB, chase);
-    // Atrás do foguete, o "para cima" da tela é a direção da viagem (o foguete sobe na tela).
-    this.up.set(0, 1, 0).lerp(this.dir, chase);
-    // Destino bem embaixo no mapa: no meio da troca o "para cima" zeraria; aí vale o lado da viagem.
-    if (this.up.lengthSq() < 1e-4) this.up.copy(this.right);
-    this.camera.up.copy(this.up.normalize());
+    // Atrás do foguete, o "para cima" da tela gira para a direção da viagem (o foguete sobe na tela, como a viagem foi
+    // composta: destino no alto, fotos dos lados). No celular, no máximo 75° (de ponta-cabeça ficava ruim; lá os
+    // planetas estão acima da Terra e o giro é pequeno). No mapa (computador), gira tudo enquanto desce do mapa.
+    const maxRoll = this.isMap ? Math.PI : MAX_ROLL;
+    const turn = THREE.MathUtils.clamp(Math.atan2(this.dir.x, this.dir.y), -maxRoll, maxRoll) * chase;
+    this.camera.up.copy(this.up.set(Math.sin(turn), Math.cos(turn), 0));
     this.camera.lookAt(this.tmpA);
     this.stars.position.copy(this.camera.position);
 
     if (this.isMap) this.layoutMap(idle, t);
-    // Clássica: o planeta escolhido some na hora da saída (o foguete rápido passaria por cima dele na tela).
-    else this.layoutPicker(idle ? 1 : 1 - smooth((t - T_LEAVE + 0.3) / 0.3));
-    this.placeCards(t);
+    // Clássica: o planeta escolhido já virou o destino; o resto da escolha some logo depois da saída.
+    else this.layoutPicker(idle ? 1 : 1 - smooth(t / 0.5));
+    this.placeCards(t, idle);
   }
 
   /** Libera geometrias e materiais (o material do contorno é compartilhado pelo jogo: fica). */
@@ -547,7 +572,7 @@ export class LaunchScene {
    * escolhido já virou o destino da viagem.
    */
   private layoutMap(idle: boolean, t: number): void {
-    const fade = idle ? 0 : smooth((t - T_LEAVE + 0.4) / 1);
+    const fade = idle ? 0 : smooth((t + 0.4) / 1.2);
     this.map.visible = fade < 0.99;
     if (!this.map.visible) return;
     // Contorno do Sol some bem antes (senão aparece como um disco escuro através da bola transparente).
@@ -585,7 +610,7 @@ export class LaunchScene {
   }
 
   /** Cartões de foto presos à câmera: entram no alto, descem devagar (o foguete "passa" por eles) e somem. */
-  private placeCards(t: number): void {
+  private placeCards(t: number, idle: boolean): void {
     const portrait = this.aspect < 0.8;
     const dist = 10;
     const hh = dist * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
@@ -593,7 +618,14 @@ export class LaunchScene {
     // Largura do cartão: quase metade da tela no celular em pé, um quarto no computador; nunca mais alto que 70% da tela.
     const w = Math.min((portrait ? 0.88 : 0.5) * hw, (1.4 * hh) / (CARD_H / CARD_W));
     for (const c of this.cards) {
-      const k = (t - c.from) / (c.to - c.from);
+      // Na escolha, desenhados minúsculos (preparo da textura e do desenho no celular, sem engasgo no meio da viagem).
+      if (idle) {
+        c.mesh.visible = c.ready;
+        c.mesh.scale.setScalar(0.0001);
+        c.mesh.position.set(0, 0, -dist); // na frente da câmera (na posição dela, ficava fora da vista e não era desenhado)
+        continue;
+      }
+      const k = c.to > c.from ? (t - c.from) / (c.to - c.from) : -1;
       c.mesh.visible = c.ready && k > 0 && k < 1;
       if (!c.mesh.visible) continue;
       const pop = smooth(k / 0.12) * (1 - smooth((k - 0.88) / 0.12));
@@ -618,7 +650,7 @@ export class LaunchScene {
       mesh.renderOrder = 10;
       mesh.visible = false;
       this.camera.add(mesh);
-      const card: PhotoCard = { mesh, ...PHOTO_TIMES[i], ready: false };
+      const card: PhotoCard = { id, mesh, from: -1, to: -1, side: PHOTO_TIMES[Math.min(i, 1)].side, ready: false };
       this.cards.push(card);
       const img = new Image();
       img.onload = async () => {
@@ -826,19 +858,26 @@ export class LaunchScene {
     return { lines, base };
   }
 
-  /** Destino da viagem: o mesmo planeta da tela de escolha. */
-  private buildDestination(place: Place): void {
-    const planet = makePlanet(place);
-    planet.scale.setScalar(14 / PLANET_R);
-    this.dest.add(planet);
+  /**
+   * Tudo o que a viagem usa fica pronto já na tela de escolha (montar na hora do toque travava o celular): os dois
+   * destinos (fica visível só o escolhido) e os três cartões de foto (imagem, texto, textura).
+   */
+  private buildTravel(): void {
+    this.destPlanets = { mars: makePlanet('mars'), moon: makePlanet('moon') };
+    for (const g of Object.values(this.destPlanets)) {
+      g.scale.setScalar(14 / PLANET_R);
+      g.visible = false;
+      this.dest.add(g);
+    }
     this.dest.visible = false;
     this.scene.add(this.dest);
+    this.buildPhotoCards(['earth', 'mars', 'moon']);
   }
 }
 
 /** Quanto o destino está à frente do foguete: começa longe e chega perto. */
 function destHeight(t: number): number {
-  return 46 - 18 * smooth((t - T_DEST) / 4);
+  return 46 - 18 * smooth((t - T_DEST) / (T_ARRIVE - T_DEST));
 }
 
 /** Marte (vermelho, crateras e calota polar) ou Lua (cinza, crateras), com raio PLANET_R. */
