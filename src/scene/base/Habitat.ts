@@ -5,6 +5,16 @@ import { BIKE_FIT } from '@/render/chibiPedal';
 import {
   BACK_Z,
   BIKE_Z,
+  BUNK_Z,
+  BED_DEPTH,
+  BED_THICKNESS,
+  GREENHOUSE_STAIRS,
+  STAIR_RUN,
+  STAIR_STEPS,
+  STAIR_WIDTH,
+  TUBE_RADIUS,
+  WALKWAY,
+  WALKWAY_WIDTH,
   BUNK_DX,
   BUNK_LEVELS,
   GARAGE_FLOOR_Y,
@@ -195,35 +205,87 @@ export class Habitat {
 
   /** Túneis pressurizados ligando a cúpula a cada módulo (vista superior do concept art). */
   private buildTubes(): void {
-    // Passarela que cruza a cúpula de leste a oeste, na altura do piso dos módulos: a tripulação anda por ela
-    // do laboratório ao alojamento (src/scene/crewRoutine.ts). Os canteiros ficam embaixo, dos dois lados.
-    const east = TUBES[0].from;
-    const west = TUBES[1].from;
-    const length = east.x - west.x;
-    const deck = toonMesh(new THREE.BoxGeometry(length, 0.08, 1.2), PALETTE.tech, 0.02);
-    deck.position.set((east.x + west.x) / 2, HABITAT_FLOOR_Y - 0.04, east.z);
-    this.root.add(deck);
-    for (const side of [-1, 1]) {
-      const rail = toonMesh(new THREE.BoxGeometry(length, 0.05, 0.05), PALETTE.accent, 0);
-      rail.position.set(deck.position.x, HABITAT_FLOOR_Y + 0.75, east.z + side * 0.6);
-      this.root.add(rail);
-      for (const k of [-0.4, -0.15, 0.15, 0.4]) {
-        const post = toonMesh(new THREE.BoxGeometry(0.05, HABITAT_FLOOR_Y + 0.75 - 0.4, 0.05), PALETTE.tech, 0);
-        post.position.set(deck.position.x + k * length, (HABITAT_FLOOR_Y + 0.75 + 0.4) / 2, east.z + side * 0.6);
-        this.root.add(post);
-      }
-    }
+    this.buildWalkway();
     for (const t of TUBES) {
       const len = t.from.distanceTo(t.to);
-      const geo = new THREE.CylinderGeometry(0.85, 0.85, len, 16);
+      const geo = new THREE.CylinderGeometry(TUBE_RADIUS, TUBE_RADIUS, len, 16);
       const tube = toonMesh(geo, PALETTE.light, 0.03);
       tube.position.copy(t.from).add(t.to).multiplyScalar(0.5);
       tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), t.to.clone().sub(t.from).normalize());
       this.root.add(tube);
-      const ring = toonMesh(new THREE.CylinderGeometry(0.95, 0.95, 0.16, 16), PALETTE.accent, 0);
+      const ring = toonMesh(new THREE.CylinderGeometry(TUBE_RADIUS + 0.1, TUBE_RADIUS + 0.1, 0.16, 16), PALETTE.accent, 0);
       ring.position.copy(t.to);
       ring.quaternion.copy(tube.quaternion);
       this.root.add(ring);
+    }
+  }
+
+  /**
+   * Passarela da cúpula, na altura do piso dos módulos (src/scene/crewRoutine.ts anda por ela): cruza de leste a
+   * oeste (laboratório ↔ alojamento) e tem um braço para o sul, até o túnel da garagem. Dos dois lados, uma escada
+   * desce até os canteiros (colheita e manutenção das plantas). Corrimão laranja com abertura nas escadas e no braço.
+   */
+  private buildWalkway(): void {
+    const y = HABITAT_FLOOR_Y;
+    const { east, west, south } = WALKWAY;
+    const half = WALKWAY_WIDTH / 2;
+    const cz = east.z;
+    const deckAt = (x0: number, x1: number, z0: number, z1: number) => {
+      const deck = toonMesh(new THREE.BoxGeometry(x1 - x0, 0.08, z1 - z0), PALETTE.tech, 0.02);
+      deck.position.set((x0 + x1) / 2, y - 0.04, (z0 + z1) / 2);
+      this.root.add(deck);
+    };
+    deckAt(west.x, east.x, cz - half, cz + half);
+    deckAt(south.x - half, south.x + half, cz + half, south.z);
+
+    // Corrimão em trechos: um trecho [a, b] ao longo de X (numa linha z) ou de Z (numa linha x).
+    const RAIL_Y = y + 0.75;
+    const rail = (a: number, b: number, at: number, alongX: boolean) => {
+      if (b - a < 0.1) return;
+      const r = toonMesh(new THREE.BoxGeometry(alongX ? b - a : 0.05, 0.05, alongX ? 0.05 : b - a), PALETTE.accent, 0);
+      r.position.set(alongX ? (a + b) / 2 : at, RAIL_Y, alongX ? at : (a + b) / 2);
+      this.root.add(r);
+      for (const p of [a + 0.05, b - 0.05]) {
+        const post = toonMesh(new THREE.BoxGeometry(0.05, 0.75, 0.05), PALETTE.tech, 0);
+        post.position.set(alongX ? p : at, y + 0.375, alongX ? at : p);
+        this.root.add(post);
+      }
+    };
+    // Trechos entre as aberturas (escadas e braço da garagem) de cada lado da passarela leste-oeste.
+    const sideRail = (z: number, gaps: [number, number][]) => {
+      let from = west.x;
+      for (const [g0, g1] of [...gaps].sort((p, q) => p[0] - q[0])) {
+        rail(from, g0, z, true);
+        from = g1;
+      }
+      rail(from, east.x, z, true);
+    };
+    const stairGap = (side: number): [number, number][] =>
+      GREENHOUSE_STAIRS.filter((st) => st.side === side).map((st) => [st.top.x - STAIR_WIDTH / 2, st.top.x + STAIR_WIDTH / 2]);
+    sideRail(cz - half, stairGap(-1));
+    sideRail(cz + half, [...stairGap(1), [south.x - half, south.x + half]]);
+    rail(cz + half, south.z, south.x - half, false);
+    rail(cz + half, south.z, south.x + half, false);
+
+    // Escadas até o chão da estufa: degraus e corrimão inclinado dos dois lados.
+    for (const st of GREENHOUSE_STAIRS) {
+      const rise = (st.top.y - st.bottom.y) / STAIR_STEPS;
+      for (let i = 0; i < STAIR_STEPS; i++) {
+        const top = st.top.y - rise * (i + 1);
+        const stepH = top - st.bottom.y + 0.04;
+        const step = toonMesh(new THREE.BoxGeometry(STAIR_WIDTH, stepH, STAIR_RUN), PALETTE.tech, 0.02);
+        // Cada degrau é um bloco do chão da estufa (um pouco enterrado) até a pisada.
+        step.position.set(st.top.x, st.bottom.y - 0.04 + stepH / 2, st.top.z + st.side * STAIR_RUN * (i + 0.5));
+        this.root.add(step);
+      }
+      const length = Math.hypot(STAIR_STEPS * STAIR_RUN, st.top.y - st.bottom.y);
+      const slope = Math.atan2(st.top.y - st.bottom.y, STAIR_STEPS * STAIR_RUN);
+      for (const dx of [-STAIR_WIDTH / 2, STAIR_WIDTH / 2]) {
+        const hand = toonMesh(new THREE.BoxGeometry(0.05, 0.05, length), PALETTE.accent, 0);
+        hand.position.set(st.top.x + dx, (st.top.y + st.bottom.y) / 2 + 0.75, (st.top.z + st.bottom.z) / 2);
+        hand.rotation.x = st.side * slope;
+        this.root.add(hand);
+      }
     }
   }
 
@@ -307,19 +369,19 @@ export class Habitat {
     // Alojamento: dois beliches encostados no fundo, cada um com duas camas.
     for (const bx of [QUARTERS_OFFSET_X - BUNK_DX, QUARTERS_OFFSET_X + BUNK_DX]) {
       for (const level of BUNK_LEVELS) {
-        const bed = toonMesh(new THREE.BoxGeometry(1.9, 0.18, 0.8), PALETTE.light, 0.04);
-        bed.position.set(bx, y + level, BACK_Z);
+        const bed = toonMesh(new THREE.BoxGeometry(1.9, BED_THICKNESS, BED_DEPTH), PALETTE.light, 0.04);
+        bed.position.set(bx, y + level, BUNK_Z);
         inside.add(bed);
-        const blanket = toonMesh(new THREE.BoxGeometry(1.3, 0.08, 0.82), PALETTE.panel, 0);
-        blanket.position.set(bx + 0.25, y + level + 0.12, BACK_Z);
+        const blanket = toonMesh(new THREE.BoxGeometry(1.3, 0.08, BED_DEPTH + 0.02), PALETTE.panel, 0);
+        blanket.position.set(bx + 0.25, y + level + 0.12, BUNK_Z);
         inside.add(blanket);
-        const pillow = toonMesh(new THREE.BoxGeometry(0.4, 0.12, 0.6), 0xffffff, 0);
-        pillow.position.set(bx - 0.7, y + level + 0.14, BACK_Z);
+        const pillow = toonMesh(new THREE.BoxGeometry(0.4, 0.12, BED_DEPTH - 0.15), 0xffffff, 0);
+        pillow.position.set(bx - 0.7, y + level + 0.14, BUNK_Z);
         inside.add(pillow);
       }
       for (const px of [-0.93, 0.93]) {
         const post = toonMesh(new THREE.BoxGeometry(0.06, 1.4, 0.06), PALETTE.tech, 0);
-        post.position.set(bx + px, y + 0.7, BACK_Z + 0.38);
+        post.position.set(bx + px, y + 0.7, BUNK_Z + BED_DEPTH / 2 - 0.02);
         inside.add(post);
       }
     }

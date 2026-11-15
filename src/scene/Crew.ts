@@ -19,6 +19,24 @@ const LOOK_SPREAD = 4;
 const LOOK_AROUND = 0.6;
 /** Tamanho do boneco deitado no beliche (ver BUNK_SPOTS em src/scene/base/layout.ts). */
 const LYING_SCALE = 0.8;
+/**
+ * Deitar no beliche: em pé de frente para os pés da cama (+X), ele deita para trás girando em volta do quadril
+ * (deitado = em pé girado 90° em Z, ver LIE_BASIS). Altura do quadril no boneco em pé (m).
+ */
+const HIP_HEIGHT = 0.9;
+const Q_LIE = new THREE.Quaternion().setFromRotationMatrix(LIE_BASIS);
+const Q_FACING_FEET = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+/** Direção (convenção do andar) de quem fica de pé ao lado da cama, olhando para os pés dela. */
+export const FACING_BED_FEET = -Math.PI / 2;
+/** Pontos do corpo que podem encostar no chão ao deitar: cantos das botas e o capacete (no referencial do model). */
+const LOW_POINTS = [-0.38, 0.38].flatMap((x) => [-0.33, 0.33].map((z) => new THREE.Vector3(x, 0.02, z)));
+const HELMET_CENTER = new THREE.Vector3(0, 1.45, 0);
+const HELMET_RADIUS = 0.42;
+/** Altura do chibi em pé (m) e o quanto ele pode se curvar para passar num lugar baixo (túneis). */
+const STAND_HEIGHT = 1.87;
+const MAX_CROUCH = 0.6;
+/** Curvado, também dobra um pouco os joelhos: o corpo desce até isto (m). */
+const CROUCH_DROP = 0.08;
 /** Duração do clipe `jump`. */
 const CHIBI_JUMP_SECONDS = 1.35;
 
@@ -38,6 +56,9 @@ export class Astronaut {
   readonly root = new THREE.Group();
   /** Parte visual que gira para a direção do movimento. */
   readonly model = new THREE.Group();
+  /** Postura dentro do `model`: curva o corpo para a frente (pivô nos pés) para passar em lugar baixo. */
+  private readonly posture = new THREE.Group();
+  private crouch = 0;
   /** Boneco simples feito de cápsulas: aparece até o chibi (.glb) carregar, ou se ele falhar. */
   private readonly fallback = new THREE.Group();
   private chibi: ChibiAstronautInstance | null = null;
@@ -86,7 +107,8 @@ export class Astronaut {
     visor.rotation.y = Math.PI;
     this.fallback.add(visor);
 
-    this.model.add(this.fallback);
+    this.model.add(this.posture);
+    this.posture.add(this.fallback);
 
     // Anel de seleção no chão (aparece quando o jogador escolhe este astronauta).
     this.ring = new THREE.Mesh(
@@ -137,7 +159,7 @@ export class Astronaut {
   useChibi(chibi: ChibiAstronautInstance): void {
     this.chibi = chibi;
     chibi.root.rotation.y = Math.PI;
-    this.model.add(chibi.root);
+    this.posture.add(chibi.root);
     this.fallback.visible = false;
     this.model.position.y = 0;
     this.action = 'idle';
@@ -149,10 +171,59 @@ export class Astronaut {
   setLying(on: boolean): void {
     if (on === this.lying) return;
     this.lying = on;
+    // Deitado não fica curvado (a postura só vale em pé).
+    this.crouch = 0;
+    this.posture.rotation.x = 0;
+    this.posture.position.y = 0;
     if (on) this.model.quaternion.setFromRotationMatrix(LIE_BASIS);
     else this.model.rotation.set(0, this.model.rotation.y, 0);
     // Deitado fica em 80%, para caber entre as duas camas do beliche.
     this.model.scale.setScalar(on ? LYING_SCALE : 1);
+  }
+
+  /**
+   * Abaixa para caber num lugar com `headroom` metros de altura (túneis): curva o corpo para a frente, sem
+   * pular (suaviza até o ângulo). Com altura de sobra, volta a ficar em pé.
+   */
+  fitHeadroom(headroom: number, dt: number): void {
+    const target = Math.min(MAX_CROUCH, Math.acos(THREE.MathUtils.clamp((headroom - 0.08) / STAND_HEIGHT, 0, 1)));
+    this.crouch = THREE.MathUtils.damp(this.crouch, target, 8, dt);
+    if (this.crouch < 0.002) this.crouch = 0;
+    // O `model` olha para −Z: girar em X para o lado negativo leva a cabeça para a frente.
+    this.posture.rotation.x = -this.crouch;
+    this.posture.position.y = -CROUCH_DROP * (this.crouch / MAX_CROUCH);
+  }
+
+  /** Onde fica o quadril de quem está deitado com os pés em `feet` (a posição do beliche). */
+  static lyingHip(feet: THREE.Vector3): THREE.Vector3 {
+    return new THREE.Vector3(0, HIP_HEIGHT * LYING_SCALE, 0).applyQuaternion(Q_LIE).add(feet);
+  }
+
+  /** Onde fica o quadril de quem está em pé em `feet`. */
+  static standingHip(feet: THREE.Vector3): THREE.Vector3 {
+    return new THREE.Vector3(feet.x, feet.y + HIP_HEIGHT, feet.z);
+  }
+
+  /**
+   * Meio caminho entre em pé (k = 0, de frente para os pés da cama) e deitado (k = 1): deita para trás girando
+   * em volta do quadril, que fica em `hip`. Sem pular nem deslizar deitado no ar.
+   */
+  lieBlend(k: number, hip: THREE.Vector3, floorY = -Infinity): void {
+    this.lying = k >= 1;
+    this.crouch = 0;
+    this.posture.rotation.x = 0;
+    this.posture.position.y = 0;
+    this.model.quaternion.copy(Q_FACING_FEET).slerp(Q_LIE, k);
+    const scale = THREE.MathUtils.lerp(1, LYING_SCALE, k);
+    this.model.scale.setScalar(scale);
+    const hipOffset = new THREE.Vector3(0, HIP_HEIGHT * scale, 0).applyQuaternion(this.model.quaternion);
+    this.root.position.copy(hip).sub(hipOffset);
+    // Nada do corpo abaixo do chão (botas e capacete): se precisar, sobe tudo um pouco.
+    const q = this.model.quaternion;
+    let lowest = new THREE.Vector3().copy(HELMET_CENTER).multiplyScalar(scale).applyQuaternion(q).y - HELMET_RADIUS * scale;
+    for (const p of LOW_POINTS) lowest = Math.min(lowest, p.clone().multiplyScalar(scale).applyQuaternion(q).y);
+    const lift = floorY - (this.root.position.y + lowest);
+    if (lift > 0) this.root.position.y += lift;
   }
 
   /** Exercício sem sair do lugar: `walk` na esteira (speed em m/s), `pedal` na bicicleta (speed = ritmo do clipe). */

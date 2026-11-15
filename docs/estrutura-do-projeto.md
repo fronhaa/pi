@@ -30,14 +30,14 @@ src/
 ├── scene/               CENA 3D (só desenha o estado)
 │   ├── BaseScene.ts     monta a base e aplica o cenário; recebe SceneState
 │   ├── base/
-│   │   ├── layout.ts    MAPA: onde fica cada prédio, posto, porta e problema
+│   │   ├── layout.ts    MAPA: onde fica cada prédio, posto, porta, problema, passarela e escadas
 │   │   ├── terrain.ts   chão, mesas, pedras
 │   │   ├── Habitat.ts   módulos, interior, janelas, modelo .glb
 │   │   ├── structures.ts cúpula, base de comunicação, painéis, bateria, abrigo (mostram os recursos; .glb do Marcelo)
 │   │   ├── Rover.ts     rover andando, estudando, desviando, atolado
 │   │   └── Sky.ts       céu, Sol, estrelas, Terra, poeira no ar
 │   ├── Crew.ts          visual dos astronautas (cor por papel, chibi .glb, poses)
-│   ├── crewRoutine.ts   rotina dentro da base (posto → academia → beliche)
+│   ├── crewRoutine.ts   rotina dentro da base (posto → academia → beliche; descansa antes da academia)
 │   ├── crewMotion.ts    física de andar (Rapier, sob demanda)
 │   └── ProblemMarkers.ts os "!" na cena
 ├── core/                ORQUESTRAÇÃO (liga sim, cena e interface)
