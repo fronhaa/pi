@@ -191,3 +191,13 @@ segundo, sem luzes pontuais e focos (cabines, fibra óptica, LED) e peças peque
 (`applyQuality`, chamada depois de carregar os `.glb`; a tripulação mantém o contorno). Medido num iPhone simulado:
 chamadas de desenho de 3.288 para ~1.540 e triângulos de 1,36 milhão para ~730 mil. No computador nada muda.
 
+## Blocos de vidro (Grégor)
+
+`gym.glb`, `dormitory.glb` e `refectory.glb` (ver [blocos-de-vidro.md](blocos-de-vidro.md)): cilindros de vidro de 5,2 m
+com as portas de acoplamento na mesma altura dos módulos. **Academia:** `gym.glb` no raio oeste
+(`GYM_GLASS_POSITION`: a porta de acoplamento encaixa no fim do túnel da estufa), sem o tubo de entrada (uma porta só,
+a do laboratório). A academia simples (módulo, móveis feitos à mão e luminária) some quando ele carrega; o módulo
+simples continua como molde dos quartos. Os aparelhos da rotina (`GYM_STATIONS`) passam a ser os pontos de interação
+do modelo (`treadmill_N_run`, `bike_N_ride`; +Z local é para onde olha), e as correias (`treadmills_run`) só andam
+com alguém correndo. Dormitório e refeitório ainda não estão no jogo.
+

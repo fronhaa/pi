@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PALETTE, toonMaterial, toonMesh } from '@/render/toon';
-import { ROVER_START, SHELTER_CENTER, distanceToRoverTrack, seededRandom, terrainHeight } from './layout';
+import { GLASS_HALF, GYM_GLASS_POSITION, ROVER_START, SHELTER_CENTER, distanceToRoverTrack, seededRandom, terrainHeight } from './layout';
 
 /** Pedra no chão que o rover precisa evitar (posição e raio). */
 export interface Rock {
@@ -79,6 +79,8 @@ function buildRocks(root: THREE.Object3D): Rock[] {
     if (Math.hypot(x - ROVER_START.x, z - ROVER_START.z) < r + 3) continue;
     // Nada de pedra em cima do abrigo de regolito e dos sacos em volta dele.
     if (Math.hypot(x - SHELTER_CENTER.x, z - SHELTER_CENTER.z) < r + 4.5) continue;
+    // Nem em cima da academia de vidro (bloco maior, no raio oeste).
+    if (Math.abs(x - GYM_GLASS_POSITION.x) < GLASS_HALF.x + r + 1 && Math.abs(z - GYM_GLASS_POSITION.z) < GLASS_HALF.z + r + 1) continue;
     const rock = toonMesh(geo, color, 0.04);
     rocks.push({ x, z, r, mesh: rock });
     rock.scale.set(sx, sy, sz);

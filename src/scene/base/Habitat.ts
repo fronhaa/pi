@@ -32,7 +32,11 @@ import {
   ROOM_LOCKER_Z,
   ROOM_LOCKER_DX,
   TUBES,
+  GLASS_HALF,
+  GYM_GLASS_POSITION,
+  setGymStations,
   addObstacle,
+  type GymStation,
   type Obstacle,
 } from './layout';
 
@@ -85,6 +89,16 @@ export class Habitat {
   private readonly cabinLights: THREE.PointLight[] = [];
   /** Animações do .glb (observatório, cata-vento). */
   mixer: THREE.AnimationMixer | null = null;
+  /**
+   * Academia: o módulo simples (casco de reserva, módulo .glb antigo e os móveis feitos à mão) some quando a
+   * academia de vidro (gym.glb) carrega. O módulo .glb antigo continua existindo: é o molde dos quartos.
+   */
+  private gymFallbackHull: THREE.Object3D | null = null;
+  private gymModule: THREE.Object3D | null = null;
+  private readonly gymProps = new THREE.Group();
+  /** Academia de vidro: animações (correias das esteiras) e a ação das correias. */
+  gymMixer: THREE.AnimationMixer | null = null;
+  private treadmillBelts: THREE.AnimationAction | null = null;
 
   constructor(obstacles: Obstacle[]) {
     // ARC-001: base de pesquisa do Grégor (research-base.glb), carregada em useModel().
@@ -111,6 +125,7 @@ export class Habitat {
       const extra = hull.clone();
       extra.position.x = ox / HABITAT_SCALE; // o grupo inteiro está em HABITAT_SCALE
       fb.add(extra);
+      this.gymFallbackHull = extra;
     }
     fb.position.copy(HABITAT_POSITION);
     fb.scale.setScalar(HABITAT_SCALE);
@@ -140,7 +155,8 @@ export class Habitat {
     const halfX = 3.6 * HABITAT_SCALE;
     const halfZ = 2.5 * HABITAT_SCALE;
     addObstacle(obstacles, x, z, halfX, halfZ);
-    addObstacle(obstacles, x + GYM_OFFSET_X, z, halfX, halfZ);
+    // Academia: a caixa do bloco de vidro (maior que o módulo simples), para a colisão já valer quando ele carregar.
+    addObstacle(obstacles, GYM_GLASS_POSITION.x, GYM_GLASS_POSITION.z, GLASS_HALF.x, GLASS_HALF.z);
     addObstacle(obstacles, x, z + 2.4, 1.0, 1.5);
     addObstacle(obstacles, x - 1.5, z + 3.06, 0.6, 0.35);
     const q0 = QUARTERS_CENTERS[0];
@@ -425,6 +441,59 @@ export class Habitat {
     }
     inside.position.set(x, 0, z);
     this.root.add(inside);
+    // Peças da academia simples (piso, luminária, esteira, bicicleta, aparelho de força): num grupo à parte, para
+    // sumirem quando a academia de vidro carregar.
+    for (const c of [...inside.children]) {
+      if (Math.abs(c.position.x - GYM_OFFSET_X) < MODULE_FLOOR_LENGTH / 2 + 0.6) this.gymProps.add(c);
+    }
+    this.gymProps.position.copy(inside.position);
+    this.root.add(this.gymProps);
+  }
+
+  /**
+   * Academia de vidro do Grégor (gym.glb, docs/blocos-de-vidro.md) no raio oeste. Some a academia simples; o tubo
+   * de entrada sai (a base inteira tem uma porta só, a do laboratório). Os aparelhos da rotina passam a ser os
+   * pontos de interação do modelo: `treadmill_N_run` (pés na correia) e `bike_N_ride` (quadril no selim). O +Z local
+   * do ponto é para onde o astronauta olha.
+   */
+  useGym(m: SceneryModel): void {
+    m.root.position.copy(GYM_GLASS_POSITION);
+    const tower = m.root.getObjectByName('access_tower');
+    if (tower) tower.visible = false;
+    this.root.add(m.root);
+    m.root.updateMatrixWorld(true);
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const facing = new THREE.Vector3();
+    const station = (name: string, clip: GymStation['clip'], speed: number, hipToFeet = 0): GymStation | null => {
+      const o = m.root.getObjectByName(name);
+      if (!o) return null;
+      o.getWorldPosition(pos);
+      o.getWorldQuaternion(quat);
+      facing.set(0, 0, 1).applyQuaternion(quat);
+      // Mesma convenção do andar (Crew.ts): 0 olha para −Z.
+      return { pos: pos.clone().setY(pos.y - hipToFeet), heading: Math.atan2(-facing.x, -facing.z), clip, speed };
+    };
+    const list: GymStation[] = [];
+    for (let i = 0; i < 6; i++) {
+      const s = station(`treadmill_${i}_run`, 'walk', 1.8);
+      if (s) list.push(s);
+    }
+    // Bicicleta: o ponto é o quadril no selim; o clipe `pedal` põe o quadril a seatedHipHeight dos pés.
+    for (let i = 0; i < 2; i++) {
+      const s = station(`bike_${i}_ride`, 'pedal', 0.9, BIKE_FIT.seatedHipHeight);
+      if (s) list.push(s);
+    }
+    if (list.length) setGymStations(list);
+    for (const o of [this.gymFallbackHull, this.gymModule, this.gymProps]) if (o) o.visible = false;
+    this.gymMixer = m.mixer;
+    this.treadmillBelts = m.play('treadmills_run');
+    if (this.treadmillBelts) this.treadmillBelts.paused = true;
+  }
+
+  /** Correias das esteiras correndo (só quando alguém está correndo nelas). */
+  setTreadmillsRunning(on: boolean): void {
+    if (this.treadmillBelts) this.treadmillBelts.paused = !on;
   }
 
   /** Troca o módulo simples pela base de pesquisa .glb. */
@@ -447,6 +516,9 @@ export class Habitat {
       this.root.add(module);
       return module;
     });
+    // O módulo .glb da academia simples: some se a academia de vidro já carregou (os quartos são clonados dele antes).
+    this.gymModule = extras[0];
+    const gymReady = this.gymMixer !== null;
     // Quartos no raio sul: o mesmo módulo (sem torre, armário, observatório e placa), girado.
     for (const c of QUARTERS_CENTERS) {
       const q = extras[0].clone(true);
@@ -456,6 +528,7 @@ export class Habitat {
       extras.push(q);
     }
     for (const f of this.southFallback) f.visible = false;
+    if (gymReady) this.gymModule.visible = false;
 
     for (const name of ['access_tower', 'sample_station']) {
       const o = m.root.getObjectByName(name);

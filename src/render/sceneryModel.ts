@@ -13,6 +13,10 @@ export const SCENERY_MODELS = {
   rover: `${import.meta.env.BASE_URL}assets/models/rover.glb`,
   commBase: `${import.meta.env.BASE_URL}assets/models/comm-base.glb`,
   solarPanels: `${import.meta.env.BASE_URL}assets/models/solar-panels-battery.glb`,
+  /** Blocos de vidro (docs/blocos-de-vidro.md). */
+  gym: `${import.meta.env.BASE_URL}assets/models/gym.glb`,
+  refectory: `${import.meta.env.BASE_URL}assets/models/refectory.glb`,
+  dormitory: `${import.meta.env.BASE_URL}assets/models/dormitory.glb`,
 } as const;
 
 export interface SceneryModel {

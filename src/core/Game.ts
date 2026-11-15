@@ -867,6 +867,7 @@ export class Game {
         onInsideTask: (r) => this.tasks.onInsideTask(r),
         insideTaskKind: (r) => this.tasks.insideTaskKind(r),
       });
+      this.base.setTreadmillsRunning(this.routine.anyoneOnTreadmill());
     } else this.crew.update(dt);
     const marker = this.targetMarker.material as THREE.MeshBasicMaterial;
     marker.opacity = Math.max(0, marker.opacity - dt * 0.8);
