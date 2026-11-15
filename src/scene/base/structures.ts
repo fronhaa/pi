@@ -77,6 +77,11 @@ export interface StructuresFrame {
   battery: number;
   /** Direção do Sol (para o concentrador da estufa); abaixo do horizonte, ele fica virado para cima. */
   sunDir?: THREE.Vector3;
+  /**
+   * Quanto o casco está aberto (0 fechado, 1 transparente). Fechado, as luzes e os fachos de dentro da estufa apagam:
+   * a luz do three.js atravessa paredes e iluminaria o lado de fora.
+   */
+  inside?: number;
 }
 
 /**
@@ -178,13 +183,14 @@ export class BaseStructures {
     const day = 1 - f.darkness;
     this.fiberMat.color.setHex(FIBER_COLOR).multiplyScalar(0.35 + 0.65 * day * (sun === UP ? 0.3 : 1));
     this.ledMat.color.setHex(LED_COLOR).multiplyScalar(0.7 + 0.5 * f.darkness);
-    this.ledLight.intensity = 1.2 + 2.3 * f.darkness;
+    const inside = f.inside ?? 1;
+    this.ledLight.intensity = (1.2 + 2.3 * f.darkness) * inside;
     // De dia, a luz do Sol entra pela fibra óptica e desce em fachos sobre os canteiros (com o Sol abaixo do
     // horizonte, quase nada); à noite, os fachos dos LEDs ficam mais fortes.
     const sunlight = day * (sun === UP ? 0.15 : 1);
-    for (const spot of this.fiberSpots) spot.intensity = FIBER_SPOT_INTENSITY * sunlight;
-    this.fiberBeamMat.opacity = 0.2 * sunlight;
-    this.ledBeamMat.opacity = 0.05 + 0.13 * f.darkness;
+    for (const spot of this.fiberSpots) spot.intensity = FIBER_SPOT_INTENSITY * sunlight * inside;
+    this.fiberBeamMat.opacity = 0.2 * sunlight * inside;
+    this.ledBeamMat.opacity = (0.05 + 0.13 * f.darkness) * inside;
   }
 
   /**
