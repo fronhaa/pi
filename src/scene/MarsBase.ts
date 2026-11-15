@@ -72,7 +72,8 @@ export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
 
 /**
  * Cabines transparentes: todas as peças do casco (casco, faixas, janelas, portas de acoplamento) ficam
- * translúcidas, para ver a tripulação lá dentro sem nada opaco na frente. Sem contorno e sem sombra.
+ * translúcidas para a câmera, para ver a tripulação lá dentro sem nada opaco na frente. Para o sol continuam
+ * metal: fazem sombra (o sol não entra) e cada cabine tem a sua luminária.
  */
 function glassMaterial<M extends THREE.Material>(mat: M, opacity: number): M {
   const m = mat.clone();
@@ -80,8 +81,14 @@ function glassMaterial<M extends THREE.Material>(mat: M, opacity: number): M {
   m.opacity = opacity;
   m.depthWrite = false;
   m.side = THREE.FrontSide;
+  // Sombra pelos dois lados: por padrão o three.js só desenha a face de trás na sombra, e num casco fechado
+  // ela fica atrás de quem está dentro; aí o sol "atravessava" o metal.
+  m.shadowSide = THREE.DoubleSide;
   return m;
 }
+
+/** Força da luminária de cada cabine (PointLight, sem sombra). */
+const CABIN_LIGHT_INTENSITY = 6;
 
 /** Centro de cada beliche em relação ao centro do alojamento. */
 const BUNK_DX = 1.25;
@@ -412,6 +419,7 @@ export class MarsBase {
     const hullGeo = new THREE.CylinderGeometry(1.6, 1.6, 7.2, 20);
     hullGeo.rotateZ(Math.PI / 2);
     const hull = new THREE.Mesh(hullGeo, glassMaterial(toonMaterial(PALETTE.light), 0.3));
+    hull.castShadow = true; // o sol não atravessa o metal
     hull.position.y = 2.65;
     fb.add(hull);
     const tower = toonMesh(new THREE.BoxGeometry(1.9, 3.9, 2.4), PALETTE.light);
@@ -457,10 +465,18 @@ export class MarsBase {
     const y = HABITAT_FLOOR_Y;
     const inside = new THREE.Group();
     // Um piso por módulo: entre eles ficam as portas de acoplamento (um piso contínuo aparecia por fora).
+    // Cada cabine tem luminária no teto: o casco faz sombra e o sol não entra, então a luz de dentro é dela.
+    const lampMat = new THREE.MeshBasicMaterial({ color: 0xfff1d0 });
     for (const ox of [0, QUARTERS_OFFSET_X, GYM_OFFSET_X]) {
       const floor = toonMesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH, 0.08, 1.9), PALETTE.tech, 0);
       floor.position.set(ox, y - 0.04, 0);
       inside.add(floor);
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH * 0.6, 0.05, 0.25), lampMat);
+      lamp.position.set(ox, y + 2.0, 0);
+      inside.add(lamp);
+      const light = new THREE.PointLight(0xffe6c0, CABIN_LIGHT_INTENSITY, 4.5, 1.6);
+      light.position.set(ox, y + 1.85, 0.2);
+      inside.add(light);
     }
 
     // Laboratório: bancada comprida no fundo, com duas telas (ciência e Terra) e prateleira de amostras.
@@ -630,7 +646,9 @@ export class MarsBase {
           cut.set(src, mat);
         }
         mesh.material = mat;
-        mesh.castShadow = false;
+        // Transparente só para a câmera: para o sol o casco é metal e faz sombra lá dentro.
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
         for (const c of [...mesh.children]) if (c.userData.isOutline) mesh.remove(c);
       });
     }
