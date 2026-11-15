@@ -45,6 +45,13 @@ const MAX_CROUCH = 0.6;
 const CROUCH_DROP = 0.08;
 /** Duração do clipe `jump`. */
 const CHIBI_JUMP_SECONDS = 1.35;
+/**
+ * Ponto do clipe `jump` (s) que fica parado enquanto o corpo ainda está no ar: logo depois do topo (0,62 s), antes de
+ * tocar o chão (0,92 s). O clipe foi feito para ~0,5 s de voo; em Marte o pulo dura ~1,2 s e na Lua ~2,7 s (2v/g).
+ */
+const CHIBI_JUMP_HOLD = 0.7;
+/** Ponto do clipe `jump` (s) em que os pés tocam o chão: ao pousar, o clipe pula para cá (só falta amortecer). */
+const CHIBI_JUMP_TOUCH = 0.92;
 
 /** Cor de destaque de cada papel (faixa no traje). Laranja só no comandante, como detalhe. */
 export const ROLE_COLORS: Record<Role, number> = {
@@ -71,6 +78,10 @@ export class Astronaut {
   private action: ChibiAction | 'idle' = 'idle';
   private current: THREE.AnimationAction | null = null;
   private jumpLeft = 0;
+  /** Corpo no ar (a física diz): o pulo não termina antes de tocar o chão. */
+  private airborne = false;
+  /** O pulo chegou a segurar a pose no ar (para saber quando pousou). */
+  private jumpHeld = false;
   private working = false;
   /** Plaquinha "🔧 Nome" sobre a cabeça enquanto trabalha (aparece até através do casco da base). */
   private badge: THREE.Sprite | null = null;
@@ -338,10 +349,16 @@ export class Astronaut {
     if (this.freeHeading !== null) this.turnTo(this.freeHeading, dt);
   }
 
+  /** A física diz se o corpo está no ar (só lá fora). */
+  setAirborne(on: boolean): void {
+    this.airborne = on;
+  }
+
   /** Pulo (Espaço): toca o clipe `jump` uma vez. */
   jump(): void {
     if (!this.chibi) return;
     this.jumpLeft = CHIBI_JUMP_SECONDS;
+    this.jumpHeld = false;
     this.playChibi('jump');
   }
 
@@ -377,7 +394,25 @@ export class Astronaut {
   /** Escolhe a animação do chibi pelo estado e avança o mixer. */
   private animateChibi(speed: number, dt: number): void {
     const c = this.chibi!;
-    this.jumpLeft = Math.max(0, this.jumpLeft - dt);
+    if (this.action === 'jump' && this.current && this.jumpLeft > 0) {
+      const t = this.current.time;
+      if (this.airborne && t >= CHIBI_JUMP_HOLD) {
+        // Ainda no ar depois do topo: segura a pose.
+        this.current.timeScale = 0;
+        this.jumpHeld = true;
+      } else {
+        this.current.timeScale = 1;
+        if (this.jumpHeld && !this.airborne) {
+          // Pousou: andando, já volta a andar; parado, só amortece (sem repetir a descida no chão).
+          this.jumpHeld = false;
+          if (speed >= 0.2) this.jumpLeft = 0;
+          else if (t < CHIBI_JUMP_TOUCH) {
+            this.current.time = CHIBI_JUMP_TOUCH;
+            this.jumpLeft = CHIBI_JUMP_SECONDS - CHIBI_JUMP_TOUCH;
+          }
+        } else this.jumpLeft = Math.max(0, this.jumpLeft - dt);
+      }
+    } else this.jumpLeft = Math.max(0, this.jumpLeft - dt);
     if (this.jumpLeft === 0) {
       if (speed >= 0.2) {
         this.playChibi('walk');

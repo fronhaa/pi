@@ -656,6 +656,7 @@ Se a atenta passar de 60%, reduza o efeito (ex.: ciência +3). Se ficar abaixo d
 **Regras (só cena, nenhuma regra muda):**
 
 1. Astronauta **sem ordem há 8 s**, de dia ou de manhã, anda sozinho até a **esteira** (dentro do habitat) e faz uma animação de exercício. **Só vai quem estava descansando** (decisão de 15/11/2026): quem acaba de voltar de uma missão lá fora ou de um conserto vai primeiro **descansar no seu quarto** e só depois fica livre para a academia. Dormir à noite também conta como descanso.
+   **Hora de dormir:** nos últimos 30% do dia (o Sol baixando, `BEDTIME_DAY_FRACTION` em `src/core/Game.ts`), quem está sem tarefa não vai mais à academia: anda até a **cama do seu quarto**. Os quartos ficam a ~27 m dos postos do laboratório e o caminho passa pela cúpula (perto da academia); só a noite (2,2 a 6 s) não dava tempo, e eles pareciam ir para a academia. O relatório da noite espera todos deitarem (no máximo 6 s); quem não chegou é posto deitado na cama quando o relatório abre (`CrewRoutine.tuckIn`), e a manhã começa dali.
 2. Depois de um tempo (ex.: 20 s), vai ao **seu quarto** e "descansa" (fica dentro, como à noite), e depois volta ao posto.
 3. Qualquer ordem do jogador (tocar, setas, tarefa) interrompe na hora.
 4. Não acontece à noite (a tripulação já entra) nem com alerta de tempestade aberto.

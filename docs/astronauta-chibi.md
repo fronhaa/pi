@@ -46,7 +46,7 @@ astro.update(dt);
 | Nome | Duração | Como tocar |
 | --- | --- | --- |
 | `walk` | 0,9 s | Loop. O passo fica sem escorregar a ~1,15 m/s; para andar mais rápido, aumente o `timeScale` da ação. |
-| `jump` | 1,35 s | Uma vez: agacha (0,28 s), impulsiona (0,42 s), topo (0,62 s), toca o chão (0,92 s) e amortece. |
+| `jump` | 1,35 s | Uma vez: agacha (0,28 s), impulsiona (0,42 s), topo (0,62 s), toca o chão (0,92 s) e amortece. No jogo, enquanto o corpo ainda está no ar, o clipe para em 0,7 s (`CHIBI_JUMP_HOLD`) e só termina ao pousar (andando, volta direto a andar; parado, pula para o toque no chão, 0,92 s, e só amortece). "No ar" = sem chão embaixo **e** com velocidade vertical (num declive o raio curto pode errar o chão): o clipe foi feito para ~0,5 s de voo, e o pulo dura ~1,2 s em Marte e ~2,7 s na Lua (`Astronaut.setAirborne`, vindo do `crewMotion`). |
 | `interact` | 3,2 s | Uma vez, parando no fim: puxa o tablet do bolso do cinto e o segura com as duas mãos, na frente do corpo. |
 | `pedal` | 1 s | Loop. **Não vem no `.glb`:** é montado por código ao carregar (`src/render/chibiPedal.ts`). Sentado, pés no círculo do pedal (IK de duas juntas) e mãos no guidão. A bicicleta da academia é montada com as mesmas medidas (`BIKE_FIT`); mudou a pose, mude as medidas. |
 | `sit` | parado | **Não vem no `.glb`:** montado por código (`src/render/chibiSit.ts`). Sentado na beirada da cama: coxas para a frente, canelas para baixo e um pouco à frente, mãos perto dos joelhos. Quem deita controla o quanto está sentado pelo peso da ação (`Astronaut.bedBlend`). |

@@ -43,8 +43,13 @@ const INTRO_DAY_SECONDS = 12;
 /** O balão de fato fica um pouco acima do capacete (o astronauta tem ~1,9 m). */
 const BUBBLE_ABOVE_HEAD = new THREE.Vector3(0, 2.2, 0);
 const BUBBLE_TMP = new THREE.Vector3();
-/** A noite espera a tripulação entrar, mas no máximo isto (ms); quem não chegou entra direto. */
+/** A noite espera a tripulação entrar e deitar, mas no máximo isto (ms); quem não chegou entra (ou deita) direto. */
 const NIGHT_MAX_MS = 6000;
+/**
+ * Fração do dia a partir da qual quem está sem tarefa vai para a cama (o Sol baixando). Só visual: os quartos ficam a
+ * ~27 m dos postos do laboratório, e a noite sozinha não dava tempo de chegar (eles iam na direção da academia).
+ */
+const BEDTIME_DAY_FRACTION = 0.7;
 
 /**
  * Orquestra a missão: interface → simulação (decisões) → interface e cena (estado).
@@ -691,6 +696,7 @@ export class Game {
       reported = true;
       window.clearTimeout(cap);
       this.motion?.forceInside();
+      if (!stormTonight) this.routine.tuckIn();
       showReport(report, state, () => {
         this.night = false;
         this.stormNight = false;
@@ -705,7 +711,13 @@ export class Game {
     if (this.motion) {
       this.motion.enabled = false;
       this.motion.goInside(ENTRANCES[entrance], stormTonight ? STORM_RUN_SPEED : NIGHT_WALK_SPEED, () => {
-        window.setTimeout(report_, Math.max(0, NIGHT_MS - (performance.now() - started)));
+        // Todos dentro: na noite normal, espera também todo mundo deitar na cama (até o limite NIGHT_MAX_MS).
+        const waitBeds = () => {
+          if (reported) return;
+          if (stormTonight || this.routine.allInBed()) window.setTimeout(report_, Math.max(0, NIGHT_MS - (performance.now() - started)));
+          else window.setTimeout(waitBeds, 200);
+        };
+        waitBeds();
       });
     } else {
       // Sem física: a tripulação some (está dentro) e a noite dura o tempo mínimo.
@@ -861,6 +873,7 @@ export class Game {
       this.routine.update(dt, {
         awake: this.phase === 'morning' || this.phase === 'day',
         sleeping: this.phase === 'night' && !this.stormNight,
+        bedtime: this.phase === 'day' && this.dayTime() >= 0.25 + 0.6 * BEDTIME_DAY_FRACTION,
         alert: state.messages.some((m) => m.kind === 'stormAlert' || m.kind === 'stormToday'),
         isOutside: (r) => !motion.isInside(r),
         inHabitat: (r) => this.tasks.placeOf(r) === 'inside',

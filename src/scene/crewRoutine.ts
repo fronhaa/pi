@@ -94,6 +94,11 @@ export interface RoutineFrame {
   sleeping: boolean;
   /** Alerta de tempestade: ficam no posto. */
   alert: boolean;
+  /**
+   * Fim da tarde (o Sol baixando): quem está sem tarefa já vai para a cama, em vez de ir à academia. Os quartos ficam
+   * longe dos postos do laboratório: só a noite (poucos segundos) não dava tempo de chegar.
+   */
+  bedtime: boolean;
   /** A física cuida dele (está lá fora)? Então a rotina não mexe. */
   isOutside(role: Role): boolean;
   /** Está dentro do habitat (não na câmara de descompressão)? */
@@ -176,6 +181,26 @@ export class CrewRoutine {
   arrivedAtTask(r: Role): boolean {
     const w = this.walkers[r];
     return w.wasInside && w.going !== null && WORK.includes(w.going) && w.path.length === 0;
+  }
+
+  /** Todos que estão no habitat já estão deitados na cama? (Quem está lá fora ou no abrigo não conta.) */
+  allInBed(): boolean {
+    return ROLES.every((r) => !this.crew.members[r].root.visible || !this.walkers[r].wasInside || (this.walkers[r].going === 'sleep' && this.walkers[r].path.length === 0));
+  }
+
+  /**
+   * A noite acabou antes de alguém chegar à cama (o relatório já cobre a cena): põe deitado na cama dele, para a
+   * manhã começar dali e não no meio do corredor.
+   */
+  tuckIn(): void {
+    for (const r of ROLES) {
+      const w = this.walkers[r];
+      if (!w.wasInside || (w.going === 'sleep' && w.path.length === 0)) continue;
+      w.going = 'sleep';
+      w.path = [];
+      w.stepTime = 0;
+      w.pos.copy(BED_SPOTS[r]);
+    }
   }
 
   /** Onde fica cada atividade (para onde ele anda). */
@@ -332,6 +357,11 @@ export class CrewRoutine {
       } else if (f.alert) {
         w.at = 'post';
         w.idle = 0;
+      } else if (f.bedtime) {
+        // Hora de dormir: vai para a cama (e de manhã acorda descansado).
+        w.at = 'post';
+        w.idle = 0;
+        w.rested = true;
       } else if (w.at === 'post') {
         // O relógio do "sem ordem" só corre quando ele já chegou ao posto.
         if (!w.path.length) w.idle += dt;
@@ -362,7 +392,7 @@ export class CrewRoutine {
         }
       }
       const kind = f.insideTaskKind(r);
-      const activity: Activity = f.sleeping ? 'sleep'
+      const activity: Activity = f.sleeping || (f.bedtime && !kind && !f.alert) ? 'sleep'
         : kind === 'harvest' ? 'harvest'
         : kind === 'analysis' ? 'analysis'
         : kind ? 'task'
@@ -428,7 +458,7 @@ export class CrewRoutine {
       // Andando: segue o caminho a velocidade constante, virado para onde vai. Onde o teto é baixo (túneis),
       // anda abaixado.
       if (w.path.length) {
-        const speed = activity === 'task' ? TASK_WALK_SPEED : f.sleeping ? NIGHT_WALK_SPEED : WALK_SPEED;
+        const speed = activity === 'task' ? TASK_WALK_SPEED : activity === 'sleep' ? NIGHT_WALK_SPEED : WALK_SPEED;
         let step = speed * dt;
         let heading = a.model.rotation.y;
         while (step > 0 && w.path.length && w.path[0].kind === 'walk') {
