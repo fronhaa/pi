@@ -23,9 +23,13 @@ internet**. Decisão: [ADR 0014](decisoes/0014-app-instalavel-e-modo-solo-offlin
 | Ícones | `public/icons/` | 192, 512, 512 *maskable* (Android recorta em círculo), Apple 180 e favicon 64 |
 | Cores | manifesto e `<meta name="theme-color">` | Fundo `#e8b98c` (o da tela de carregamento) e barra `#473c3a` (`PALETTE.shadow`) |
 
-- **Atualização:** `registerType: 'autoUpdate'`. Depois de um deploy, a versão nova é baixada em segundo plano e entra
-  na próxima vez que o jogo abrir. Não há aviso na tela.
-- **`?lang=pt` e `?coop=wss://…`** continuam funcionando: abrem o mesmo `index.html` guardado.
+- **Atualização (sem Command+R):** a página (`index.html`) não vai no cache fixo; ela vem **da rede primeiro**
+  (`NetworkFirst`, espera até 4 s). Com internet, o jogo abre sempre na versão mais nova, direto, sem recarregar
+  sozinho. Sem internet (ou rede muito lenta), abre a cópia guardada. O resto do jogo (código com nome versionado,
+  modelos, fotos, dados) continua no cache; a versão nova do service worker baixa em segundo plano e assume na hora
+  (`skipWaiting`, `clientsClaim`). `src/ui/appUpdate.ts` procura versão nova quando o app instalado volta a aparecer
+  na tela. Não há aviso.
+- **`?lang=pt` e `?coop=wss://…`** continuam funcionando: são a mesma página (o cache ignora o `?`).
 - **Fonte Fredoka** (Google Fonts): guardada na primeira vez que carrega (`CacheFirst`). Sem ela, o jogo usa a fonte do
   sistema.
 - **Dados da NASA** (`public/data/*.json`) vão no cache com o resto. Dado novo só chega com um deploy novo, como antes.

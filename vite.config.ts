@@ -38,12 +38,30 @@ export default defineConfig({
       workbox: {
         // Tudo o que o modo solo precisa: código, modelos 3D, fotos, texturas e os dados baixados da NASA.
         globPatterns: ['**/*.{js,css,html,png,jpg,svg,glb,json,wasm,webmanifest}'],
+        // A página (index.html) NÃO vai no cache fixo: ela vem da rede primeiro (abaixo). Assim, com internet, o jogo
+        // abre sempre a versão mais nova, sem Command+R e sem recarregar sozinho; sem internet, usa a cópia guardada.
+        globIgnores: ['index.html'],
+        // Sem isto o plugin serviria a página guardada em toda navegação (o padrão é 'index.html').
+        navigateFallback: null,
         // O chunk da física (Rapier com WASM embutido) tem ~4,3 MB.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
-        // ?lang=pt e ?coop=wss://… abrem o mesmo index.html guardado.
-        navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
+        // A versão nova do service worker assume na hora (o resto do jogo novo é baixado em segundo plano).
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
+          {
+            // A página: rede primeiro (versão nova na hora); sem internet ou rede lenta (4 s), a cópia guardada.
+            // ?lang=pt e ?coop=wss://… são a mesma página.
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages',
+              networkTimeoutSeconds: 4,
+              matchOptions: { ignoreSearch: true },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
           {
             // Fonte Fredoka: guardada na primeira vez, para o jogo offline continuar com a mesma letra.
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
