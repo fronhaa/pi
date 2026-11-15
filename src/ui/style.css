@@ -393,6 +393,10 @@ body.guiding .toast { top: 250px; }
  * Linha do tempo: 0–1,5 s contagem 3-2-1 (foguete na base) · 1,5 s Liftoff! · 1,8–4 s decolagem (o chão desce, o céu
  * escurece) · 3,6–7,6 s viagem (linhas de velocidade, a Terra fica para trás, o destino cresce, o fato) · 7,6–9 s o
  * foguete voa até o destino. Movimento devagar; nada pisca mais de 3 vezes por segundo. */
+/* Antes da nave chegar (tela de escolha e viagem): nada da interface do jogo, só a Terra 3D e a caixa de escolha. */
+body.pre-mission #ui, body.pre-mission .crew-bubble, body.pre-mission .offscreen-arrow, body.pre-mission .intro-guide, body.pre-mission .toast { display: none !important; }
+body.pre-mission .backdrop { background: rgba(27, 22, 48, 0.25); }
+@media (max-aspect-ratio: 4/5) { body.pre-mission .backdrop { align-items: flex-start; } }
 .launch-intro { position: fixed; inset: 0; z-index: 60; background: transparent; overflow: hidden; font-family: var(--font); color: var(--ink); transition: opacity 0.4s, background-color 0.25s; }
 .launch-intro.launch-closing { background: #1B1630; }
 .launch-intro.launch-out { opacity: 0; pointer-events: none; }

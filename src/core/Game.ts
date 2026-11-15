@@ -23,7 +23,7 @@ import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CrewBubble } from '@/ui/CrewBubble';
 import { showCard, showEnd, showMissionStart, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
 import { playLaunchIntro, prefersReducedMotion } from '@/ui/LaunchIntro';
-import { LaunchScene } from '@/scene/LaunchScene';
+import { LAUNCH_ZOOM_SECONDS, LaunchScene } from '@/scene/LaunchScene';
 import { IntroGuide } from '@/ui/IntroGuide';
 import { IntroDirector } from './intro';
 import { showModeChoice } from '@/ui/coop';
@@ -65,7 +65,7 @@ const BEDTIME_DAY_FRACTION = 0.7;
  */
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
-  /** Intro da viagem passando: o quadro desenha só ela (a base fica parada por trás). */
+  /** Tela de escolha ou intro da viagem: o quadro desenha só ela (a base fica parada por trás). */
   private launch: LaunchScene | null = null;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(50, 1, 0.1, 600);
@@ -275,6 +275,7 @@ export class Game {
 
   /** Solo: escolhe Marte ou Lua, cria a missão do lugar e começa o treino dos sóis 1 a 3 (o guia ensina na hora). */
   private startSolo(): void {
+    this.showLaunchPad();
     showPlaceChoice((place) => {
       this.setLocation(place);
       this.newMission();
@@ -285,14 +286,34 @@ export class Game {
 
   /** Viagem da Terra até a base em 3D cartoon (src/scene/LaunchScene.ts) com o texto por cima; depois, a missão. */
   private playLaunch(place: Location): void {
-    this.launch?.dispose();
-    this.launch = new LaunchScene(place, prefersReducedMotion());
-    this.launch.resize(window.innerWidth, window.innerHeight);
-    playLaunchIntro(place, () => {
-      this.launch?.dispose();
-      this.launch = null;
-      this.startMission();
-    });
+    const launch = this.showLaunchPad();
+    const reduced = prefersReducedMotion();
+    launch.begin(place, reduced);
+    // O texto (contagem, fato, "Pular") entra quando a câmera termina de descer até a base.
+    window.setTimeout(
+      () =>
+        playLaunchIntro(place, () => {
+          launch.dispose();
+          if (this.launch === launch) this.launch = null;
+          // A nave chegou: só agora aparecem o HUD e o resto da interface do jogo.
+          document.body.classList.remove('pre-mission');
+          this.startMission();
+        }),
+      reduced ? 0 : LAUNCH_ZOOM_SECONDS * 1000,
+    );
+  }
+
+  /**
+   * Tela de escolha (Marte ou Lua): de fundo, a Terra 3D girando no espaço com o foguete na base, sem HUD
+   * (classe `pre-mission` no body). A mesma cena vira a viagem em `playLaunch`.
+   */
+  private showLaunchPad(): LaunchScene {
+    document.body.classList.add('pre-mission');
+    if (!this.launch) {
+      this.launch = new LaunchScene();
+      this.launch.resize(window.innerWidth, window.innerHeight);
+    }
+    return this.launch;
   }
 
   /** Abertura da missão: a missão histórica (datas reais) aparece logo depois da escolha, antes do sol 1 e do treino. */
@@ -747,13 +768,14 @@ export class Game {
     markPlayed();
     this.hud.setState(this.mission.state);
     // Jogar de novo: escolhe o lugar outra vez (dá para experimentar Marte e Lua e comparar).
-    showEnd(this.mission.state, () =>
+    showEnd(this.mission.state, () => {
+      this.showLaunchPad();
       showPlaceChoice((place) => {
         this.setLocation(place);
         this.newMission();
         this.playLaunch(place);
-      }),
-    );
+      });
+    });
   }
 
   /** Bateria prevista para depois da noite (a mesma prévia do plano; solo ou servidor). Só para a cena, de dia. */

@@ -177,6 +177,10 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 
 - Depois de escolher Marte ou Lua: foguete cartoon (primitivas com `toonMesh` e contorno) decola da base na Terra,
   passa pelas nuvens, a Terra fica para trás e ele chega ao destino. ~9 s, só visual.
+- **Tela de escolha (Marte ou Lua):** a mesma cena é o fundo: a Terra girando no espaço com o foguete na base
+  (à direita no computador, embaixo da caixa no celular). Ao escolher, a câmera desce até a base (~1,6 s) e começa a contagem.
+- **Sem HUD até a nave chegar:** a classe `pre-mission` no `body` esconde o HUD (`#ui`), balões, setas, guia e avisos
+  na tela de escolha e na viagem. Sai quando o foguete chega (`Game.playLaunch`).
 - Usa o renderizador do jogo: enquanto passa, o quadro desenha só a intro (a base não é desenhada, não pesa no celular).
 - O texto por cima (contagem, "Liftoff!", fato real F30/F31, "Pular") é HTML em `src/ui/LaunchIntro.ts`.
 - O destino é "trapaça de cinema": fica sempre acima e atrás do foguete e cresce. Exceção à regra "planeta gigante

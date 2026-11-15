@@ -6,6 +6,9 @@ import { MOON_PALETTE, PALETTE, toonMaterial, toonMesh } from '@/render/toon';
  * nuvens, a Terra fica para trás e ele chega a Marte ou à Lua. Só visual. ~9 s, sincronizada com o texto por cima
  * (src/ui/LaunchIntro.ts: contagem, "Liftoff!", fato real e "Pular").
  *
+ * Antes da escolha (Marte ou Lua), a mesma cena é o fundo da tela de escolha: a Terra girando no espaço, com a base
+ * no alto. Ao escolher (`begin`), a câmera desce até a base e começa a contagem.
+ *
  * Desenhada pelo renderizador do jogo (src/core/Game.ts): enquanto ela passa, a cena da base não é desenhada, então
  * não pesa mais no celular. O tempo é o relógio da própria cena (`update` lê performance.now).
  *
@@ -18,6 +21,8 @@ const DEST_Z = -60;
 /** Destino um pouco à esquerda: a câmera fica à direita do foguete, então assim ele aparece no meio da tela. */
 const DEST_X = -11;
 export const LAUNCH_SECONDS = 9;
+/** Descida da câmera, da Terra vista do espaço (tela de escolha) até a base, antes da contagem. */
+export const LAUNCH_ZOOM_SECONDS = 1.6;
 
 interface CamKey {
   t: number;
@@ -44,7 +49,15 @@ const smooth = (x: number) => {
 export class LaunchScene {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
-  private readonly start = performance.now();
+  private readonly created = performance.now();
+  /** Quando a viagem começou (null = ainda na tela de escolha, Terra girando). */
+  private started: number | null = null;
+  private reduced = false;
+  /** Ângulo da câmera em volta da Terra na hora em que a viagem começou (a descida parte dele). */
+  private orbitAtStart = 0;
+  private aspect = 1;
+  private width = 1;
+  private height = 1;
   private readonly rocket = new THREE.Group();
   private readonly flame = new THREE.Group();
   private readonly puffs: { mesh: THREE.Mesh; born: number; dir: THREE.Vector3 }[] = [];
@@ -52,16 +65,14 @@ export class LaunchScene {
   private readonly streaks: THREE.LineSegments;
   private readonly streakBase: Float32Array;
   private readonly dest = new THREE.Group();
+  private readonly clouds = new THREE.Group();
   private readonly skyDay = new THREE.Color(0x8ec5ee);
   private readonly skySpace = new THREE.Color(0x1b1630);
   private readonly bg = new THREE.Color();
   private readonly tmpA = new THREE.Vector3();
   private readonly tmpB = new THREE.Vector3();
 
-  constructor(
-    place: 'mars' | 'moon',
-    private readonly reduced = false,
-  ) {
+  constructor() {
     this.scene.background = this.bg.copy(this.skyDay);
     this.scene.add(new THREE.HemisphereLight(0xfff6ea, 0x6b6f8a, 1.4));
     const sun = new THREE.DirectionalLight(0xfff0dc, 2.2);
@@ -77,22 +88,45 @@ export class LaunchScene {
     const s = this.buildStreaks();
     this.streaks = s.lines;
     this.streakBase = s.base;
-    this.buildDestination(place);
     this.update();
+  }
+
+  /** Começa a viagem: a câmera desce até a base e, depois de LAUNCH_ZOOM_SECONDS, a contagem. */
+  begin(place: 'mars' | 'moon', reduced = false): void {
+    if (this.started !== null) return;
+    this.buildDestination(place);
+    this.reduced = reduced;
+    this.orbitAtStart = this.orbitAngle();
+    this.started = performance.now();
+  }
+
+  /** Câmera girando devagar em volta da Terra (tela de escolha). */
+  private orbitAngle(): number {
+    return ((performance.now() - this.created) / 1000) * 0.12;
   }
 
   /** Tamanho da tela: no celular em pé, ângulo maior para caber a torre e o foguete inteiros. */
   resize(w: number, h: number): void {
     const aspect = w / Math.max(1, h);
+    this.aspect = aspect;
+    this.width = w;
+    this.height = h;
     this.camera.aspect = aspect;
     this.camera.fov = aspect < 0.8 ? 62 : 46;
     this.camera.updateProjectionMatrix();
   }
 
-  /** Avança a animação pelo relógio (ou num instante dado, para teste). Com "reduzir movimento", fica parada na chegada. */
+  /**
+   * Avança a animação pelo relógio (ou num instante dado, para teste). Antes de `begin`: Terra girando no espaço.
+   * Tempo negativo = descida da câmera até a base. Com "reduzir movimento", vai direto para a chegada.
+   */
   update(at?: number): void {
-    const t = at ?? (this.reduced ? 7.2 : Math.min(LAUNCH_SECONDS, (performance.now() - this.start) / 1000));
+    const idle = this.started === null && at === undefined;
+    const elapsed = this.started === null ? 0 : (performance.now() - this.started) / 1000;
+    const t = at ?? (idle ? -LAUNCH_ZOOM_SECONDS : this.reduced ? 7.2 : Math.min(LAUNCH_SECONDS, elapsed - LAUNCH_ZOOM_SECONDS));
     const y = rocketHeight(t);
+    /** 1 = vista do espaço (tela de escolha), 0 = na base. */
+    const away = idle ? 1 : 1 - smooth((t + LAUNCH_ZOOM_SECONDS) / LAUNCH_ZOOM_SECONDS);
 
     // Foguete: treme antes de sair, sobe, e no fim voa para dentro do destino (diminuindo).
     const shake = t > 0.9 && t < 2.2 ? Math.sin(t * 90) * 0.03 * (1 - Math.abs(t - 1.55) / 0.7) : 0;
@@ -119,7 +153,7 @@ export class LaunchScene {
     }
 
     // Céu: azul até ~12 de altura (passa pelas nuvens ainda de dia), depois espaço; estrelas aparecem junto.
-    const space = smooth((y - 12) / 36);
+    const space = Math.max(away, smooth((y - 12) / 36));
     this.bg.copy(this.skyDay).lerp(this.skySpace, space);
     (this.stars.material as THREE.PointsMaterial).opacity = space;
     this.stars.visible = space > 0.02;
@@ -152,10 +186,25 @@ export class LaunchScene {
     }
 
     // Câmera.
-    const { pos, look } = cameraAt(t);
+    const { pos, look } = cameraAt(Math.max(0, t));
     this.camera.position.set(pos[0], y + pos[1], pos[2]);
     this.tmpA.set(look[0], y + look[1], look[2]);
+    if (away > 0) {
+      // Vista do espaço: a Terra inteira embaixo, a base no alto dela (a caixa de escolha fica no meio da tela).
+      const a = idle ? this.orbitAngle() : this.orbitAtStart;
+      const d = this.aspect < 0.8 ? 200 : 135;
+      this.tmpB.set(Math.sin(a) * d, -R + d * (this.aspect < 0.8 ? 0.22 : 0.42), Math.cos(a) * d);
+      this.camera.position.lerp(this.tmpB, away);
+      // No celular em pé a caixa de escolha ocupa o meio e o alto: a Terra aparece embaixo dela.
+      this.tmpB.set(0, -R + R * (this.aspect < 0.8 ? 3.1 : 0.25), 0);
+      this.tmpA.lerp(this.tmpB, away);
+    }
+    // Tela deitada: a caixa de escolha fica no meio, então a Terra vai para a direita (desloca a imagem).
+    if (away > 0 && this.aspect >= 0.8) this.camera.setViewOffset(this.width, this.height, -0.34 * this.width * away, 0, this.width, this.height);
+    else if (this.camera.view?.enabled) this.camera.clearViewOffset();
     this.camera.lookAt(this.tmpA);
+    // Vistas do espaço, as nuvens viravam uma "torre" esquisita em cima da base.
+    this.clouds.visible = away < 0.5;
     this.stars.position.copy(this.camera.position);
   }
 
@@ -167,29 +216,49 @@ export class LaunchScene {
       mesh.geometry.dispose();
       if (mesh.userData.isOutline) return;
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      for (const m of mats) m?.dispose();
+      for (const m of mats) {
+        (m as THREE.MeshToonMaterial | undefined)?.map?.dispose();
+        m?.dispose();
+      }
     });
   }
 
   // ---------- montagem ----------
 
-  /** Terra: oceano azul com continentes verdes (cores por vértice) e a base no topo, em terra. */
+  /**
+   * Terra: oceano azul com continentes verdes e a base no topo, em terra. Os continentes são pintados numa textura
+   * pequena (bordas lisas; por vértice ficavam em degraus).
+   */
   private buildEarth(): THREE.Object3D {
-    const geo = new THREE.SphereGeometry(R, 72, 48);
-    const ocean = new THREE.Color(0x3e7cc8);
-    const land = new THREE.Color(PALETTE.plant);
-    const colors: number[] = [];
-    const n = new THREE.Vector3();
-    const p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      n.fromBufferAttribute(p, i).normalize();
-      const v = Math.sin(n.x * 5) + Math.sin(n.y * 4 + 1) + Math.sin(n.z * 6 + 2) + 0.5 * Math.sin((n.x + n.z) * 9);
-      const c = v > 0.7 || n.y > 0.97 ? land : ocean;
-      colors.push(c.r, c.g, c.b);
+    const w = 512;
+    const h = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    const img = ctx.createImageData(w, h);
+    const ocean = [0x3e, 0x7c, 0xc8];
+    const land = [0x6f, 0x9a, 0x4a];
+    for (let j = 0; j < h; j++) {
+      const th = ((j + 0.5) / h) * Math.PI;
+      for (let i = 0; i < w; i++) {
+        const ph = ((i + 0.5) / w) * Math.PI * 2;
+        // Mesma conta de direção da SphereGeometry do three.js (u = longitude, v = latitude).
+        const x = -Math.cos(ph) * Math.sin(th);
+        const y = Math.cos(th);
+        const z = Math.sin(ph) * Math.sin(th);
+        const v = Math.sin(x * 5) + Math.sin(y * 4 + 1) + Math.sin(z * 6 + 2) + 0.5 * Math.sin((x + z) * 9);
+        const k = Math.max(smooth((v - 0.66) / 0.08), smooth((y - 0.965) / 0.01));
+        const o = (j * w + i) * 4;
+        for (let c = 0; c < 3; c++) img.data[o + c] = ocean[c] + (land[c] - ocean[c]) * k;
+        img.data[o + 3] = 255;
+      }
     }
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    const earth = toonMesh(geo, 0xffffff, 0.006);
-    earth.material.vertexColors = true;
+    ctx.putImageData(img, 0, 0);
+    const map = new THREE.CanvasTexture(canvas);
+    map.colorSpace = THREE.SRGBColorSpace;
+    const earth = toonMesh(new THREE.SphereGeometry(R, 96, 64), 0xffffff, 0.006);
+    earth.material.map = map;
     earth.position.y = -R;
     return earth;
   }
@@ -233,6 +302,7 @@ export class LaunchScene {
 
   /** Nuvens fofas no caminho do foguete: passar por elas dá a sensação de subir rápido. */
   private buildClouds(): void {
+    this.scene.add(this.clouds);
     const spots: [number, number, number][] = [
       [-5, 7, -3], [5.5, 10, -6], [-3.5, 14, 2], [4, 18, 1], [-6, 21, -8], [2, 25, -5],
     ];
@@ -244,7 +314,7 @@ export class LaunchScene {
         cloud.add(puff);
       }
       cloud.position.set(x, y, z);
-      this.scene.add(cloud);
+      this.clouds.add(cloud);
     }
   }
 
