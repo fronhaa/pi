@@ -22,12 +22,24 @@ export function showTutorial(onDone: () => void, step = 1, onSources?: () => voi
   });
 }
 
+/**
+ * Foto REAL de Marte (desafio: "a real Mars photo"): a cratera Jezero vista pelo Perseverance, PIA24745,
+ * imagem da NASA (domínio público) embutida no jogo, com crédito. Não é ao vivo: é de 15/07/2021.
+ */
+function realMarsPhoto(withCaption: boolean): HTMLElement {
+  const src = `${import.meta.env.BASE_URL}assets/images/jezero-perseverance-PIA24745.jpg`;
+  return h('figure', { class: 'real-photo' },
+    h('img', { src, alt: t('photo.alt'), loading: 'lazy', width: 1280, height: 232 }),
+    withCaption ? h('figcaption', {}, t('photo.caption')) : null,
+  );
+}
+
 /** Antes da missão solo: base em Marte ou na Lua (docs/game-design.md, "Base lunar"). */
 export function showPlaceChoice(onChoose: (place: 'mars' | 'moon') => void): void {
   openDialog({
     title: t('place.title'),
     logo: true,
-    body: [h('p', {}, t('place.text')), h('p', {}, t('place.mars.hint')), h('p', {}, t('place.moon.hint'))],
+    body: [h('p', {}, t('place.text')), realMarsPhoto(true), h('p', {}, t('place.mars.hint')), h('p', {}, t('place.moon.hint'))],
     actions: [
       { label: t('place.mars'), primary: true, onClick: () => onChoose('mars') },
       { label: t('place.moon'), onClick: () => onChoose('moon') },
@@ -163,7 +175,10 @@ export function showNasaData(source: FlareSource, missions: MissionSource, curre
         current && missions.kind === 'snapshot'
           ? h('li', {}, h('strong', {}, t('data.horizons.name')), snapshotBadge(missions.generatedAt), h('p', {}, t('data.horizons.use')), link('https://ssd.jpl.nasa.gov/horizons/'))
           : null,
-        h('li', {}, h('strong', {}, t('data.osdr.name')), planned(), h('p', {}, t('data.osdr.use')), link('https://osdr.nasa.gov/bio/repo/')),
+        h('li', {}, h('strong', {}, t('data.osdr.name')), h('span', { class: 'badge real' }, t('data.osdr.badge')), h('p', {}, t('data.osdr.use')),
+          link('https://osdr.nasa.gov/bio/repo/data/studies/OSD-342')),
+        h('li', {}, h('strong', {}, t('data.photo.name')), h('span', { class: 'badge real' }, t('data.photo.badge')),
+          realMarsPhoto(false), h('p', {}, t('data.photo.use')), link('https://images.nasa.gov/details/PIA24745')),
         h('li', {}, h('strong', {}, t('data.rad.name')), h('span', { class: 'badge real' }, t('data.rad.badge')), h('p', {}, t('data.rad.use')),
           link(t('data.rad.link'))),
         h('li', {}, h('strong', {}, t('data.radlab.name')), planned(), h('p', {}, t('data.radlab.use')), link('https://visualization.osdr.nasa.gov/radlab/gui/data-api/')),

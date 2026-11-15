@@ -369,3 +369,8 @@ body.guiding .toast { top: 250px; }
 .forecast li.storm { border-color: var(--bad); background: #fff1ee; }
 .forecast li.dust { border-color: var(--warn); background: #fff7e6; }
 .coop-status { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 30; }
+
+/* Foto real de Marte (Perseverance, PIA24745) na escolha do lugar e nas fontes. */
+.real-photo { margin: 6px 0 8px; }
+.real-photo img { display: block; width: 100%; height: auto; border: var(--border); border-radius: 12px; }
+.real-photo figcaption { margin-top: 4px; font-size: 12px; opacity: 0.8; line-height: 1.3; }

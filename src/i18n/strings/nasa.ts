@@ -4,8 +4,8 @@
  * Parâmetros entre chaves: {n}. Toda chave precisa existir nos dois idiomas (o TypeScript confere).
  */
 export const pt = {
-  'fact.exercise': 'Astronautas fazem exercício todo dia, umas 2 horas. Assim os ossos e os músculos continuam fortes.',
-  'fact.exercise.source': 'Fonte: NASA, perda de osso e músculo no espaço (2023)',
+  'fact.exercise': 'Astronautas fazem exercício todo dia, umas 2 horas. Assim os ossos e os músculos continuam fortes. Camundongos na Estação Espacial perderam músculo e osso em 33 dias.',
+  'fact.exercise.source': 'Fonte: NASA (2023) e estudo OSD-342 do OSDR',
   'fact.greenhouseInflatable': 'A NASA estuda uma estufa inflável para a Lua e Marte. Ela não é de vidro e ficaria sob o solo. A luz do Sol chega por fibra óptica.',
   'fact.greenhouseInflatable.source': 'Fonte: NASA, estufas para a Lua e Marte (2017)',
   'flare.real': 'Erupção real: {date}',
@@ -41,7 +41,13 @@ export const pt = {
   'data.donki.use': 'Cada tempestade solar do jogo usa uma erupção real registrada pela NASA. Ela tem data e classe: M = média, X = forte. A dose do jogo é uma escala nossa, não medida em Marte.',
   'data.donki.count': '{n} erupções reais de 2016 a hoje.',
   'data.osdr.name': 'OSDR: pesquisas de saúde no espaço',
-  'data.osdr.use': 'Em breve: estudos reais sobre como o espaço afeta o corpo.',
+  'data.osdr.use': 'Estudos reais de saúde no espaço. Camundongos passaram 33 dias na Estação Espacial. Eles perderam músculo e osso (estudo OSD-342).',
+  'data.osdr.badge': 'estudo real',
+  'data.photo.name': 'Foto real de Marte: rover Perseverance',
+  'data.photo.use': 'Cratera Jezero, 15 de julho de 2021 (sol 143). Cinco fotos da câmera Mastcam-Z juntas.',
+  'data.photo.badge': 'foto real',
+  'photo.caption': 'Foto real da cratera Jezero, em Marte, tirada pelo rover Perseverance. Crédito: NASA/JPL-Caltech/ASU/MSSS.',
+  'photo.alt': 'Chão de Marte, cor de ferrugem, com pedras e morros ao fundo',
   'data.radlab.name': 'RadLab: radiação medida na Estação Espacial',
   'data.radlab.use': 'Em breve: medições reais feitas na ISS, em órbita da Terra. Não são de Marte.',
   'data.marstrek.name': 'Mars Trek: relevo de Marte',
@@ -57,8 +63,8 @@ export const pt = {
 } as const;
 
 export const en: Record<keyof typeof pt, string> = {
-  'fact.exercise': 'Astronauts exercise every day, about 2 hours. That keeps their bones and muscles strong.',
-  'fact.exercise.source': 'Source: NASA, bone and muscle loss in space (2023)',
+  'fact.exercise': 'Astronauts exercise every day, about 2 hours. That keeps their bones and muscles strong. Mice on the Space Station lost muscle and bone in 33 days.',
+  'fact.exercise.source': 'Source: NASA (2023) and OSDR study OSD-342',
   'fact.greenhouseInflatable': 'NASA is studying an inflatable greenhouse for the Moon and Mars. It is not glass, and it would sit under soil. Sunlight reaches it through optical fibers.',
   'fact.greenhouseInflatable.source': 'Source: NASA, greenhouses for the Moon and Mars (2017)',
   'flare.real': 'Real flare: {date}',
@@ -94,7 +100,13 @@ export const en: Record<keyof typeof pt, string> = {
   'data.donki.use': 'Each game solar storm uses a real flare recorded by NASA. It has a date and a class: M = medium, X = strong. The game’s dose is our own scale, not measured on Mars.',
   'data.donki.count': '{n} real flares from 2016 to today.',
   'data.osdr.name': 'OSDR: space health research',
-  'data.osdr.use': 'Coming soon: real studies about how space affects the body.',
+  'data.osdr.use': 'Real studies on health in space. Mice spent 33 days on the Space Station. They lost muscle and bone (study OSD-342).',
+  'data.osdr.badge': 'real study',
+  'data.photo.name': 'Real Mars photo: Perseverance rover',
+  'data.photo.use': 'Jezero Crater, July 15, 2021 (sol 143). Five Mastcam-Z camera images put together.',
+  'data.photo.badge': 'real photo',
+  'photo.caption': 'Real photo of Jezero Crater on Mars, taken by the Perseverance rover. Credit: NASA/JPL-Caltech/ASU/MSSS.',
+  'photo.alt': 'Rust-colored Martian ground with rocks and hills in the distance',
   'data.radlab.name': 'RadLab: radiation measured on the Space Station',
   'data.radlab.use': 'Coming soon: real measurements taken on the ISS, in Earth orbit. They are not from Mars.',
   'data.marstrek.name': 'Mars Trek: Mars terrain',
