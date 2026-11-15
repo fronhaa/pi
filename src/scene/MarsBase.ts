@@ -126,6 +126,17 @@ function bunkSpot(dx: number, level: 0 | 1): THREE.Vector3 {
  * Aparelhos da academia que um astronauta usa (F9: esteira e bicicleta, como na Estação Espacial).
  * `heading` segue a convenção do andar: 0 olha para −Z; aqui todos olham para a frente (+Z), para a câmera.
  */
+/**
+ * Para onde cada papel olha quando está parado no seu posto (GDD, "Para onde o astronauta olha"):
+ * no laboratório, a sua tela da bancada; no alojamento, o armário (engenheiro) e a mesinha (médico).
+ */
+export const HABITAT_LOOK: Record<Role, THREE.Vector3> = {
+  commander: new THREE.Vector3(HABITAT_POSITION.x - 0.9, HABITAT_FLOOR_Y + 1.3, HABITAT_POSITION.z + BACK_Z - 0.2),
+  scientist: new THREE.Vector3(HABITAT_POSITION.x + 0.9, HABITAT_FLOOR_Y + 1.3, HABITAT_POSITION.z + BACK_Z - 0.2),
+  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 2.38, HABITAT_FLOOR_Y + 1, HABITAT_POSITION.z + BACK_Z),
+  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X, HABITAT_FLOOR_Y + 0.7, HABITAT_POSITION.z + 0.3),
+};
+
 const GYM_DX = 1.8;
 export const GYM_STATIONS = [
   { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X - GYM_DX, HABITAT_FLOOR_Y + 0.14, HABITAT_POSITION.z), heading: Math.PI, speed: 1.8 },
