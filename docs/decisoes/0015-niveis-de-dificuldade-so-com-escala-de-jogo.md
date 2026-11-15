@@ -1,4 +1,4 @@
-# 0013. Níveis de dificuldade só com escala de jogo
+# 0015. Níveis de dificuldade só com escala de jogo
 
 - **Status:** Proposto
 - **Data:** 2026-11-15

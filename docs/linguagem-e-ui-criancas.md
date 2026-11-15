@@ -33,7 +33,7 @@ Para o jogo ser acessível aos 7 e interessante aos 12 (**"Low Floor, High Ceili
 6. **Camada dupla de dados (simples × modo cientista).**
    - **Visão padrão (7+):** barras coloridas de 0% a 100% e números inteiros pequenos (`80 kg of ice`,
      `6 hours left`, `38 rock tubes`).
-   - ***Tooltip* / modo cientista (10–12 anos e juízes da NASA):** ao passar o mouse ou abrir "Dados da NASA", mostra a
+   - ***Tooltip* / modo cientista (10–12 anos e juízes da NASA):** ao passar o mouse, mostra a
      unidade física real (kPa, mSv, kW, τ de opacidade da atmosfera). A escala do jogo continua sendo do jogo: nunca
      diga à criança "você recebeu X mSv" ([ciencia-marte.md](ciencia-marte.md), regra 2).
 
@@ -70,5 +70,5 @@ Ao criar alertas, missões ou textos de interface, siga o modelo da coluna da di
 - [ ] Frases de 8 a 12 palavras; no máximo 2 por caixa; PT e EN.
 - [ ] Começa com ícone + 2 ou 3 palavras em negrito; verbo no imperativo; voz ativa.
 - [ ] Termo da NASA explicado entre parênteses na primeira vez.
-- [ ] Número simples na tela; unidade real só no modo cientista ("Dados da NASA").
+- [ ] Número simples na tela; unidade real só no modo cientista (dica do mouse). Nada de "Fonte:", link ou nome de base de dados na tela ([fontes-nasa.md](fontes-nasa.md)).
 - [ ] Fato científico com fonte em [ciencia-marte.md](ciencia-marte.md).

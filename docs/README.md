@@ -16,6 +16,8 @@ Ela vive junto com o código, então é versionada, revisada em PR e nunca fica 
 | [servidor-coop.md](servidor-coop.md) | Quem mexe no coop online ou no VPS. Servidor Go, regras do coop, protocolo, deploy e como as regras de `src/sim` rodam no servidor. |
 | [ciencia-marte.md](ciencia-marte.md) | Quem escreve texto educativo, ajuda "?" ou a apresentação. Fatos reais de Marte conferidos, com fonte, página e trecho original, e textos para a criança em PT/EN. |
 | [dados.md](dados.md) | Quem mexe nos dados reais da NASA: fontes, coleta e como atualizar. |
+| [pwa.md](pwa.md) | Quem publica o jogo ou ajuda professores. Instalar como app pelo Chrome, modo solo sem internet, cache e ícones. |
+| [fontes-nasa.md](fontes-nasa.md) | Juízes, professores e pais. Quais dados da NASA o jogo usa, por quê, o que é real e o que é escala do jogo. O jogo não mostra fontes (ADR 0013). |
 | [arquitetura.md](arquitetura.md) | Todo mundo, no primeiro dia. Pastas, loop do jogo, quem é dono de quê. |
 | [estrutura-do-projeto.md](estrutura-do-projeto.md) | **Antes de mexer em qualquer parte.** As 6 áreas do time, mapa das pastas e receitas: cenário, personagem, interação, problema, carta, texto, modelo 3D. |
 | [fisica.md](fisica.md) | Quem vai criar objetos, personagens ou fases. |

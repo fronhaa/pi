@@ -59,13 +59,13 @@ const MAP_SIDE = 0.08;
 const ORBIT_BOOST = 3.5;
 
 /**
- * Fotos reais da NASA que passam ao lado do foguete na trajetória (cartões de foto), com crédito no próprio cartão.
- * Fontes e trechos originais em docs/ciencia-marte.md (F34 a F36). Arquivos em public/assets/images/.
+ * Fotos reais da NASA que passam ao lado do foguete na trajetória (cartões de foto). O crédito não vai no cartão
+ * (ADR 0013): fica em docs/fontes-nasa.md, com fontes e trechos originais em docs/ciencia-marte.md (F34 a F36). Arquivos em public/assets/images/.
  */
 const PHOTOS = {
-  earth: { file: 'earth-apollo17-AS17-148-22727.jpg', credit: 'NASA' },
-  mars: { file: 'mars-viking-PIA00407.jpg', credit: 'NASA/JPL/USGS' },
-  moon: { file: 'moon-apollo11-AS11-44-6667.jpg', credit: 'NASA' },
+  earth: { file: 'earth-apollo17-AS17-148-22727.jpg' },
+  mars: { file: 'mars-viking-PIA00407.jpg' },
+  moon: { file: 'moon-apollo11-AS11-44-6667.jpg' },
 } as const;
 type PhotoId = keyof typeof PHOTOS;
 
@@ -429,7 +429,7 @@ export class LaunchScene {
       const img = new Image();
       img.onload = async () => {
         await document.fonts?.load('700 28px Fredoka').catch(() => undefined);
-        drawCard(canvas, img, tr('launch.photo.badge'), tr(`launch.photo.${id}` as StringKey), PHOTOS[id].credit);
+        drawCard(canvas, img, tr('launch.photo.badge'), tr(`launch.photo.${id}` as StringKey));
         map.needsUpdate = true;
         card.ready = true;
       };
@@ -660,8 +660,8 @@ function makePlanet(place: Place): THREE.Group {
   return g;
 }
 
-/** Cartão de foto cartoon: papel claro com contorno escuro, a foto, o selo "foto real", a legenda e o crédito. */
-function drawCard(canvas: HTMLCanvasElement, img: HTMLImageElement, badge: string, caption: string, credit: string): void {
+/** Cartão de foto cartoon: papel claro com contorno escuro, a foto, o selo "foto real" e a legenda (crédito em docs/fontes-nasa.md). */
+function drawCard(canvas: HTMLCanvasElement, img: HTMLImageElement, badge: string, caption: string): void {
   const ctx = canvas.getContext('2d')!;
   const ink = '#473C3A';
   const font = "'Fredoka', ui-rounded, system-ui, sans-serif";
@@ -703,15 +703,12 @@ function drawCard(canvas: HTMLCanvasElement, img: HTMLImageElement, badge: strin
   ctx.fillStyle = '#FFFFFF';
   ctx.textBaseline = 'middle';
   ctx.fillText(badge, px + 26, py + 32);
-  // Legenda (até 2 linhas) e crédito.
+  // Legenda (até 2 linhas).
   ctx.fillStyle = ink;
   ctx.font = `700 30px ${font}`;
   ctx.textBaseline = 'alphabetic';
   const lines = wrap(ctx, caption, pw);
   lines.slice(0, 2).forEach((l, i) => ctx.fillText(l, px, py + ph + 46 + i * 36));
-  ctx.font = `500 20px ${font}`;
-  ctx.fillStyle = '#7A6C68';
-  ctx.fillText(credit, px, CARD_H - 30);
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {

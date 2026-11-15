@@ -37,7 +37,7 @@ Conteúdo só educativo não prende a atenção; conteúdo só divertido perde a
 ### Dados reais
 
 - [ ] Usar APIs/dados abertos da NASA em vez de números inventados. **Até um pouco de dado real já vale.**
-- [ ] **Atribuir as fontes dentro do jogo.**
+- [x] **Atribuir as fontes.** O desafio sugere dentro do jogo (opcional); escolhemos só na documentação, em [fontes-nasa.md](fontes-nasa.md), para o jogo falar com a criança ([ADR 0013](decisoes/0013-fontes-da-nasa-so-na-documentacao.md)).
 - [ ] Dado embutido (curado) é aceito, mas **não pode ser apresentado como "ao vivo"**.
 
 ### Armadilhas a evitar

@@ -15,7 +15,7 @@ Mars Exploration: Missão Jezero é um jogo de navegador. Nele, uma criança de 
 | --- | --- |
 | Desafio | [Build a Junior Astronaut Mission Trainer](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/), NASA Space Apps Challenge 2026 (14 e 15 de novembro) |
 | Público | Crianças de 7 a 12 anos; também serve para pais e sala de aula |
-| Plataforma | Navegador, sem download e sem conta; computador e celular |
+| Plataforma | Navegador, sem download e sem conta; computador e celular. Pode ser instalado como app pelo Chrome, e o modo solo funciona sem internet depois da primeira visita ([pwa.md](pwa.md)) |
 | Local da missão | Cratera Jezero, Marte; ou polo sul da Lua, perto da cratera Shackleton ([Base lunar](#base-lunar), só no modo solo) |
 | Duração de uma partida | 15 sóis, cerca de 10 a 15 minutos |
 | Jogadores | 1 no modo solo; de 2 a 5 no modo cooperativo, no mesmo aparelho (planejado) ou **online, cada um no seu aparelho** (servidor Go e cliente prontos: [servidor-coop.md](servidor-coop.md)) |
@@ -149,11 +149,10 @@ A missão 4 é a melhor para contar a história: a CME do sol 14 (20 de maio de 
 - Na primeira partida, o jogo sorteia entre as missões de força média; as difíceis entram a partir da segunda.
 - O alerta continua chegando um sol antes do impacto, agora com a data real do evento.
 - A dose continua sendo a escala do jogo (INTERPRETADO). O que é real é a data, o tipo e a velocidade da CME, nunca a dose.
-- As janelas são dados baixados. O selo é "dados reais baixados em 2026-11-14", nunca "ao vivo".
-- Logo depois da abertura (escolha do lugar), antes do sol 1 e do treino, uma janela "📅 Sua missão" diz a missão e a data real em que ela começa, com a fonte (NASA DONKI e JPL Horizons). No modo em grupo continua como aviso no começo da partida.
+- As janelas são dados baixados, nunca chamadas de "ao vivo".
+- Logo depois da abertura (escolha do lugar), antes do sol 1 e do treino, uma janela "📅 Sua missão" diz a data real em que ela começa e que as tempestades e o tempo das mensagens são reais (as fontes ficam em [fontes-nasa.md](fontes-nasa.md)). No modo em grupo continua como aviso no começo da partida.
 - Todas as mensagens da Terra usam o atraso real do sol em que chegam.
-- Na tela final, o jogo mostra as datas da missão, as 3 tempestades com data, força e link para o DONKI, e o atraso real mínimo e máximo das mensagens.
-- A tela "Dados da NASA" mostra o DONKI e o JPL Horizons com o selo "dados reais baixados".
+- Na tela final, o jogo mostra as datas da missão, as 3 tempestades com data e força, e o atraso real mínimo e máximo das mensagens.
 - Sem o arquivo das missões, o jogo volta às erupções reais sorteadas (`donki-flares.json`) e, sem elas, às simuladas.
 - "Primeira partida" é guardada no navegador (`localStorage`). Sem ele, toda partida conta como a primeira.
 
@@ -196,7 +195,7 @@ Cada fato aparece **uma vez por missão**, ligado ao que a criança acabou de vi
 | Relatório do sol 1 | O Perseverance também usa baterias para os picos de consumo (gera cerca de 110 W) | [JPL, press kit](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/) |
 | Relatório do sol da tempestade de poeira | Em 2018, uma tempestade de poeira global cortou a energia do Opportunity; a missão terminou em 2019 | [NASA](https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/) |
 | Relatório do sol em que o rover atolou | Em 2009, o Spirit atolou em areia fofa; a NASA encerrou a missão em 2011 | [JPL](https://www.jpl.nasa.gov/missions/mars-exploration-rover-spirit-mer-spirit/) |
-| Tela "Dados da NASA" | O RAD do Curiosity mediu cerca de 0,67 mSv por dia na superfície de Marte (cratera Gale, 2012–2013). É a única medição de radiação **em Marte** no jogo; nunca é convertida na dose do jogo | [NASA](https://www.nasa.gov/news-release/nasa-rover-results-include-first-age-measurement-on-mars-and-help-for-human-exploration/) |
+| Só na documentação ([fontes-nasa.md](fontes-nasa.md)) | O RAD do Curiosity mediu cerca de 0,67 mSv por dia na superfície de Marte (cratera Gale, 2012–2013). É a única medição de radiação **em Marte** no jogo; nunca é convertida na dose do jogo | [NASA](https://www.nasa.gov/news-release/nasa-rover-results-include-first-age-measurement-on-mars-and-help-for-human-exploration/) |
 
 ## Vitória, derrota e estrelas
 
@@ -503,7 +502,7 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 | EVA curta | Terminou o conserto, a dupla volta sozinha. Parada lá fora sem tarefa, volta depois de 12 s. Há o botão "Voltar para dentro". Ainda com a dupla fora, dá para mandá-la a outro problema de fora sem passar de novo pela câmara | Escolha de jogo, para ensinar que se fica pouco tempo fora |
 | Sem EVA no dia da tempestade | Com a mensagem "a tempestade chega hoje", o botão vira "Sem EVA hoje". O conserto de fora fica para amanhã (relatório: "ninguém saiu por causa da tempestade"). Sem o aviso (antena desalinhada), a tripulação não sabe e pode sair | Escolha de jogo, ligada ao aviso real do DONKI. Não achamos documento primário da NASA com a regra exata; por isso fica como INTERPRETADO |
 
-**Fato na tela.** Na primeira EVA da partida aparece: "A NASA planeja até 24 horas de EVA por semana para cada astronauta. A semana tem 168 horas: quase todo o tempo é dentro." (fonte citada no aviso). O termo EVA tem "?".
+**Fato na tela.** Na primeira EVA da partida aparece: "A NASA planeja até 24 horas de EVA por semana para cada astronauta. A semana tem 168 horas: quase todo o tempo é dentro." (a fonte fica em [fontes-nasa.md](fontes-nasa.md), não no aviso). O termo EVA tem "?".
 
 **Equilíbrio** (`npm run balance`, estratégia atenta resolvendo tudo o que pode): praticamente igual ao de antes. 3★ em ~21% (erupções reais, antes ~19%) e ~45% (simuladas, antes ~43%); nas missões históricas, varia de 0 a +3 pontos. Sobe um pouco porque, no dia da tempestade, ninguém sai e a dose de tarefa fora não soma.
 
@@ -852,9 +851,9 @@ O passo do tutorial do sol 1 sobre energia passa a apontar para a estufa, não p
 
 ## Dados reais da NASA
 
-> **Clima espacial atual (15/11/2026):** a **primeira tempestade** da missão é sorteada entre as **5 erupções reais mais recentes** do DONKI (`CONFIG.solarStorms.recentPool`); as outras continuam sorteadas de todo o histórico. No **sol 1**, a mensagem "O Sol ultimamente" mostra quantas erupções fortes reais houve nos 30 dias antes do download, a mais recente (com data e link) e a dica da proteção, com o selo "dados reais baixados em…" (nunca "ao vivo"). Atualizar: `npm run fetch-data`.
+> **Clima espacial atual (15/11/2026):** a **primeira tempestade** da missão é sorteada entre as **5 erupções reais mais recentes** do DONKI (`CONFIG.solarStorms.recentPool`); as outras continuam sorteadas de todo o histórico. No **sol 1**, a mensagem "☀️ O Sol antes da viagem" mostra quantas erupções fortes reais houve nos 30 dias antes do download, a mais recente (só na dica do mouse) e a dica da proteção, sem selo de data e sem dizer "agora" (nunca parece ao vivo). Atualizar: `npm run fetch-data`.
 
-As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros conjuntos de dados entram aos poucos, e cada um mostra no jogo um selo honesto do seu estado.
+As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros conjuntos de dados entram aos poucos. As fontes, com link e estado de cada uma, ficam em [fontes-nasa.md](fontes-nasa.md), não no jogo ([ADR 0013](decisoes/0013-fontes-da-nasa-so-na-documentacao.md)).
 
 | Fonte | Uso no jogo | Estado no protótipo |
 | --- | --- | --- |
@@ -867,10 +866,10 @@ As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros c
 
 **Regras de honestidade (o enunciado do desafio pede isso):**
 
-- O jogo nunca apresenta dado estático como ao vivo. A tela "Dados da NASA" mostra um selo para cada fonte: "ao vivo", "dados reais baixados" (com a data) ou "simulado".
-- Cada alerta de tempestade diz se a erupção é real (com data e link para o DONKI) ou simulada.
-- O jogo avisa que energia, vida, blindagem e dose são simplificados. Só é chamado de real o que veio de uma fonte.
-- As fontes são citadas dentro do jogo, com links.
+- O jogo nunca apresenta dado estático como ao vivo. Não há selo de data na tela: a mensagem do sol 1 se chama "☀️ O Sol antes da viagem" e fala de "30 dias", não de "últimos 30 dias".
+- Cada alerta de tempestade diz se a erupção é real (com a data) ou simulada.
+- Energia, vida, blindagem e dose são simplificados, e a dose nunca aparece em unidade real (mSv). Só é chamado de real o que veio de uma fonte.
+- As fontes ficam na documentação ([fontes-nasa.md](fontes-nasa.md)), com links; o jogo não mostra referências, nomes de bases de dados nem links (crianças de 7 a 12 anos).
 
 O jogo segue a [Art Bible (seção 7)](art-bible.md#7-fundamentação-científica):
 
@@ -1010,10 +1009,10 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 
 | Área | Conteúdo |
 | --- | --- |
-| Barra superior | Pílulas soltas sobre o cenário: nome da missão; "Sol N de 15" com barrinha de progresso (tocar explica o que é um sol); botões "Como jogar" e "Dados da NASA" (só ícone no celular) e seletor de idioma PT \| EN |
+| Barra superior | Pílulas soltas sobre o cenário: nome da missão; "Sol N de 15" com barrinha de progresso (tocar explica o que é um sol); botão "Como jogar" (só ícone no celular) e seletor de idioma PT \| EN |
 | Recursos (esquerda) | **Só os 3 recursos centrais** que o desafio cita ("life support, power, shielding"): ⚡ bateria, 💧 suporte de vida e 🛡️ blindagem, cada um com barra e botão "?". A **dose** fica dentro da blindagem como **risco** (linha pequena com marcas; amarela e vermelha perto do limite): pouca proteção, mais dose |
 | Meta da missão (topo) | ⭐ ciência "18 de 100" (com barra; no celular, selo curto "18/100" na linha do sol). Ciência é o objetivo, não algo que mantém a base viva. 🧪 Tubos de amostra **só aparecem quando estão acabando** (3 expedições ou menos); o custo de hoje já aparece no plano ("−3 tubos"). Cada um abre o "?" ao tocar |
-| Idioma e fontes | **Só inglês** (decisão de 15/11/2026: desafio e juízes em inglês; o seletor poluía o HUD). Os textos em português ficam no código (`?lang=pt`). As **fontes da NASA** saíram do topo e ficam no fim do "How to play" (o desafio pede as fontes dentro do jogo) |
+| Idioma e fontes | **Só inglês** (decisão de 15/11/2026: desafio e juízes em inglês; o seletor poluía o HUD). Os textos em português ficam no código (`?lang=pt`). As **fontes da NASA** não ficam no jogo: estão em [fontes-nasa.md](fontes-nasa.md) ([ADR 0013](decisoes/0013-fontes-da-nasa-so-na-documentacao.md)) |
 | Celular | Nomes curtos (Power, Life, Shield), contador "Inside · Outside" só com alguém lá fora, mensagem da Terra compacta (a linha do atraso continua) |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |
@@ -1104,9 +1103,9 @@ O jogo está pronto para o envio quando todos os itens abaixo passam num navegad
 - [x] O snapshot de erupções reais do DONKI está no projeto (`npm run fetch-data`).
 - [x] Em produção, as tempestades mostram a data real e um link para o DONKI.
 - [x] As tempestades vêm de 6 missões históricas reais (`public/data/missions.json`), com o atraso real Terra-Marte em cada sol.
-- [x] A tela final mostra as datas reais da missão e as tempestades com link para o DONKI.
+- [x] A tela final mostra as datas reais da missão e as tempestades que aconteceram.
 - [x] Quando não há dado real, o jogo diz "simulado" e nunca "ao vivo".
-- [x] A tela "Dados da NASA" lista as fontes com selo de estado e links.
+- [x] As fontes, com link e estado, estão em [fontes-nasa.md](fontes-nasa.md) (fora do jogo, ADR 0013).
 - [ ] A tela final mostra estudos reais do OSDR (testar a busca).
 
 ### Experiência

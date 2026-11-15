@@ -30,7 +30,7 @@ flowchart LR
 
 - O botão **Jogar em grupo** só aparece se o jogo souber o endereço do servidor, nesta ordem:
   1. `?coop=wss://…` na URL (útil com link temporário);
-  2. `VITE_COOP_URL` no build: um `wss://…` fixo, ou `same-origin` (o jogo foi servido pelo próprio servidor coop; é o que a imagem Docker usa).
+  2. `VITE_COOP_URL` no build: um `wss://…` fixo, ou `same-origin` (o jogo foi servido pelo próprio servidor coop; é o que a imagem Docker usa). No GitHub Pages ele vem da variável do repositório `COOP_URL` ([abaixo](#jogo-do-github-pages-ligado-ao-servidor)).
 - Sem endereço, o jogo funciona só no modo solo, como antes.
 - No modo em grupo, o jogo **não roda regras**: mostra o que o servidor manda e repassa decisões. A noite, o relatório e a tela final são os mesmos do solo.
 - Cada jogador só mexe na parte da energia do seu papel; os outros botões ficam travados. "Terminar o sol" só para o comandante.
@@ -164,10 +164,32 @@ Atualizar com o código da `main` (do seu computador, na raiz do repositório):
 
 ```bash
 git archive main | coder ssh devs -- 'rm -rf ~/jezero-coop.new && mkdir ~/jezero-coop.new && tar -x -C ~/jezero-coop.new && rm -rf ~/jezero-coop && mv ~/jezero-coop.new ~/jezero-coop'
-coder ssh devs -- 'cd ~/jezero-coop/server && COOP_BIND=0.0.0.0 COOP_PORT=18095 ALLOWED_ORIGINS="*.trycloudflare.com,localhost:*" docker compose up -d --build jezero-coop'
+coder ssh devs -- 'cd ~/jezero-coop/server && COOP_BIND=0.0.0.0 COOP_PORT=18095 ALLOWED_ORIGINS="fronhaa.github.io,*.trycloudflare.com,localhost:*" docker compose up -d --build --no-deps jezero-coop'
 ```
 
-Assim só o `jezero-coop` é recriado; o túnel continua de pé e **o link não muda**.
+Assim só o `jezero-coop` é recriado; o túnel continua de pé e **o link não muda**. O `ALLOWED_ORIGINS` precisa ter
+`fronhaa.github.io`: sem ele, o jogo publicado no GitHub Pages leva **403** ao conectar (a página do túnel continua
+funcionando, por isso o erro passa despercebido).
+
+### Jogo do GitHub Pages ligado ao servidor
+
+O workflow do Pages (`.github/workflows/pages.yml`) passa a variável do repositório `COOP_URL` para o build como
+`VITE_COOP_URL`. Com ela, o botão **Jogar em grupo** aparece em <https://fronhaa.github.io/pi/> sem nada na URL.
+
+```bash
+gh variable set COOP_URL --body 'wss://<link-do-tunel>.trycloudflare.com/ws'
+gh workflow run pages.yml     # publica de novo com o endereço
+```
+
+- O link `trycloudflare.com` é **temporário**: se o `jezero-coop-tunnel` reiniciar, ele muda. Aí é só repetir os dois
+  comandos acima com o link novo; o código não muda.
+- Sem a variável, o build sai como antes (só solo, ou `?coop=wss://…` na URL).
+- Conferir a origem sem abrir o navegador (101 = conectou, 403 = origem bloqueada):
+
+```bash
+curl -s --http1.1 -o /dev/null -w '%{http_code}\n' -H 'Origin: https://fronhaa.github.io' -H 'Connection: Upgrade' \
+  -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' https://<link>/ws
+```
 
 ## Subir no VPS (container)
 
