@@ -47,6 +47,11 @@
 | F29 | Camundongos no espaço perderam músculo e osso | Camundongos que passaram 33 dias na Estação Espacial perderam massa muscular e óssea | [OSDR: OSD-342 (missão RR-19)](https://osdr.nasa.gov/bio/repo/data/studies/OSD-342) | Tela de fontes (Data sources), item do OSDR | Contexto (saúde) |
 | F30 | A viagem até Marte leva meses | O Perseverance pousou depois de uma viagem de 203 dias e 472 milhões de km | [NASA (2021)](https://www.nasa.gov/news-release/touchdown-nasas-mars-perseverance-rover-safely-lands-on-red-planet/) | Intro da viagem (Marte) | Contexto (distância) |
 | F31 | A viagem até a Lua leva dias | A Apollo 11 saiu da Terra em 16/07/1969 e pisou na Lua em 20/07/1969 | [NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/) | Intro da viagem (Lua) | Contexto (distância) |
+| F32 | Foto real: lançamento do Perseverance | Atlas V levando o Perseverance decola da Flórida em 30/07/2020 | [NASA Image Library: KSC-20200730-PH-FMX01_0042](https://images.nasa.gov/details/KSC-20200730-PH-FMX01_0042) | Cartão de foto na viagem (Marte) | Foto (crédito NASA/Frank Michaux) |
+| F33 | Foto real: lançamento da Apollo 11 | Saturn V da Apollo 11 decola em 16/07/1969 | [NASA Image Library: S69-39961](https://images.nasa.gov/details/S69-39961) | Cartão de foto na viagem (Lua) | Foto (crédito NASA) |
+| F34 | Foto real: a Terra vista do espaço | A Terra fotografada pela Apollo 17 a caminho da Lua, em 07/12/1972 | [NASA Image Library: AS17-148-22727](https://images.nasa.gov/details/as17-148-22727) | Cartão de foto na viagem (Marte e Lua) | Foto (crédito NASA) |
+| F35 | Foto real: Marte inteiro | Mosaico de cerca de 1000 imagens das sondas Viking | [NASA Photojournal: PIA00407](https://photojournal.jpl.nasa.gov/catalog/PIA00407) | Cartão de foto na viagem (Marte) | Foto (crédito NASA/JPL/USGS) |
+| F36 | Foto real: a Lua cheia | A Lua fotografada pela Apollo 11 na volta para a Terra, em 21/07/1969 | [NASA Image Library: AS11-44-6667](https://images.nasa.gov/details/as11-44-6667) | Cartão de foto na viagem (Lua) | Foto (crédito NASA) |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -278,6 +283,24 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Criança (EN):** "Apollo 11 took only 4 days to reach the Moon."
 - **No jogo:** intro da viagem, depois de escolher a Lua (`src/ui/LaunchIntro.ts`, cena em `src/scene/LaunchScene.ts`).
 - **Atenção:** "4 dias" é do lançamento até o passo na Lua (16 a 20 de julho), não só o voo até a órbita. Conferido em 15/11/2026.
+
+### F32 a F36. Fotos reais na trajetória da viagem
+
+Cartões de foto que passam ao lado do foguete na intro (`src/scene/LaunchScene.ts`, `PHOTOS`). Arquivos em
+`public/assets/images/` (versão "small" da biblioteca da NASA). Legenda no jogo: `launch.photo.*` em `src/i18n/strings/ui.ts`.
+
+- **F32:** **"the launch of the United Launch Alliance Atlas V 541 rocket from Space Launch Complex 41 at Cape Canaveral Air Force Station in Florida on July 30, 2020. The Atlas V carried NASA’s Mars Perseverance rover"**. Crédito: NASA/Frank Michaux. ([KSC-20200730-PH-FMX01_0042](https://images.nasa.gov/details/KSC-20200730-PH-FMX01_0042))
+  - Criança: "Perseverance decola rumo a Marte (2020)" / "Perseverance lifts off to Mars (2020)".
+- **F33:** **"The huge, 363-feet tall Apollo 11 (Spacecraft 107/Lunar Module S/Saturn 506) space vehicle is launched from Pad A, Launch Complex 39, Kennedy Space Center (KSC), at 9:32 a.m. (EDT), July 16, 1969."** ([S69-39961](https://images.nasa.gov/details/S69-39961))
+  - Criança: "Apollo 11 decola rumo à Lua (1969)" / "Apollo 11 lifts off to the Moon (1969)".
+- **F34:** **"This view of Earth was seen by the Apollo 17 crew as they traveled toward the moon"** (7 Dec. 1972). ([AS17-148-22727](https://images.nasa.gov/details/as17-148-22727))
+  - Criança: "A Terra vista pela Apollo 17 (1972)" / "Earth seen by Apollo 17 (1972)". Aparece nas duas viagens: é a mesma Terra que fica para trás.
+- **F35:** **"About 1000 Viking Orbiter red- and violet-filter images have been processed to provide global color coverage of Mars"**. Crédito: NASA/JPL/USGS. ([PIA00407](https://photojournal.jpl.nasa.gov/catalog/PIA00407))
+  - Criança: "Marte visto pelas sondas Viking" / "Mars seen by the Viking orbiters".
+  - **Atenção:** é um mosaico (muitas fotos juntas), não uma foto única. Por isso a legenda não tem ano.
+- **F36:** **"This outstanding view of the whole full moon was photographed from the Apollo 11 spacecraft during its trans-Earth journey homeward."** ([AS11-44-6667](https://images.nasa.gov/details/as11-44-6667))
+  - Criança: "A Lua vista pela Apollo 11 (1969)" / "The Moon seen by Apollo 11 (1969)".
+- Conferido na API da biblioteca de imagens da NASA (`images-api.nasa.gov`) em 15/11/2026.
 
 ## Ligação com os objetivos de aprendizagem
 

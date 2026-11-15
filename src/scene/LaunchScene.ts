@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { MOON_PALETTE, PALETTE, toonMaterial, toonMesh } from '@/render/toon';
+import { t as tr, type StringKey } from '@/i18n';
 
 /**
  * Intro da viagem em 3D cartoon (mesmo estilo toon com contorno do jogo): o foguete decola da Terra, atravessa as
@@ -41,6 +42,36 @@ const CAM: CamKey[] = [
   { t: 9, pos: [4, -3, 22], look: [0, 10, 0] },
 ];
 
+/**
+ * Fotos reais da NASA que passam ao lado do foguete na trajetória (cartões de foto), com crédito no próprio cartão.
+ * Fontes e trechos originais em docs/ciencia-marte.md (F32 a F36). Arquivos em public/assets/images/.
+ */
+const PHOTOS = {
+  launchMars: { file: 'launch-perseverance-KSC-20200730-PH-FMX01_0042.jpg', credit: 'NASA/Frank Michaux' },
+  launchMoon: { file: 'launch-apollo11-S69-39961.jpg', credit: 'NASA' },
+  earth: { file: 'earth-apollo17-AS17-148-22727.jpg', credit: 'NASA' },
+  mars: { file: 'mars-viking-PIA00407.jpg', credit: 'NASA/JPL/USGS' },
+  moon: { file: 'moon-apollo11-AS11-44-6667.jpg', credit: 'NASA' },
+} as const;
+type PhotoId = keyof typeof PHOTOS;
+
+/** Quando cada cartão passa (segundos da viagem) e de que lado da tela. Depois do "Liftoff!", antes da chegada. */
+const PHOTO_TIMES: { from: number; to: number; side: 1 | -1 }[] = [
+  { from: 3.0, to: 4.9, side: 1 },
+  { from: 4.8, to: 6.7, side: -1 },
+  { from: 6.6, to: 8.6, side: 1 },
+];
+const CARD_W = 512;
+const CARD_H = 560;
+
+interface PhotoCard {
+  mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  from: number;
+  to: number;
+  side: 1 | -1;
+  ready: boolean;
+}
+
 const smooth = (x: number) => {
   const k = Math.min(1, Math.max(0, x));
   return k * k * (3 - 2 * k);
@@ -66,6 +97,7 @@ export class LaunchScene {
   private readonly streakBase: Float32Array;
   private readonly dest = new THREE.Group();
   private readonly clouds = new THREE.Group();
+  private readonly cards: PhotoCard[] = [];
   private readonly skyDay = new THREE.Color(0x8ec5ee);
   private readonly skySpace = new THREE.Color(0x1b1630);
   private readonly bg = new THREE.Color();
@@ -95,6 +127,7 @@ export class LaunchScene {
   begin(place: 'mars' | 'moon', reduced = false): void {
     if (this.started !== null) return;
     this.buildDestination(place);
+    this.buildPhotoCards(place === 'mars' ? ['launchMars', 'earth', 'mars'] : ['launchMoon', 'earth', 'moon']);
     this.reduced = reduced;
     this.orbitAtStart = this.orbitAngle();
     this.started = performance.now();
@@ -203,6 +236,7 @@ export class LaunchScene {
     if (away > 0 && this.aspect >= 0.8) this.camera.setViewOffset(this.width, this.height, -0.34 * this.width * away, 0, this.width, this.height);
     else if (this.camera.view?.enabled) this.camera.clearViewOffset();
     this.camera.lookAt(this.tmpA);
+    this.placeCards(t);
     // Vistas do espaço, as nuvens viravam uma "torre" esquisita em cima da base.
     this.clouds.visible = away < 0.5;
     this.stars.position.copy(this.camera.position);
@@ -220,6 +254,54 @@ export class LaunchScene {
         (m as THREE.MeshToonMaterial | undefined)?.map?.dispose();
         m?.dispose();
       }
+    });
+  }
+
+  /** Cartões de foto presos à câmera: entram no alto, descem devagar (o foguete "passa" por eles) e somem. */
+  private placeCards(t: number): void {
+    const portrait = this.aspect < 0.8;
+    const dist = 10;
+    const hh = dist * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    const hw = hh * this.aspect;
+    // Largura do cartão: quase metade da tela no celular em pé, um quarto no computador; nunca mais alto que 70% da tela.
+    const w = Math.min((portrait ? 0.88 : 0.5) * hw, (1.4 * hh) / (CARD_H / CARD_W));
+    for (const c of this.cards) {
+      const k = (t - c.from) / (c.to - c.from);
+      c.mesh.visible = c.ready && k > 0 && k < 1;
+      if (!c.mesh.visible) continue;
+      const pop = smooth(k / 0.12) * (1 - smooth((k - 0.88) / 0.12));
+      c.mesh.scale.set(w * pop, w * pop, 1);
+      // Fora do meio da tela, onde está o foguete.
+      c.mesh.position.set(c.side * (portrait ? 0.56 : 0.55) * hw, (0.5 - 0.35 * k) * hh, -dist);
+      c.mesh.rotation.z = -c.side * 0.06 + Math.sin(t * 2.2 + c.from) * 0.02;
+    }
+  }
+
+  private buildPhotoCards(ids: PhotoId[]): void {
+    if (!this.camera.parent) this.scene.add(this.camera);
+    ids.forEach((id, i) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = CARD_W;
+      canvas.height = CARD_H;
+      const map = new THREE.CanvasTexture(canvas);
+      map.colorSpace = THREE.SRGBColorSpace;
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, CARD_H / CARD_W),
+        new THREE.MeshBasicMaterial({ map, transparent: true, depthTest: false, depthWrite: false }),
+      );
+      mesh.renderOrder = 10;
+      mesh.visible = false;
+      this.camera.add(mesh);
+      const card: PhotoCard = { mesh, ...PHOTO_TIMES[i], ready: false };
+      this.cards.push(card);
+      const img = new Image();
+      img.onload = async () => {
+        await document.fonts?.load('700 28px Fredoka').catch(() => undefined);
+        drawCard(canvas, img, tr('launch.photo.badge'), tr(`launch.photo.${id}` as StringKey), PHOTOS[id].credit);
+        map.needsUpdate = true;
+        card.ready = true;
+      };
+      img.src = `${import.meta.env.BASE_URL}assets/images/${PHOTOS[id].file}`;
     });
   }
 
@@ -473,4 +555,72 @@ function cameraAt(t: number): { pos: [number, number, number]; look: [number, nu
   const k = smooth((t - a.t) / (b.t - a.t));
   const lerp3 = (p: number[], q: number[]) => p.map((v, j) => v + (q[j] - v) * k) as [number, number, number];
   return { pos: lerp3(a.pos, b.pos), look: lerp3(a.look, b.look) };
+}
+
+/** Cartão de foto cartoon: papel claro com contorno escuro, a foto, o selo "foto real", a legenda e o crédito. */
+function drawCard(canvas: HTMLCanvasElement, img: HTMLImageElement, badge: string, caption: string, credit: string): void {
+  const ctx = canvas.getContext('2d')!;
+  const ink = '#473C3A';
+  const font = "'Fredoka', ui-rounded, system-ui, sans-serif";
+  ctx.clearRect(0, 0, CARD_W, CARD_H);
+  ctx.fillStyle = '#FBF4EC';
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  ctx.roundRect(5, 5, CARD_W - 10, CARD_H - 10, 28);
+  ctx.fill();
+  ctx.stroke();
+  // Foto cortada para preencher (como object-fit: cover).
+  const px = 24;
+  const py = 24;
+  const pw = CARD_W - 48;
+  const ph = 340;
+  const scale = Math.max(pw / img.width, ph / img.height);
+  const sw = pw / scale;
+  const sh = ph / scale;
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(px, py, pw, ph, 14);
+  ctx.clip();
+  ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, px, py, pw, ph);
+  ctx.restore();
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.roundRect(px, py, pw, ph, 14);
+  ctx.stroke();
+  // Selo "FOTO REAL" em cima da foto.
+  ctx.font = `700 22px ${font}`;
+  const bw = ctx.measureText(badge).width + 28;
+  ctx.fillStyle = '#E8792B';
+  ctx.beginPath();
+  ctx.roundRect(px + 12, py + 12, bw, 38, 19);
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(badge, px + 26, py + 32);
+  // Legenda (até 2 linhas) e crédito.
+  ctx.fillStyle = ink;
+  ctx.font = `700 30px ${font}`;
+  ctx.textBaseline = 'alphabetic';
+  const lines = wrap(ctx, caption, pw);
+  lines.slice(0, 2).forEach((l, i) => ctx.fillText(l, px, py + ph + 46 + i * 36));
+  ctx.font = `500 20px ${font}`;
+  ctx.fillStyle = '#7A6C68';
+  ctx.fillText(credit, px, CARD_H - 30);
+}
+
+function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width > max && line) {
+      lines.push(line);
+      line = word;
+    } else line = next;
+  }
+  if (line) lines.push(line);
+  return lines;
 }

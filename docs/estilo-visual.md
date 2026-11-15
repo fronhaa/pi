@@ -185,6 +185,9 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 - O texto por cima (contagem, "Liftoff!", fato real F30/F31, "Pular") é HTML em `src/ui/LaunchIntro.ts`.
 - O destino é "trapaça de cinema": fica sempre acima e atrás do foguete e cresce. Exceção à regra "planeta gigante
   no céu" abaixo, que vale para a cena da base.
+- **Fotos reais na trajetória:** 3 cartões de foto da NASA (decolagem, Terra, destino) presos à câmera passam ao lado
+  do foguete, fora do meio da tela. Papel claro com contorno escuro, selo "FOTO REAL", legenda e crédito desenhados num
+  canvas. Fontes: F32 a F36 em `docs/ciencia-marte.md`.
 - "Reduzir movimento" no sistema: a cena fica parada na chegada.
 
 ## O que não usar
