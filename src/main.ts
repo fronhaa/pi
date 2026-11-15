@@ -1,4 +1,5 @@
 import { LoadingScreen } from '@/ui/LoadingScreen';
+import { watchAppUpdates } from '@/ui/appUpdate';
 
 /**
  * Ponto de entrada. Este arquivo é propositalmente pequeno: o jogo (Three.js + Rapier, ~1,7 MB)
@@ -25,4 +26,6 @@ async function boot(): Promise<void> {
   }
 }
 
+// Mantém a cópia para jogar sem internet em dia (a versão nova já abre direto da rede: docs/pwa.md).
+watchAppUpdates();
 boot();
