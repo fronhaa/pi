@@ -160,6 +160,13 @@ export const ROVER_DOCK = {
   inside: new THREE.Vector3(GARAGE_POSITION.x, GARAGE_FLOOR_Y, GARAGE_POSITION.z),
   heading: Math.PI / 2,
 } as const;
+/** Meio comprimento do rover (rover.glb): estacionado, o nariz fica a isto do centro da garagem, virado para o túnel. */
+const ROVER_HALF_LENGTH = 1.3;
+/**
+ * Onde o cientista fica para tirar as amostras e fazer a manutenção do rover estacionado: na frente do nariz dele,
+ * entre o rover e o túnel da estufa.
+ */
+export const GARAGE_SERVICE_SPOT = new THREE.Vector3(GARAGE_POSITION.x, GARAGE_FLOOR_Y, ROVER_DOCK.inside.z - ROVER_HALF_LENGTH - 0.75);
 
 export const TUBES: readonly { from: THREE.Vector3; to: THREE.Vector3 }[] = [
   // Leste: laboratório.

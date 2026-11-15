@@ -123,6 +123,8 @@ export class Game {
     this.routine.onFirstExercise = () => this.hud.toast(t('fact.exercise'), t('fact.exercise.source'));
     // Fato da estufa inflável da NASA para a Lua e Marte (F20), na primeira vez que alguém trabalha na estufa.
     this.routine.onFirstGreenhouse = () => this.hud.toast(t('fact.greenhouseInflatable'), t('fact.greenhouseInflatable.source'));
+    // Manutenção do rover pelo cientista (só visual): ele sai para uma busca extra, sem encher tubos.
+    this.routine.onRoverServiced = () => this.base.releaseRover();
 
     const uiRoot = document.createElement('div');
     uiRoot.id = 'ui';
@@ -741,6 +743,8 @@ export class Game {
         inHabitat: (r) => this.tasks.placeOf(r) === 'inside',
         onInsideTask: (r) => this.tasks.onInsideTask(r),
         insideTaskKind: (r) => this.tasks.insideTaskKind(r),
+        roverWaiting: this.base.roverNeedsCrew,
+        roverAt: this.base.roverObject.position,
       });
     } else this.crew.update(dt);
     const marker = this.targetMarker.material as THREE.MeshBasicMaterial;

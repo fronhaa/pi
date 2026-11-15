@@ -156,6 +156,11 @@ export class Rover {
    */
   private sol = 0;
   private expeditionSol = -1;
+  /**
+   * Busca extra (só visual): depois da revisão feita pelo cientista, o rover sai de novo para explorar e fotografar a
+   * cratera, sem encher tubos (a regra continua uma expedição com tubos por sol). Para nas rochas com o braço guardado.
+   */
+  private survey = false;
   private readonly warning: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   /** Cabeça da câmera (gira para olhar a rocha), braço robótico (desce para estudar) e luz do instrumento. */
   private readonly head: THREE.Group;
@@ -274,6 +279,23 @@ export class Rover {
 
   get isServicing(): boolean {
     return this.phase === 'service';
+  }
+
+  /**
+   * Na garagem, revisão automática terminada, esperando o próximo sol: um cientista livre pode ir lá tirar as amostras,
+   * fazer a manutenção e liberá-lo para uma busca extra (releaseForSurvey).
+   */
+  get needsCrew(): boolean {
+    return this.phase === 'service' && this.serviceLeft <= 0 && this.sol <= this.expeditionSol && !this.stuckAt;
+  }
+
+  /** O cientista terminou a manutenção: sai de ré para uma busca extra, só para explorar e fotografar (sem tubos). */
+  releaseForSurvey(): void {
+    if (!this.needsCrew) return;
+    this.survey = true;
+    this.phase = 'dockOut';
+    this.dockS = Rover.dockLength();
+    this.studies = 0;
   }
 
   /** O que o rover está fazendo agora (para testes): drive, study, dockIn, service ou dockOut. */
@@ -635,6 +657,7 @@ export class Rover {
       this.phase = 'service';
       this.serviceLeft = SERVICE_SECONDS;
       this.studies = 0;
+      this.survey = false;
     } else if (this.phase === 'dockOut' && this.dockS <= 0) {
       this.phase = 'drive';
       this.target = null;
@@ -646,7 +669,8 @@ export class Rover {
     const p = this.root.position;
     if (this.phase === 'study') {
       this.studyLeft -= dt;
-      this.animateTools(true, dt, time);
+      // Na busca extra, só a câmera trabalha (braço guardado: não coleta amostra).
+      this.animateTools(!this.survey, dt, time);
       if (this.studyLeft <= 0) {
         this.phase = 'drive';
         this.target = null;
@@ -676,7 +700,8 @@ export class Rover {
         this.samplesSol = this.sol;
         this.samples = 0;
       }
-      this.samples++;
+      // Busca extra: fotografa, mas não enche tubo (os tubos do sol são decididos pela regra, src/sim/day.ts).
+      if (!this.survey) this.samples++;
       this.phase = 'study';
       this.studyLeft = STUDY_SECONDS;
       this.blocked = false;

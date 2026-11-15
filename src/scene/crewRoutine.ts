@@ -7,6 +7,9 @@ import {
   BED_SPOTS,
   BED_TOP,
   DOME_CENTER,
+  GARAGE_FLOOR_Y,
+  GARAGE_POSITION,
+  GARAGE_SERVICE_SPOT,
   GREENHOUSE_STAIRS,
   GREENHOUSE_WORK_SPOT,
   GYM_STATIONS,
@@ -22,6 +25,7 @@ import {
   PROBLEM_SPOTS,
   QUARTERS_LANE_Z,
   QUARTERS_MODULES,
+  TUBES,
   headroomAt,
 } from './base/layout';
 
@@ -35,6 +39,10 @@ const NIGHT_WALK_SPEED = 2.2;
 /** Indo consertar a estufa: apressado (o conserto só começa quando ele chega). */
 const TASK_WALK_SPEED = 2.4;
 /** Deitar na cama: sentar na beirada e deitar; levantar: sentar de novo e ficar de pé (s). */
+/** Manutenção do rover pelo cientista: tirar as amostras e revisar (s). */
+const ROVER_SERVICE_SECONDS = 8;
+/** Túnel da garagem (sul): começa na estufa e termina na porta da garagem. */
+const GARAGE_TUBE = TUBES[2];
 const SIT_DOWN_SECONDS = 0.8;
 const LIE_DOWN_SECONDS = 1.4;
 const SIT_UP_SECONDS = 1.2;
@@ -87,6 +95,9 @@ export interface RoutineFrame {
   isOutside(role: Role): boolean;
   /** Está dentro do habitat (não na câmara de descompressão)? */
   inHabitat(role: Role): boolean;
+  /** O rover está na garagem esperando a tripulação (manutenção) e onde ele está. */
+  roverWaiting?: boolean;
+  roverAt?: THREE.Vector3;
   /** Está consertando um problema de dentro (a estufa)? */
   onInsideTask(role: Role): boolean;
   /** Qual tarefa de dentro: vazamento, colheita ou análise (cada uma tem o seu lugar). */
@@ -94,8 +105,9 @@ export interface RoutineFrame {
 }
 
 /** `task` = conserto da estufa; `harvest` e `analysis` = tarefas opcionais (colher, analisar). */
-type Activity = 'post' | 'gym' | 'bed' | 'task' | 'harvest' | 'analysis' | 'sleep';
-const WORK: Activity[] = ['task', 'harvest', 'analysis'];
+/** `rover` = o cientista na garagem, tirando as amostras e fazendo a manutenção do rover (só visual). */
+type Activity = 'post' | 'gym' | 'bed' | 'task' | 'harvest' | 'analysis' | 'rover' | 'sleep';
+const WORK: Activity[] = ['task', 'harvest', 'analysis', 'rover'];
 
 /**
  * Um passo do caminho: andar até um ponto, virar para os pés da cama (`face`), deitar na cama (`lie`, de pé ao lado
@@ -125,6 +137,8 @@ interface Walker {
   wasInside: boolean;
   /** Tempo já passado no passo de deitar ou levantar (s). */
   stepTime: number;
+  /** Quanto falta da manutenção do rover (s). */
+  serviceLeft: number;
 }
 
 /**
@@ -146,9 +160,11 @@ export class CrewRoutine {
   private exerciseShown = false;
   /** Primeira vez que alguém chega para trabalhar na estufa (o jogo mostra o fato da estufa inflável da NASA). */
   onFirstGreenhouse: () => void = () => {};
+  /** O cientista terminou a manutenção do rover: o jogo libera o rover para uma busca extra. */
+  onRoverServiced: () => void = () => {};
   private greenhouseShown = false;
   private readonly walkers = Object.fromEntries(
-    ROLES.map((r) => [r, { at: 'post', idle: 0, left: 0, station: 0, rested: true, pos: HABITAT_SPOTS[r].clone(), path: [], going: null, placed: false, wasInside: false, stepTime: 0 } as Walker]),
+    ROLES.map((r) => [r, { at: 'post', idle: 0, left: 0, station: 0, rested: true, pos: HABITAT_SPOTS[r].clone(), path: [], going: null, placed: false, wasInside: false, stepTime: 0, serviceLeft: ROVER_SERVICE_SECONDS } as Walker]),
   ) as Record<Role, Walker>;
 
   constructor(private readonly crew: Crew) {}
@@ -162,6 +178,7 @@ export class CrewRoutine {
   /** Onde fica cada atividade (para onde ele anda). */
   private spotOf(r: Role, activity: Activity, station: number): THREE.Vector3 {
     if (activity === 'task') return GREENHOUSE_WORK_SPOT;
+    if (activity === 'rover') return GARAGE_SERVICE_SPOT;
     if (activity === 'harvest') return HARVEST_WORK_SPOT;
     if (activity === 'analysis') return LAB_WORK_SPOT;
     if (activity === 'gym') return GYM_STATIONS[station].pos;
@@ -225,16 +242,18 @@ export class CrewRoutine {
    * no lugar (deitando: de costas para a cama, senta na beirada e deita; ou descendo a escada da estufa). Sempre pelos pontos certos, nunca
    * atravessando cama, casco ou canteiro.
    */
-  private route(r: Role, from: THREE.Vector3, to: THREE.Vector3, fromBed: boolean, toBed: boolean, stairIndex: number | null): Step[] {
+  private route(r: Role, from: THREE.Vector3, to: THREE.Vector3, fromBed: boolean, toBed: boolean, stairIndex: number | null, toGarage = false): Step[] {
     const stand = (p: THREE.Vector3): Step => ({ kind: 'walk', to: p.clone() });
     const side = this.besideBed(r);
     const steps: Step[] = [];
     if (fromBed) steps.push({ kind: 'rise', to: side.clone() }, { kind: 'stand', to: side.clone() });
     // Descendo para a estufa: pela escada daquela tarefa (conserto: norte; colheita: sul).
     const stair = stairIndex === null ? null : GREENHOUSE_STAIRS[stairIndex];
-    const corridorX = stair ? stair.top.x : to.x;
+    const corridorX = stair ? stair.top.x : toGarage ? GARAGE_TUBE.from.x : to.x;
     steps.push(...this.corridor(from.x, corridorX).map(stand));
     if (stair) steps.push(stand(stair.top), stand(stair.bottom));
+    // Para a garagem: pelo braço sul da passarela e pelo túnel, descendo até o piso da garagem.
+    if (toGarage) steps.push(...this.garagePath().map(stand));
     if (toBed) steps.push(stand(side), { kind: 'face', to: side.clone() }, { kind: 'sit', to: side.clone() }, { kind: 'lie', to: to.clone() });
     else steps.push(stand(to));
     // Tira pontos repetidos (já está no corredor, ou o destino fica no corredor). Virar, deitar e levantar ficam.
@@ -257,6 +276,22 @@ export class CrewRoutine {
       from = st.to;
     }
     return best;
+  }
+
+  /** Da passarela até dentro da garagem: braço sul, túnel, e desce até o piso da garagem (um pouco mais baixo). */
+  private garagePath(): THREE.Vector3[] {
+    const x = GARAGE_TUBE.from.x;
+    return [
+      new THREE.Vector3(x, FLOOR_Y, GARAGE_TUBE.from.z),
+      new THREE.Vector3(x, FLOOR_Y, GARAGE_TUBE.to.z),
+      new THREE.Vector3(x, GARAGE_FLOOR_Y, GARAGE_TUBE.to.z + 0.45),
+    ];
+  }
+
+  /** Saindo da garagem: o mesmo caminho ao contrário, até a passarela. */
+  private leaveGarage(from: THREE.Vector3): Step[] {
+    const inGarage = from.z > GARAGE_TUBE.to.z - 0.2 && Math.abs(from.x - GARAGE_POSITION.x) < 2;
+    return inGarage ? this.garagePath().reverse().map((p) => ({ kind: 'walk', to: p })) : [];
   }
 
   /** Saindo da estufa (sobe pela escada mais perto) antes de ir ao corredor. */
@@ -347,6 +382,8 @@ export class CrewRoutine {
         : kind === 'harvest' ? 'harvest'
         : kind === 'analysis' ? 'analysis'
         : kind ? 'task'
+        // O rover voltou e espera a tripulação: o cientista livre vai à garagem (não interrompe quem já está lá).
+        : r === 'scientist' && f.roverWaiting && f.awake && !f.alert && (w.going === 'rover' || w.at === 'post') ? 'rover'
         : w.at;
 
       // Mudou de atividade: calcula o caminho até o novo lugar.
@@ -362,7 +399,9 @@ export class CrewRoutine {
         const goingToBed = (w.going === 'bed' || w.going === 'sleep') && w.path.length > 0;
         w.going = activity;
         if (!((inBed || goingToBed) && toBed)) {
-          w.path = [...this.leaveGreenhouse(w.pos), ...this.route(r, w.pos, this.spotOf(r, activity, w.station), inBed, toBed, activity === 'task' ? 0 : activity === 'harvest' ? HARVEST_STAIR : null)];
+          const leave = [...this.leaveGreenhouse(w.pos), ...this.leaveGarage(w.pos)];
+          const start = leave.length ? leave[leave.length - 1].to : w.pos;
+          w.path = [...leave, ...this.route(r, start, this.spotOf(r, activity, w.station), inBed, toBed, activity === 'task' ? 0 : activity === 'harvest' ? HARVEST_STAIR : null, activity === 'rover')];
           w.stepTime = 0;
         }
       }
@@ -448,9 +487,22 @@ export class CrewRoutine {
           this.greenhouseShown = true;
           this.onFirstGreenhouse();
         }
-        // Trabalhando: de frente para o trabalho (vazamento, plantas ou bancada), nunca para a câmera.
+        // Trabalhando: de frente para o trabalho (vazamento, plantas, bancada ou rover), nunca para a câmera.
         a.setLying(false);
         a.root.position.copy(w.pos);
+        if (activity === 'rover') {
+          // Tira as amostras e revisa o rover; pronto, libera ele para uma busca extra e vai descansar depois.
+          a.faceToward(f.roverAt ?? GARAGE_POSITION, dt);
+          a.tinker(dt);
+          w.idle = 0;
+          w.serviceLeft -= dt;
+          if (w.serviceLeft <= 0) {
+            w.serviceLeft = ROVER_SERVICE_SECONDS;
+            w.rested = false;
+            this.onRoverServiced();
+          }
+          continue;
+        }
         a.faceToward(activity === 'harvest' ? PROBLEM_SPOTS.harvest : activity === 'analysis' ? LAB_BENCH_LOOK : PROBLEM_SPOTS.greenhouseLeak, dt);
         a.idle(dt);
       } else {
