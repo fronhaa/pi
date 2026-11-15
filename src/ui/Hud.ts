@@ -78,6 +78,11 @@ export class Hud {
   private nightView: { res: Resources; sol: number } | null = null;
 
   private readonly top = h('header', { class: 'top' });
+  /**
+   * Meta da missão no topo (ciência e tubos). O desafio pede 2 ou 3 recursos centrais: o painel da esquerda
+   * mostra só energia, suporte de vida e proteção; ciência é a meta e a dose é o risco dentro da proteção.
+   */
+  private readonly goal = h('div', { class: 'goal-slot' });
   private readonly resources = h('section', { class: 'resources panel', 'aria-labelledby': 'res-title' });
   private readonly messages = h('section', { class: 'messages panel', 'aria-live': 'polite', 'aria-labelledby': 'msg-title' });
   private readonly planEl = h('section', { class: 'plan panel', 'aria-labelledby': 'plan-title' });
@@ -209,6 +214,7 @@ export class Hud {
         h('span', { class: 'sol-track', 'aria-hidden': 'true' }, h('i', { style: `width:${pct}%` })),
         h('span', { class: 'help', 'aria-hidden': 'true' }, '?'),
       ),
+      this.goal,
       h('div', { class: 'top-actions' },
         topButton('📖', t('top.help'), () => this.cb.onHowTo()),
         topButton('🛰️', t('top.nasaData'), () => this.cb.onNasaData()),
@@ -229,16 +235,34 @@ export class Hud {
     };
     // Tubos: o que sobra, já descontando as amostras que o rover coletou hoje (ao vivo).
     const tubesLeft = (r.tubes ?? CONFIG.samples.tubes) - (this.tubesPlan()?.filled ?? 0);
+    // Os 3 recursos centrais (desafio: "life support, power, shielding"). A dose fica DENTRO da proteção, como
+    // risco: pouca proteção, mais dose. Nenhuma regra muda; só onde cada número aparece.
+    const doseCls = r.dose >= doseBad ? 'bad' : r.dose >= doseWarn ? 'warn' : 'good';
     patchChildren(this.resources, [
-      h('h2', { id: 'res-title' }, 'Base'),
-      resource('res.battery', 'help.battery', r.battery, CONFIG.battery.max, level(r.battery)),
-      resource('res.life', 'help.life', r.life, CONFIG.life.max, level(r.life)),
-      resource('res.shield', 'help.shield', r.shield, CONFIG.shield.max, level(r.shield)),
-      resource('res.dose', 'help.dose', r.dose, CONFIG.dose.max, r.dose >= doseBad ? 'bad' : r.dose >= doseWarn ? 'warn' : 'good', [doseWarn, doseBad]),
-      resource('res.science', 'help.science', r.science, CONFIG.science.goal, 'sci', [], t('res.goal', { n: CONFIG.science.goal })),
-      // Tubos de amostra (regra em src/sim/day.ts): ficam amarelos/vermelhos quando faltam poucas expedições.
-      // Com energia na ciência, mostra já o que a expedição de hoje vai gastar ("−3 hoje"); o número cai na noite.
-      resource('res.tubes', 'help.tubes', tubesLeft, CONFIG.samples.tubes, level((tubesLeft / CONFIG.samples.tubes) * 100), [], this.tubesToday()),
+      h('h2', { id: 'res-title' }, t('res.title')),
+      resource('res.battery', 'help.battery', r.battery, CONFIG.battery.max, level(r.battery), [], undefined, '⚡'),
+      resource('res.life', 'help.life', r.life, CONFIG.life.max, level(r.life), [], undefined, '💧'),
+      resource('res.shield', 'help.shield', r.shield, CONFIG.shield.max, level(r.shield), [], undefined, '🛡️'),
+      riskLine(r.dose, CONFIG.dose.max, doseCls, [doseWarn, doseBad]),
+    ]);
+    // Meta da missão, no topo: ciência (o objetivo) e tubos de amostra (o que a ciência gasta).
+    // Tubos (regra em src/sim/day.ts): com energia na ciência, mostra o que a expedição de hoje vai gastar.
+    const today = this.tubesToday();
+    const tubesCls = level((tubesLeft / CONFIG.samples.tubes) * 100);
+    const sci = Math.round(r.science);
+    patchChildren(this.goal, [
+      h('button', {
+        class: 'goal top-chip', type: 'button', 'aria-label': t('a11y.helpFor', { name: t('res.science') }),
+        onclick: () => openHelp('help.science', t('res.science')),
+      },
+        h('span', {}, `⭐ ${t('goal.science', { n: sci, goal: CONFIG.science.goal })}`),
+        h('span', { class: 'sol-track goal-track', role: 'meter', 'aria-label': t('res.science'), 'aria-valuemin': 0, 'aria-valuemax': CONFIG.science.goal, 'aria-valuenow': sci },
+          h('i', { style: `width:${Math.min(100, (sci / CONFIG.science.goal) * 100)}%` })),
+      ),
+      h('button', {
+        class: `goal tubes top-chip tone-${tubesCls}`, type: 'button', 'aria-label': t('a11y.helpFor', { name: t('res.tubes') }),
+        onclick: () => openHelp('help.tubes', t('res.tubes')),
+      }, `🧪 ${t('goal.tubes', { n: tubesLeft })}${today ? ` · ${today}` : ''}`),
     ]);
   }
 
@@ -498,15 +522,34 @@ function topButton(icon: string, label: string, onClick: () => void): HTMLButton
   );
 }
 
-function resource(nameKey: StringKey, helpKey: StringKey, value: number, max: number, cls: string, marks: number[] = [], extra?: string) {
-  const name = t(nameKey);
+/**
+ * Dose de radiação como RISCO, dentro da proteção (não é uma barra a mais para cuidar): linha pequena e discreta
+ * enquanto está baixa; amarela e vermelha perto do limite (as mesmas faixas de antes).
+ */
+function riskLine(value: number, max: number, cls: string, marks: number[]) {
+  const name = t('res.dose');
+  const shown = Math.round(value * 10) / 10;
+  const shownText = shown.toLocaleString(getLang() === 'pt' ? 'pt-BR' : 'en');
+  return h('div', { class: `risk risk-${cls}` },
+    h('div', { class: 'res-head' }, `☢ ${name}`, helpButton('help.dose', name),
+      h('span', { class: 'val' }, t('risk.of', { n: shownText, max }))),
+    h('div', { class: `bar thin ${cls}`, role: 'meter', 'aria-label': name, 'aria-valuemin': 0, 'aria-valuemax': max, 'aria-valuenow': shown },
+      h('i', { style: `width:${Math.max(0, Math.min(100, (value / max) * 100))}%` }),
+      ...marks.map((m) => h('span', { class: 'mark', style: `left:${(m / max) * 100}%` })),
+    ),
+  );
+}
+
+function resource(nameKey: StringKey, helpKey: StringKey, value: number, max: number, cls: string, marks: number[] = [], extra?: string, icon?: string) {
+  const label = t(nameKey);
+  const name = icon ? `${icon} ${label}` : label;
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   const shown = Math.round(value * 10) / 10;
   const shownText = shown.toLocaleString(getLang() === 'pt' ? 'pt-BR' : 'en');
   return h('div', { class: 'res' },
-    h('div', { class: 'res-head' }, name, helpButton(helpKey, name),
+    h('div', { class: 'res-head' }, name, helpButton(helpKey, label),
       h('span', { class: 'val' }, extra ? `${shownText} · ${extra}` : shownText)),
-    h('div', { class: `bar ${cls}`, role: 'meter', 'aria-label': name, 'aria-valuemin': 0, 'aria-valuemax': max, 'aria-valuenow': shown },
+    h('div', { class: `bar ${cls}`, role: 'meter', 'aria-label': label, 'aria-valuemin': 0, 'aria-valuemax': max, 'aria-valuenow': shown },
       h('i', { style: `width:${pct}%` }),
       ...marks.map((m) => h('span', { class: 'mark', style: `left:${(m / max) * 100}%` })),
     ),

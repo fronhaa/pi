@@ -928,12 +928,15 @@ Os códigos e estados seguem a Art Bible ([seção 9](art-bible.md#9-categorias-
 
 ## Interface, linguagem e acessibilidade
 
+> **Recursos centrais (decisão de 15/11/2026):** o desafio recomenda 2 ou 3 recursos em vez de 5 ou 6. O HUD mostra 3 para cuidar (energia, vida, proteção), 1 meta (ciência, com os tubos) e 1 risco (dose, dentro da proteção). Nenhuma regra mudou: só onde cada número aparece.
+
 A interface fica por cima da cena e tem só cinco áreas, todas com bordas grossas e arredondadas que combinam com o contorno de nanquim.
 
 | Área | Conteúdo |
 | --- | --- |
 | Barra superior | Pílulas soltas sobre o cenário: nome da missão; "Sol N de 15" com barrinha de progresso (tocar explica o que é um sol); botões "Como jogar" e "Dados da NASA" (só ícone no celular) e seletor de idioma PT \| EN |
-| Recursos (esquerda) | Bateria, suporte de vida, blindagem, dose (com marcas em 50 e 70), ciência (com a meta) e tubos de amostra (de 38), cada um com barra e botão "?" |
+| Recursos (esquerda) | **Só os 3 recursos centrais** que o desafio cita ("life support, power, shielding"): ⚡ bateria, 💧 suporte de vida e 🛡️ blindagem, cada um com barra e botão "?". A **dose** fica dentro da blindagem como **risco** (linha pequena com marcas; amarela e vermelha perto do limite): pouca proteção, mais dose |
+| Meta da missão (topo) | ⭐ ciência "18 de 100" (com barra) e 🧪 tubos de amostra ("32 tubos · −3 hoje"). Ciência é o objetivo, não algo que mantém a base viva; os tubos mostram o que a ciência gasta. Cada um abre o "?" ao tocar |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |
 | Janelas | Tutorial (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
