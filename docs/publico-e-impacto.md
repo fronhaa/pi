@@ -18,10 +18,14 @@ O jogo é desenhado para **a criança de 7 anos conseguir jogar sozinha**; a de 
 
 ### Texto
 
+Guia completo, com as 6 regras de ouro, exemplos e o modo cientista: [linguagem-e-ui-criancas.md](linguagem-e-ui-criancas.md).
+
 | Regra | Limite |
 | --- | --- |
-| Frase | Até **15 palavras** |
-| Caixa de ajuda "?" | Até **2 frases** (~25 palavras) |
+| Frase | De **8 a 12 palavras** (padrão Lexile 300L–500L) |
+| Caixa de ajuda "?" | Até **2 frases** curtas |
+| Alerta e botão | Começa com **ícone + 2 ou 3 palavras em negrito** e verbo no imperativo |
+| Termo da NASA | Fica no texto, com a explicação simples entre parênteses: "**EVA** (caminhada lá fora)" |
 | Mensagem da Terra, alerta, relatório | Até **2 frases**; a primeira já diz o que fazer |
 | Vocabulário | Palavras do dia a dia. Termo científico só com "?" na primeira vez que aparece |
 | Tom | Ativo e direto: "Reforce a blindagem!", não "É recomendável que a blindagem seja reforçada" |
@@ -106,7 +110,7 @@ Para quem implementa (inicialmente o Marcelo). **Corrigir** = problema encontrad
 | --- | --- | --- | --- | --- |
 | 1 | Corrigir | **Botão "Pular" no toque** quando há astronauta selecionado | No celular não há como pular, então a lição da gravidade (aviso do primeiro pulo) nunca aparece | Tocando só na tela, a criança pula e vê o aviso dos 38% |
 | 2 | Corrigir | **Conferir a altura do pulo.** Teoria: 2,2 m/s em 3,73 m/s² dá ~0,65 m; o teste do PR #9 mediu ~0,4 m | A tela afirma para a criança que o pulo sobe 2,6× mais; o jogo precisa mostrar isso | Altura medida por passo de física fica a menos de 10% da teoria, ou o texto/valor é ajustado |
-| 3 | Corrigir | **Encurtar os 10 textos com mais de 20 palavras** (lista na [seção 2](#texto)), nos dois idiomas | Leitura de 7 a 9 anos | Nenhum texto de jogo passa de 2 frases / ~25 palavras |
+| 3 | Corrigir | **Encurtar os textos ao padrão novo** ([linguagem-e-ui-criancas.md](linguagem-e-ui-criancas.md)): frases de 8 a 12 palavras, ícone + negrito, termo da NASA explicado. Começar pelos 10 com mais de 20 palavras (lista na [seção 2](#texto)), nos dois idiomas | Leitura de 7 a 9 anos | Nenhum texto de jogo passa de 2 frases nem de 12 palavras por frase |
 | 4 | Corrigir | Incluir o pulo na dica de toque (`crew.hint.touch`) quando o item 1 existir | A dica precisa mostrar tudo o que dá para fazer | A dica cita andar e pular |
 | 5 | Decidir | **Revelar as barras aos poucos:** sol 1 mostra bateria, vida e blindagem; dose aparece no primeiro alerta de tempestade; ciência quando a criança põe o primeiro bloco nela | 5 barras + poeira de uma vez é muito para 7 anos; o desafio pede 2 a 3 recursos | Sol 1 com no máximo 3 barras; cada barra nova chega com o "?" aberto uma vez |
 | 6 | Decidir | **Pergunta antes e depois** ([seção 5](#pergunta-antes-e-depois-dentro-do-jogo)) | Dá um número de impacto para o pitch, sem coletar dados | As duas telas existem, nos dois idiomas, sem nada salvo fora do aparelho |
@@ -114,11 +118,13 @@ Para quem implementa (inicialmente o Marcelo). **Corrigir** = problema encontrad
 | 8 | Decidir | **Cooperativo:** modo de 2 jogadores (Terra e Marte) é o padrão em sala; 4 papéis viram opção avançada | 4 papéis negociando é ótimo para 10 a 12, pesado para 7 | Menu de cooperativo abre em 2 jogadores |
 | 9 | Decidir | **Diversidade da tripulação** ([seção 4](#4-representatividade)) na Art Bible e nos modelos | Toda criança se ver no jogo | CHR-001 a 004 definidos com diversidade de gênero e tom de pele |
 | 10 | Decidir | **Guia para professor** ([seção 5](#guia-para-professor-1-página)) | Alcance em escola | Página publicada junto com o jogo |
+| 11 | Corrigir | **🔊 Ler para mim** (Web Speech API, `pt-BR`/`en-US`, `rate: 0.95`) nas caixas de texto | Reforço auditivo para quem lê devagar (7 anos) | Toda caixa de texto do jogo tem o botão e lê no idioma atual |
+| 12 | Decidir | **Modo cientista**: unidade real (kPa, mSv, kW, τ) no *tooltip* e em "Dados da NASA"; na tela, só barras e números inteiros | Low Floor, High Ceiling: 7 anos veem o simples, 10–12 e juízes veem o dado real | Cada recurso tem a unidade real no modo cientista, sem converter a escala do jogo em unidade real |
 
 ## 7. Checklist de revisão (todo PR que mexe em texto, interface ou mecânica)
 
 - [ ] Uma criança de 7 anos entenderia sem ajuda de adulto?
-- [ ] Textos novos com até 15 palavras por frase e 2 frases por caixa, nos dois idiomas?
+- [ ] Textos novos com 8 a 12 palavras por frase e no máximo 2 frases por caixa, nos dois idiomas, seguindo [linguagem-e-ui-criancas.md](linguagem-e-ui-criancas.md) (ícone + negrito, imperativo, termo da NASA explicado)?
 - [ ] Funciona só com toque?
 - [ ] Termo científico novo tem "?"?
 - [ ] Nada assusta: sem morte, sem castigo, derrota explica e convida a tentar de novo?

@@ -10,7 +10,7 @@
 1. **Todo fato tem fonte aberta e data de conferência.** Sem link, não entra (fica em [Pendentes](#pendentes-de-fonte)).
 2. **Os números reais não substituem a escala do jogo.** A dose do jogo é uma escala própria (INTERPRETADO, [Art Bible 7.5](art-bible.md#75-donki)). Os fatos aparecem **ao lado**, como comparação. Nunca diga à criança "você recebeu X mSv".
 3. **Sem susto.** Radiação e poeira sempre vêm com a solução ("por isso a base tem…"), nunca em tom de perigo ([segurança emocional](publico-e-impacto.md#3-segurança-emocional)).
-4. **Texto para a criança:** até 2 frases, até 15 palavras por frase, em PT e EN.
+4. **Texto para a criança:** até 2 frases, de 8 a 12 palavras por frase, em PT e EN ([linguagem-e-ui-criancas.md](linguagem-e-ui-criancas.md)).
 
 ## Resumo
 

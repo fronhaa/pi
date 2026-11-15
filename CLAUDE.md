@@ -5,6 +5,7 @@ Jogo 3D cartoon no navegador para o desafio NASA Space Apps 2026 "Junior Astrona
 ## Antes de mexer
 
 - **Público: crianças de 7 a 12 anos.** Simplicidade, facilidade e caráter educativo são critério crítico: antes de mexer em texto, interface ou mecânica, leia `docs/publico-e-impacto.md` e passe no checklist dele.
+- **Todo texto do jogo (PT e EN) segue `docs/linguagem-e-ui-criancas.md`:** frases de 8 a 12 palavras, no máximo 2 por caixa; alerta e botão começam com ícone + 2 ou 3 palavras em **negrito**; verbo no imperativo e voz ativa; termo da NASA com explicação simples entre parênteses ("**EVA** (caminhada lá fora)"); número simples na tela e unidade real só no modo cientista.
 - Leia `docs/desafio.md` e `docs/game-design.md` (o que estamos construindo e por quê), depois `docs/arquitetura.md`. Para física, `docs/fisica.md`; para visual, `docs/art-bible.md` (direção de arte) e `docs/estilo-visual.md` (como está no código).
 - Siga `docs/convencoes.md` (identificadores em inglês, comentários/docs em português, alias `@/`).
 - **Onde mexer:** `docs/estrutura-do-projeto.md` tem o mapa por área e as receitas (cenário novo em `src/scenarios/`, personagem em `src/sim/crew.ts`, interação em `src/sim/actions.ts`, posições em `src/scene/base/layout.ts`, textos em `src/i18n/strings/<assunto>.ts`). Siga a receita inteira.
