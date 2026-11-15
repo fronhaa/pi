@@ -268,8 +268,9 @@ export class Game {
     await this.loadMotion();
     // Prepara de uma vez os shaders da base (no celular, preparar na primeira vez que aparece trava o quadro).
     await this.renderer.compileAsync(this.scene, this.camera);
-    // Solo (sem servidor de grupo): a tela de escolha 3D e a viagem também já ficam montadas e preparadas aqui.
-    if (!coopServerUrl()) await this.ensureLaunchScene().warmUp(this.renderer);
+    // A tela de escolha 3D e a viagem também já ficam montadas e preparadas aqui (menos ao voltar para uma partida
+    // em grupo já começada: aí o jogo vai direto para ela).
+    if (!this.resumingCoop()) await this.ensureLaunchScene().warmUp(this.renderer);
   }
 
   start(): void {
@@ -290,17 +291,28 @@ export class Game {
   // ---------- modo e lugar ----------
 
   /** Solo: escolhe Marte ou Lua, cria a missão do lugar e começa o treino dos sóis 1 a 3 (o guia ensina na hora). */
-  private startSolo(): void {
-    showPlaceChoice3D(this.showLaunchPad(), (place) => {
-      this.setLocation(place);
-      this.newMission();
-      // Viagem da Terra até a base (só visual, dá para pular); a missão começa quando o foguete chega.
-      this.playLaunch(place);
-    });
+  /** Sozinho: cria a missão do lugar e faz a viagem; a missão começa quando o foguete chega. */
+  private startSolo(place: Location): void {
+    this.setLocation(place);
+    this.newMission();
+    this.playLaunch(place, () => this.startMission());
+  }
+
+  /** Em grupo (só Marte, por enquanto): faz a viagem até Marte e, na chegada, abre a sala de espera. */
+  private startGroupTrip(url: string): void {
+    this.setLocation('mars');
+    this.playLaunch('mars', () => this.startCoop(url));
+  }
+
+  /** Partida em grupo já começada nesta página (recarregou no meio): volta direto para ela, sem escolha nem viagem. */
+  private resumingCoop(): { url: string; saved: { code: string; token: string } } | null {
+    const url = coopServerUrl();
+    const saved = url ? new CoopClient(url).savedSession() : null;
+    return url && saved ? { url, saved } : null;
   }
 
   /** Viagem da Terra até a base em 3D cartoon (src/scene/LaunchScene.ts) com o texto por cima; depois, a missão. */
-  private playLaunch(place: Location): void {
+  private playLaunch(place: Location, onArrive: () => void): void {
     const launch = this.showLaunchPad();
     const reduced = prefersReducedMotion();
     // O foguete já está em órbita: o motor liga na hora e ele acelera até o ponto de saída. O texto entra já no toque
@@ -313,7 +325,7 @@ export class Game {
         if (this.launch === launch) this.launch = null;
         // A nave chegou: só agora aparecem o HUD e o resto da interface do jogo.
         document.body.classList.remove('pre-mission');
-        this.startMission();
+        onArrive();
       },
       toDeparture,
     );
@@ -355,19 +367,21 @@ export class Game {
     this.hud.render();
   }
 
-  /** Com servidor coop configurado, pergunta: sozinho ou em grupo. Sem servidor, vai direto ao solo. */
+  /**
+   * Entrada do jogo: 1º Marte ou Lua (tela 3D); 2º, se há servidor de grupo, sozinho ou em grupo. O grupo só existe
+   * em Marte (o servidor roda só Marte), então na Lua vai direto para o modo sozinho.
+   */
   private chooseMode(): void {
+    const resume = this.resumingCoop();
+    if (resume) {
+      this.startCoop(resume.url, resume.saved); // recarregou a página no meio de uma partida em grupo
+      return;
+    }
     const url = coopServerUrl();
-    if (!url) {
-      this.startSolo();
-      return;
-    }
-    const saved = new CoopClient(url).savedSession();
-    if (saved) {
-      this.startCoop(url, saved); // recarregou a página no meio de uma partida em grupo
-      return;
-    }
-    showModeChoice(() => this.startSolo(), () => this.startCoop(url));
+    showPlaceChoice3D(this.showLaunchPad(), (place) => {
+      if (url && place === 'mars') showModeChoice(() => this.startSolo(place), () => this.startGroupTrip(url));
+      else this.startSolo(place);
+    });
   }
 
   private startCoop(url: string, saved?: { code: string; token: string }): void {
@@ -789,11 +803,7 @@ export class Game {
     this.hud.setState(this.mission.state);
     // Jogar de novo: escolhe o lugar outra vez (dá para experimentar Marte e Lua e comparar).
     showEnd(this.mission.state, () => {
-      showPlaceChoice3D(this.showLaunchPad(), (place) => {
-        this.setLocation(place);
-        this.newMission();
-        this.playLaunch(place);
-      });
+      showPlaceChoice3D(this.showLaunchPad(), (place) => this.startSolo(place));
     });
   }
 
