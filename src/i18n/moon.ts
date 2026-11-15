@@ -11,7 +11,7 @@ const pt = {
   'top.sol': 'Dia {sol} de {total}',
 
   'help.life': 'Ar, água e comida da tripulação. Precisa de 3 blocos por dia para ficar estável. Se chegar a 0, a missão acaba.',
-  'help.shield': 'A blindagem protege a base da radiação do Sol. Ela é feita de sacos de regolito (a terra da Lua). Ela se desgasta um pouco todo dia.',
+  'help.shield': 'A blindagem são sacos de regolito (terra da Lua) no abrigo. Cada bloco de energia move as máquinas que enchem mais sacos. Ela se desgasta um pouco todo dia.',
   'help.dose': 'Dose é quanta radiação a tripulação já recebeu. Na Lua não há ar para proteger. Ela sobe o dobro de Marte todo dia. Em 100, a tripulação precisa voltar para a Terra. Este número é uma escala do jogo, não uma medição real.',
   'help.sol': 'Na base lunar contamos os dias da Terra (24 horas). Um dia inteiro da Lua dura 29 dias e meio da Terra!',
   'help.dust': 'Poeira cobre os painéis solares e diminui a energia. Na Lua não há vento. A poeira só sai se um astronauta limpar.',
@@ -105,7 +105,7 @@ const en: Record<keyof typeof pt, string> = {
   'top.sol': 'Day {sol} of {total}',
 
   'help.life': 'Air, water and food for the crew. It needs 3 blocks per day to stay steady. If it reaches 0, the mission ends.',
-  'help.shield': 'Shielding protects the base from the Sun’s radiation. It is made of bags of regolith (Moon soil). It wears down a little every day.',
+  'help.shield': 'Shielding is bags of regolith (Moon soil) around the shelter. Each energy block runs the machines that fill more bags. It wears down a little every day.',
   'help.dose': 'Dose is how much radiation the crew has received. The Moon has no air to protect you. It goes up twice as much as on Mars every day. At 100, the crew must go back to Earth. This number is a game scale, not a real measurement.',
   'help.sol': 'At the Moon base we count Earth days (24 hours). A whole Moon day lasts 29 and a half Earth days!',
   'help.dust': 'Dust covers the solar panels and lowers the energy. The Moon has no wind. Dust only comes off if an astronaut cleans it.',

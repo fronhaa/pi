@@ -71,6 +71,8 @@ São três recursos centrais (energia, suporte de vida e blindagem), seguindo o 
 | Tubos de amostra | 38 | Todo sol com energia na ciência, o rover faz uma expedição e enche 3 tubos (não importa quantos blocos). Com o rover atolado, não sai e não gasta tubos | Os 38 são da missão inteira. Sem tubos, o rover só mede, sem guardar amostras, e a ciência do dia vale a metade |
 | Poeira nos painéis | 0% | Cai 6 pontos percentuais por sol com vento | Máximo 80%; reduz os blocos gerados na mesma proporção |
 
+**Blindagem: por que custa energia.** A proteção contra a tempestade solar é **massa** entre a tripulação e o Sol: no Orion, a tripulação monta um abrigo com sacos de estiva quando chega o aviso; na superfície, regolito sobre o abrigo. Cavar regolito gasta energia: a escavadeira robótica RASSOR 2.0 da NASA usa 4 W por kg/h ([F28](ciencia-marte.md#f28-abrigo-contra-tempestade-solar-mais-massa-e-máquinas-cavam-o-regolito)). No jogo, cada bloco de energia na blindagem é o trabalho das máquinas que enchem mais **sacos de regolito** no abrigo (INTERPRETADO: +8 por bloco). Os textos nunca dizem que a energia, por si, protege.
+
 **Tubos de amostra.** O rover Perseverance levou 43 tubos para Marte: 38 para amostras e 5 "tubos-testemunha" ([F14](ciencia-marte.md#f14-o-perseverance-tem-poucos-tubos-de-amostra)). No jogo, os 38 são da missão inteira e cada expedição enche 3 (`CONFIG.samples`, INTERPRETADO: o número 38 é real; 3 por expedição e a ciência pela metade sem tubos são regras do jogo). A lição: os tubos são poucos, então vale escolher bem quando mandar o rover. Espalhar 1 bloco de ciência por dia gasta 3 tubos para +3 de ciência; concentrar a ciência rende mais por tubo. O plano de energia mostra o custo antes de terminar o sol ("+9 · 🧪 −3 tubos"; sem tubos: "🧪 sem tubos: só metade"). O painel mostra "Tubos de amostra" com o gasto do dia já previsto ("38 · −3 hoje"; com 0 blocos na ciência, só "38") e **enchendo ao vivo**: a cada parada de estudo do rover, um tubo a menos (37, 36, 35, "🧪 3 de 3 cheios hoje"). A regra é que decide os 3 tubos do sol; na noite, o relatório confirma o número, o relatório conta quantos o rover encheu e quantos restam, e o primeiro relatório com expedição traz o fato do Perseverance (só em Marte). Na cena, o rover faz uma expedição por sol, com 3 paradas de estudo (uma por tubo), e guarda os tubos dentro dele, como o Perseverance ([F25](ciencia-marte.md#f25-como-o-perseverance-coleta-e-guarda-as-amostras)): **não tem garagem nem volta a uma base** ([F23](ciencia-marte.md#f23-o-rover-de-ciência-passa-a-noite-onde-está), [F24](ciencia-marte.md#f24-garagem-para-rover-a-nasa-não-usa); [ADR 0011](decisoes/0011-rover-sem-garagem-e-quartos-no-raio-sul.md)). Depois das 3 paradas do sol, segue explorando e fotografando, com o braço guardado e sem encher tubos; à noite para onde estiver e continua no sol seguinte.
 
 **Tempestade solar.** Um evento solar real do DONKI dispara a tempestade e define a intensidade dela no jogo. Nas [missões históricas](#calendário-da-missão-janelas-históricas-reais) (o modo padrão), o evento é uma ejeção de massa coronal (CME), e a força vem do tipo de velocidade: S e C = fraca, O = média, R e ER = forte. Sem as missões, o evento é uma erupção sorteada, e a força vem da classe: C = fraca, M = média, X = forte. As duas usam a mesma escala: fraca (10), média (25), forte (45). A dose recebida é calculada assim:
@@ -104,7 +106,7 @@ Os 3 primeiros sóis (dias, na Lua) são um **treino guiado**, dentro dos 15 só
 
 - **Dia de treino:** nos sóis 1 a 3 não há problemas, mas o dia não pula direto para a noite: ele dura **12 s** (só visual), para a criança ver o Sol cruzar o céu enquanto o painel diz "os painéis fazem energia com a luz do Sol".
 - **Lua:** o treino do sol 3 é a **sombra das montanhas** (a luz do Sol some por alguns segundos; "às vezes por dias"), porque na Lua não há vento nem tempestade de poeira. A mensagem chega em ~1 segundo.
-- **Botão 👁️ "Ver por dentro / Ver por fora"** no topo, em toda a missão (solo e grupo): fecha ou abre o casco das cápsulas, da estufa e dos túneis.
+- **Botão 👁️ "Ver por dentro / Ver por fora"** no topo, em toda a missão (solo e grupo): fecha ou abre o casco das cápsulas, da estufa e dos túneis. Com o casco fechado, as luzes de dentro (luminárias das cabines, LEDs e fibra óptica da estufa) apagam junto: no three.js a luz atravessa paredes, e iluminaria o chão de fora.
 - **Em grupo**, as regras dos sóis 1 a 3 são as mesmas (o servidor roda o mesmo `src/sim`), mas sem o guia e sem o dia curto: "Começar o dia" vai direto para a noite, como antes. A base começa aberta.
 - O "📖 Como jogar" (3 passos) continua no topo; a missão solo não abre mais com ele, porque o treino ensina na hora.
 
@@ -949,12 +951,17 @@ Os códigos e estados seguem a Art Bible ([seção 9](art-bible.md#9-categorias-
 
 ## Interface, linguagem e acessibilidade
 
+> **Recursos centrais (decisão de 15/11/2026):** o desafio recomenda 2 ou 3 recursos em vez de 5 ou 6. O HUD mostra 3 para cuidar (energia, vida, proteção), 1 meta (ciência, com os tubos) e 1 risco (dose, dentro da proteção). Nenhuma regra mudou: só onde cada número aparece.
+
 A interface fica por cima da cena e tem só cinco áreas, todas com bordas grossas e arredondadas que combinam com o contorno de nanquim.
 
 | Área | Conteúdo |
 | --- | --- |
 | Barra superior | Pílulas soltas sobre o cenário: nome da missão; "Sol N de 15" com barrinha de progresso (tocar explica o que é um sol); botões "Como jogar" e "Dados da NASA" (só ícone no celular) e seletor de idioma PT \| EN |
-| Recursos (esquerda) | Bateria, suporte de vida, blindagem, dose (com marcas em 50 e 70), ciência (com a meta) e tubos de amostra (de 38), cada um com barra e botão "?" |
+| Recursos (esquerda) | **Só os 3 recursos centrais** que o desafio cita ("life support, power, shielding"): ⚡ bateria, 💧 suporte de vida e 🛡️ blindagem, cada um com barra e botão "?". A **dose** fica dentro da blindagem como **risco** (linha pequena com marcas; amarela e vermelha perto do limite): pouca proteção, mais dose |
+| Meta da missão (topo) | ⭐ ciência "18 de 100" (com barra; no celular, selo curto "18/100" na linha do sol). Ciência é o objetivo, não algo que mantém a base viva. 🧪 Tubos de amostra **só aparecem quando estão acabando** (3 expedições ou menos); o custo de hoje já aparece no plano ("−3 tubos"). Cada um abre o "?" ao tocar |
+| Idioma e fontes | **Só inglês** (decisão de 15/11/2026: desafio e juízes em inglês; o seletor poluía o HUD). Os textos em português ficam no código (`?lang=pt`). As **fontes da NASA** saíram do topo e ficam no fim do "How to play" (o desafio pede as fontes dentro do jogo) |
+| Celular | Nomes curtos (Power, Life, Shield), contador "Inside · Outside" só com alguém lá fora, mensagem da Terra compacta (a linha do atraso continua) |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |
 | Janelas | Treino dos sóis 1 a 3 (balão no alto), "Como jogar" (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |

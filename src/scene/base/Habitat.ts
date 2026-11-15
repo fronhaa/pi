@@ -81,6 +81,8 @@ export class Habitat {
   private readonly windows = new THREE.MeshBasicMaterial({ color: PALETTE.window });
   /** Vidros das janelas dos módulos .glb: acendem à noite (luz de dentro). */
   private readonly windowGlass: THREE.MeshToonMaterial[] = [];
+  /** Luminárias das cabines: apagam com o casco fechado (a luz do three.js atravessa paredes e vazaria para fora). */
+  private readonly cabinLights: THREE.PointLight[] = [];
   /** Animações do .glb (observatório, cata-vento). */
   mixer: THREE.AnimationMixer | null = null;
 
@@ -173,6 +175,7 @@ export class Habitat {
       lamp.position.set(0, y + 2.45, 0);
       room.add(lamp);
       const light = new THREE.PointLight(0xffe6c0, CABIN_LIGHT_INTENSITY, 4.5, 1.6);
+      this.cabinLights.push(light);
       light.position.set(0, y + 2.3, 0.2);
       room.add(light);
       const wall = new THREE.Mesh(new THREE.BoxGeometry(0.05, ROOM_WALL_HEIGHT, wallFront - ROOM_WALL_BACK_Z), wallMat);
@@ -301,8 +304,12 @@ export class Habitat {
     }
   }
 
-  /** Janelas acendem à noite (`night` de 0 a 1). */
-  update(night: number): void {
+  /**
+   * Janelas acendem à noite (`night` de 0 a 1). `inside` (0–1) é o quanto o casco está aberto: fechado, as luzes de
+   * dentro apagam, senão iluminariam o chão e os prédios de fora através do casco.
+   */
+  update(night: number, inside = 1): void {
+    for (const l of this.cabinLights) l.intensity = CABIN_LIGHT_INTENSITY * inside;
     this.windows.color.setHex(PALETTE.window).multiplyScalar(0.6 + night * 0.8);
     for (const mat of this.windowGlass) {
       mat.emissive.setHex(0xffd27a);
@@ -330,6 +337,7 @@ export class Habitat {
       lamp.position.set(ox, y + 2.45, 0);
       inside.add(lamp);
       const light = new THREE.PointLight(0xffe6c0, CABIN_LIGHT_INTENSITY, 4.5, 1.6);
+      this.cabinLights.push(light);
       light.position.set(ox, y + 2.3, 0.2);
       inside.add(light);
     }

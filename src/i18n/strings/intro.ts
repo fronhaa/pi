@@ -1,7 +1,7 @@
 /**
  * Introdução: os sóis 1 a 3 são um treino guiado (docs/game-design.md, "Introdução: sóis 1 a 3").
  * Linguagem para 7–12 anos (docs/linguagem-e-ui-criancas.md): título com ícone, até 12 palavras por frase.
- * Fatos: F6 (aviso da Terra), F27 (poeira dura semanas ou meses), atraso de 3 a 22 min (JPL Horizons).
+ * Fatos: F6 (aviso da Terra), F28 (o abrigo ganha massa; máquinas cavam o regolito com energia), F27 (poeira dura semanas ou meses), atraso de 3 a 22 min (JPL Horizons).
  * O que muda na Lua: src/i18n/moon.ts.
  */
 export const pt = {
@@ -30,7 +30,7 @@ export const pt = {
   'intro.3.dust.title': '🌪️ Treino: tempestade de poeira',
   'intro.3.dust.text': 'Em Marte, uma tempestade de poeira pode durar semanas ou meses. Menos Sol, menos energia.',
   'intro.3.solar.title': '☀️ Treino: tempestade solar',
-  'intro.3.solar.text': 'O Sol também solta tempestades de radiação. A Terra avisa antes: ponha energia na blindagem!',
+  'intro.3.solar.text': 'A Terra avisa antes da tempestade. Use energia nas máquinas que enchem mais sacos de terra no abrigo!',
   'intro.3.end.title': '✅ Fim do treino',
   'intro.3.end.text': 'Foi só um treino: nada mudou na base. A partir do sol 4, é para valer!',
 
@@ -64,7 +64,7 @@ export const en: Record<keyof typeof pt, string> = {
   'intro.3.dust.title': '🌪️ Training: dust storm',
   'intro.3.dust.text': 'On Mars, a dust storm can last weeks or months. Less Sun means less energy.',
   'intro.3.solar.title': '☀️ Training: solar storm',
-  'intro.3.solar.text': 'The Sun also sends out radiation storms. Earth warns you first: put energy into shielding!',
+  'intro.3.solar.text': 'Earth warns you before the storm. Use energy so machines fill more soil bags for the shelter!',
   'intro.3.end.title': '✅ Training is over',
   'intro.3.end.text': 'It was only training: nothing changed in the base. From sol 4 on, it is for real!',
 

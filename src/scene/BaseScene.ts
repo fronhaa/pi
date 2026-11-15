@@ -253,7 +253,9 @@ export class BaseScene {
     // Partículas no ar só com a tempestade de poeira ativa (ou no treino da introdução).
     const airborne = Math.max(s.dustStorm ? dust : 0, (this.demo.dust ?? 0) * d);
     this.sky.update({ night: n, dust, airborne, alert, sunlight, time, dt, dayTime: this.dayTime });
-    this.habitat.update(n);
+    // Casco fechado: as luzes de dentro apagam junto (senão a luz atravessa o casco e ilumina o lado de fora).
+    const inside = THREE.MathUtils.smootherstep(this.hullOpen, 0, 1);
+    this.habitat.update(n, inside);
     this.structures.update({
       time,
       dt,
@@ -263,6 +265,7 @@ export class BaseScene {
       earthMessage: s.earthMessage || (!!this.demo.alert && d > 0.4),
       battery: s.res.battery / CONFIG.battery.max,
       sunDir: this.sky.sunVector,
+      inside,
     });
     this.rover.update(dt, time, crew, s.scienceBlocks, s.night, s.sol ?? 0);
     // Rastros: uma marca a cada pedaço andado; desbotam aos poucos (o vento apaga em meses, F26).
