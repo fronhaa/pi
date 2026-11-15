@@ -253,8 +253,9 @@ escala do jogo (INTERPRETADO): quanta energia, folga e pressa a tripulação tem
 | Prévia da noite (setas e "a base passa bem") | sim | sim | **não**: a criança faz a conta (os avisos de tempestade da Terra continuam) |
 | Missões históricas (Marte) | só as de força média | médias na 1ª partida; depois, todas | todas |
 
-A tela final mostra o nível junto das estrelas (3★ no Fácil não é 3★ no Difícil). No modo em grupo as salas são
-sempre do nível Médio, por enquanto.
+A tela final mostra o nível junto das estrelas (3★ no Fácil não é 3★ no Difícil). **No modo em grupo, quem criou a
+sala escolhe o nível** no saguão; os outros veem qual foi. No fim, ao jogar de novo, o dono da sala pode trocar o nível
+(`docs/servidor-coop.md`).
 
 **Equilíbrio dos níveis** (`npm run balance`, 2.000 partidas por estratégia, 2026-11-15, erupções reais do DONKI;
 o robô joga sem erro, então a criança acha cada nível mais difícil do que a tabela):

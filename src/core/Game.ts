@@ -784,7 +784,7 @@ export class Game {
   private dayTime(): number {
     if (this.night) return 1.15;
     if (this.phase === 'day') {
-      const total = this.coop ? CONFIG.problems.daySeconds : this.dayLength;
+      const total = this.coop ? tuning(this.current.difficulty).daySeconds : this.dayLength;
       const elapsed = this.coop ? total - (this.coop.dayRemaining ?? total) : this.dayElapsed;
       return 0.25 + 0.6 * THREE.MathUtils.clamp(elapsed / total, 0, 1);
     }

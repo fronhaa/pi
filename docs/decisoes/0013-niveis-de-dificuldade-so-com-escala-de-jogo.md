@@ -35,5 +35,5 @@ O teste `tests/sim/difficulty.test.ts` garante isso.
 - A mesma semente dá os mesmos sóis em todos os níveis (os sorteios não dependem do nível).
 - Número de nível novo: rode `npm run balance` (ou `BALANCE_LEVEL=hard npm run balance`) e atualize a tabela de
   equilíbrio em `docs/game-design.md#níveis-de-dificuldade`.
-- Modo em grupo: as salas ficam no Médio. Para escolher o nível na sala, mude o protocolo dos dois lados
-  (`src/net/protocol.ts` e `server/internal/coop/`) e passe o nível ao `newMission` da ponte, que já o aceita.
+- Modo em grupo: o dono da sala escolhe o nível (ação `level`, `docs/servidor-coop.md`). O servidor Go não guarda
+  número nenhum de nível: lê os níveis válidos e a duração do dia de `config().difficulty`, que vem do TypeScript.

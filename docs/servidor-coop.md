@@ -35,7 +35,7 @@ flowchart LR
 - No modo em grupo, o jogo **não roda regras**: mostra o que o servidor manda e repassa decisões. A noite, o relatório e a tela final são os mesmos do solo.
 - Cada jogador só mexe na parte da energia do seu papel; os outros botões ficam travados. "Terminar o sol" só para o comandante.
 - O modo em grupo é **só em Marte** por enquanto: a base lunar ([GDD](game-design.md#base-lunar), ADR 0007) é só no solo. Ao entrar no modo em grupo, o cliente volta a cena e os textos para Marte. O estado tem `location` e `shadowSol` (sempre `"mars"` e `0` no servidor).
-- Os **níveis de dificuldade** ([GDD](game-design.md#níveis-de-dificuldade)) também são só do solo: a sala é sempre do nível Médio. O estado tem `difficulty` (sempre `"medium"` no servidor; o Go ignora o campo). `newMission` da ponte (`src/sim/bridge.ts`) já aceita o nível como 5º parâmetro, para quando a sala puder escolher.
+- **Nível da missão** ([GDD](game-design.md#níveis-de-dificuldade)): o **dono da sala** escolhe no saguão (ação `level`; padrão Médio) e pode trocar no fim, antes de jogar de novo. Durante a partida o nível fica travado. Todos veem a escolha (`state.level`), e quem está em Marte recebe o nível da partida (`mars.difficulty`). O servidor valida o nível e pega a duração do dia de cada um em `config().difficulty` (`sim.IsLevel`, `sim.DaySeconds`): os números continuam só em `src/sim/config.ts`.
 - Se a internet cair ou a página recarregar, o jogo volta sozinho para a mesma sala e o mesmo papel (token guardado na aba, `sessionStorage`).
 
 ## Regras do coop implementadas no servidor
@@ -49,7 +49,7 @@ flowchart LR
 | Avisos em Marte com jogador na Terra | O aviso **antecipado** só vem da Terra. No dia da tempestade ou da poeira, o **alarme da base** dispara sozinho (`stormToday`, `dustNow`). *Decisão nossa: mantém a Terra essencial sem deixar a criança de Marte sem nenhum aviso. Ajustável em `MarsMessages()`.* |
 | Energia | Cada papel só muda a sua parte. O total nunca passa dos blocos do sol. Se uma carta reduz os blocos, o plano é cortado (ciência, depois blindagem, depois vida). |
 | Cartas, "Começar o dia", pausar e "Terminar o dia" | Só o comandante. |
-| Dia em tempo real | O **relógio é do servidor**: ele abre cada problema no segundo sorteado e encerra o dia aos 75 s ou quando tudo foi consertado. Sem problemas no sol (sóis 1 a 3, o treino), "Começar o dia" vai direto para a noite. No solo, esses sóis têm um dia curto de 12 s só visual e o guia do treino; em grupo, não (ver GDD, "Introdução: sóis 1 a 3"). |
+| Dia em tempo real | O **relógio é do servidor**: ele abre cada problema no segundo sorteado e encerra o dia no tempo do nível (90, 75 ou 60 s; `Game.DaySeconds`) ou quando tudo foi consertado. Sem problemas no sol (sóis 1 a 3, o treino), "Começar o dia" vai direto para a noite. No solo, esses sóis têm um dia curto de 12 s só visual e o guia do treino; em grupo, não (ver GDD, "Introdução: sóis 1 a 3"). |
 | Consertar problemas | Cada jogador de Marte manda **o astronauta do seu papel**; o progresso e o "consertado" vão para o servidor, que aplica as regras (dose fora da base, consequência à noite). Dois jogadores consertando o mesmo problema: conta uma vez. |
 | Tripulação na tela | **Cada jogador controla só o astronauta do(s) próprio(s) papel(is)** (o comandante também fica com os papéis sem dono). Tocar no astronauta de outro mostra "Esse astronauta é do Jogador N". Todos veem **todos** os astronautas andando: ver [Tripulação sincronizada](#tripulação-sincronizada). |
 | Missões históricas | Iguais ao solo: a primeira partida da sala usa uma missão de força média; as seguintes, qualquer uma. Sem `missions.json`, erupções sorteadas. |
@@ -94,6 +94,7 @@ Endereço: `wss://<host>/ws`. Cada mensagem é um objeto com `t` (tipo).
 | `join` | `code` (4 letras, sem vogais) | Qualquer um |
 | `rejoin` | `code`, `token` | Quem caiu (o `token` veio no `welcome`) |
 | `claim` / `release` | `role` | Na sala de espera |
+| `level` | `level` (`easy`, `medium`, `hard`) | Anfitrião, no saguão ou no fim (no meio da partida: `wrong_phase`) |
 | `start` | — | Anfitrião (também recomeça após o fim) |
 | `earth` | `option` | Terra, na vez da Terra |
 | `card` | `option` | Comandante |
@@ -111,7 +112,7 @@ Endereço: `wss://<host>/ws`. Cada mensagem é um objeto com `t` (tipo).
 | `t` | Conteúdo |
 | --- | --- |
 | `welcome` | `code`, `playerId`, `token` (guarde para reconectar) |
-| `state` | A cada mudança (no dia, também a cada segundo do relógio): `phase` (`lobby`, `earth`, `mars`, `day`, `ended`), `you`, `players`, `autoEarth`, e `mars` e/ou `earth` conforme os papéis, e `eva` (`pair`, `by`) se houver uma dupla lá fora. O relatório do último sol vem em `mars.lastReport` / `earth.lastReport`. |
+| `state` | A cada mudança (no dia, também a cada segundo do relógio): `phase` (`lobby`, `earth`, `mars`, `day`, `ended`), `you`, `players`, `autoEarth`, `level` (nível escolhido para a próxima partida), e `mars` (com `difficulty`, o nível desta partida) e/ou `earth` conforme os papéis, e `eva` (`pair`, `by`) se houver uma dupla lá fora. O relatório do último sol vem em `mars.lastReport` / `earth.lastReport`. |
 | `crew` | `list`: posição e destino dos astronautas de **outro** jogador (quem mandou não recebe de volta). O `state` também traz `crew` com a última posição de cada um, para quem reconecta |
 | `error` | `code`: `room_not_found`, `room_full`, `role_taken`, `need_commander`, `not_your_role`, `wrong_phase`, `card_pending`, `invalid`, `bad_token`, `server_full`, `too_fast`, `eva_busy`, `eva_banned` |
 

@@ -1,4 +1,5 @@
 import { t, type StringKey } from '@/i18n';
+import { DIFFICULTIES, type Difficulty } from '@/sim/config';
 import { COOP_ROLES, EARTH_OPTIONS, type CoopRole, type CoopState, type EarthOption } from '@/net/protocol';
 import { h, openDialog, patchChildren } from './dom';
 
@@ -27,6 +28,8 @@ export interface LobbyCallbacks {
   claim(role: CoopRole): void;
   release(role: CoopRole): void;
   start(): void;
+  /** Só o dono da sala: escolhe o nível da partida. */
+  level(level: Difficulty): void;
   leave(): void;
 }
 
@@ -113,6 +116,16 @@ export class Lobby {
       );
     };
 
+    // Nível da missão: o dono da sala escolhe; os outros veem qual foi (src/sim/config.ts, DIFFICULTY).
+    const level = s.level ?? 'medium';
+    const levelEl = me.host
+      ? h('div', { class: 'actions row level-pick', role: 'group', 'aria-label': t('coop.level') },
+          ...DIFFICULTIES.map((l) => h('button', {
+            class: `btn${l === level ? ' primary' : ''}`, type: 'button', 'aria-pressed': String(l === level),
+            onclick: () => this.cb.level(l),
+          }, t(`level.${l}` as StringKey))))
+      : h('p', {}, h('strong', {}, t(`level.${level}` as StringKey)));
+
     const footer: (HTMLElement | null)[] = [];
     if (me.host) {
       footer.push(h('button', { class: 'btn primary', type: 'button', disabled: !hasCommander, onclick: () => this.cb.start() }, `🚀 ${t('coop.start')}`));
@@ -129,6 +142,9 @@ export class Lobby {
       h('p', {}, h('strong', {}, t('coop.pickRole'))),
       h('ul', { class: 'roles' }, ...COOP_ROLES.map(roleRow)),
       h('p', { class: 'hint' }, `${t('coop.extraRoles')} ${owner('earth') ? '' : t('coop.autoEarth')}`),
+      h('p', {}, h('strong', {}, t('coop.level'))),
+      levelEl,
+      h('p', { class: 'hint' }, me.host ? t(`level.${level}.hint` as StringKey) : t('coop.level.host')),
       h('div', { class: 'actions' }, ...footer),
       h('div', { class: 'actions row' }, h('button', { class: 'btn', type: 'button', onclick: () => this.cb.leave() }, t('coop.leave'))),
     ]);

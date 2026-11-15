@@ -1380,8 +1380,8 @@ var JezeroSim = (function(exports) {
 		return JSON.stringify(_objectSpread2(_objectSpread2({}, s), {}, { cardSols: Object.fromEntries(s.cardSols) }));
 	}
 	/**
-	* `location` e `difficulty` são opcionais: o servidor Go de hoje não manda, e a sala fica em Marte no nível Médio
-	* (Lua e níveis só no solo, por enquanto).
+	* `location` e `difficulty` são opcionais. O servidor manda "mars" e o nível que o dono da sala escolheu; sem nível,
+	* Médio (Lua só no solo, por enquanto).
 	*/
 	function newMission(seed, flaresJson, historicalJson, location, difficulty) {
 		const flares = JSON.parse(flaresJson);
@@ -1450,12 +1450,16 @@ var JezeroSim = (function(exports) {
 	function parseMissionsJson(raw) {
 		return JSON.stringify(parseMissions(JSON.parse(raw)));
 	}
-	function pickHistoricalJson(missionsJson, seed, firstGame) {
-		return JSON.stringify(pickHistorical(JSON.parse(missionsJson), seed >>> 0, firstGame));
+	function pickHistoricalJson(missionsJson, seed, firstGame, difficulty) {
+		const level = difficulty !== null && difficulty !== void 0 ? difficulty : "medium";
+		return JSON.stringify(pickHistorical(JSON.parse(missionsJson), seed >>> 0, firstGame, level));
 	}
-	/** Números de jogo que o servidor também usa (relógio do dia, atraso das mensagens da Terra). */
+	/**
+	* Números de jogo que o servidor também usa (relógio do dia, atraso das mensagens da Terra). `difficulty` traz os
+	* níveis: o servidor valida o nível escolhido pelo dono da sala e usa a duração do dia de cada um.
+	*/
 	function config() {
-		return JSON.stringify(CONFIG);
+		return JSON.stringify(_objectSpread2(_objectSpread2({}, CONFIG), {}, { difficulty: DIFFICULTY }));
 	}
 	exports.answerCard = answerCard;
 	exports.apply = apply;

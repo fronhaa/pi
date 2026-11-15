@@ -85,6 +85,25 @@ type config struct {
 	CommDelayMin       int
 	CommDelayMax       int
 	ProblemsDaySeconds float64
+	// Duração do dia por nível (src/sim/config.ts, DIFFICULTY). As chaves são os níveis válidos.
+	DaySecondsByLevel map[string]float64
+}
+
+// DefaultLevel: nível de quem não escolheu (o jogo de sempre).
+const DefaultLevel = "medium"
+
+// IsLevel: o nível existe em src/sim/config.ts?
+func IsLevel(level string) bool {
+	_, ok := Config.DaySecondsByLevel[level]
+	return ok
+}
+
+// DaySeconds: duração do dia do nível (nível desconhecido = o de sempre).
+func DaySeconds(level string) float64 {
+	if s, ok := Config.DaySecondsByLevel[level]; ok {
+		return s
+	}
+	return Config.ProblemsDaySeconds
 }
 
 func loadConfig() config {
@@ -104,14 +123,22 @@ func loadConfig() config {
 		Problems struct {
 			DaySeconds float64 `json:"daySeconds"`
 		} `json:"problems"`
+		Difficulty map[string]struct {
+			DaySeconds float64 `json:"daySeconds"`
+		} `json:"difficulty"`
 	}
 	if err := json.Unmarshal([]byte(raw), &c); err != nil {
 		panic(err)
+	}
+	byLevel := map[string]float64{}
+	for level, t := range c.Difficulty {
+		byLevel[level] = t.DaySeconds
 	}
 	return config{
 		Sols: c.Sols, StormCount: c.SolarStorms.Count,
 		CommDelayMin: c.SolarStorms.CommDelayMin.Min, CommDelayMax: c.SolarStorms.CommDelayMin.Max,
 		ProblemsDaySeconds: c.Problems.DaySeconds,
+		DaySecondsByLevel:  byLevel,
 	}
 }
 
@@ -125,14 +152,15 @@ type Mission struct {
 }
 
 // NewMission: historical != nil usa as tempestades e os atrasos reais da missão histórica.
-func NewMission(seed uint32, realFlares []Flare, historical *HistoricalMission) *Mission {
+// level: nível da missão ("easy", "medium", "hard"); desconhecido vira "medium" (regra no sim.js).
+func NewMission(seed uint32, realFlares []Flare, historical *HistoricalMission, level string) *Mission {
 	if realFlares == nil {
 		realFlares = []Flare{}
 	}
 	fj, _ := json.Marshal(realFlares)
 	hj, _ := json.Marshal(historical)
 	m := &Mission{e: newEngine()}
-	if _, err := m.e.call("newMission", seed, string(fj), string(hj)); err != nil {
+	if _, err := m.e.call("newMission", seed, string(fj), string(hj), "mars", level); err != nil {
 		panic(err)
 	}
 	m.refresh()
@@ -232,13 +260,14 @@ func ParseMissions(raw []byte) []HistoricalMission {
 	return m
 }
 
-// PickHistorical: primeira partida só com missões de força média; depois, qualquer uma.
-func PickHistorical(missions []HistoricalMission, seed uint32, firstGame bool) *HistoricalMission {
+// PickHistorical: sorteio da missão histórica pelo nível (regra em src/sim/historical.ts). No Médio, a primeira
+// partida só tem missões de força média; depois, qualquer uma.
+func PickHistorical(missions []HistoricalMission, seed uint32, firstGame bool, level string) *HistoricalMission {
 	if len(missions) == 0 {
 		return nil
 	}
 	mj, _ := json.Marshal(missions)
-	out, err := helperCall("pickHistoricalJson", string(mj), seed, firstGame)
+	out, err := helperCall("pickHistoricalJson", string(mj), seed, firstGame, level)
 	if err != nil {
 		return nil
 	}

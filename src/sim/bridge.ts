@@ -1,4 +1,4 @@
-import { CONFIG, type Difficulty } from './config.ts';
+import { CONFIG, DIFFICULTY, type Difficulty } from './config.ts';
 import { Mission } from './mission.ts';
 import { parseMissions, pickHistorical, type MissionsFile } from './historical.ts';
 import { applyAction, type MissionAction } from './actions.ts';
@@ -30,8 +30,8 @@ export function state(): string {
 }
 
 /**
- * `location` e `difficulty` são opcionais: o servidor Go de hoje não manda, e a sala fica em Marte no nível Médio
- * (Lua e níveis só no solo, por enquanto).
+ * `location` e `difficulty` são opcionais. O servidor manda "mars" e o nível que o dono da sala escolheu; sem nível,
+ * Médio (Lua só no solo, por enquanto).
  */
 export function newMission(seed: number, flaresJson: string, historicalJson: string, location?: string, difficulty?: string): void {
   const flares = JSON.parse(flaresJson) as Flare[];
@@ -96,11 +96,15 @@ export function parseMissionsJson(raw: string): string {
   return JSON.stringify(parseMissions(JSON.parse(raw) as MissionsFile));
 }
 
-export function pickHistoricalJson(missionsJson: string, seed: number, firstGame: boolean): string {
-  return JSON.stringify(pickHistorical(JSON.parse(missionsJson) as HistoricalMission[], seed >>> 0, firstGame));
+export function pickHistoricalJson(missionsJson: string, seed: number, firstGame: boolean, difficulty?: string): string {
+  const level = (difficulty ?? 'medium') as Difficulty;
+  return JSON.stringify(pickHistorical(JSON.parse(missionsJson) as HistoricalMission[], seed >>> 0, firstGame, level));
 }
 
-/** Números de jogo que o servidor também usa (relógio do dia, atraso das mensagens da Terra). */
+/**
+ * Números de jogo que o servidor também usa (relógio do dia, atraso das mensagens da Terra). `difficulty` traz os
+ * níveis: o servidor valida o nível escolhido pelo dono da sala e usa a duração do dia de cada um.
+ */
 export function config(): string {
-  return JSON.stringify(CONFIG);
+  return JSON.stringify({ ...CONFIG, difficulty: DIFFICULTY });
 }
