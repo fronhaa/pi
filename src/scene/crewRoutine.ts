@@ -1,15 +1,14 @@
 import * as THREE from 'three';
 import { ROLES, type Role } from '@/sim/crew';
 import type { ProblemKind } from '@/sim/types';
-import { Astronaut, FACING_OUT_OF_BED, type Crew } from './Crew';
+import { FACING_OUT_OF_BED, type Crew } from './Crew';
 import {
+  BED_DEPTH,
   BED_FRONT_Z,
   BED_SPOTS,
   BED_TOP,
   DOME_CENTER,
-  GARAGE_FLOOR_Y,
-  GARAGE_POSITION,
-  GARAGE_SERVICE_SPOT,
+  BED_ROOMS,
   GREENHOUSE_STAIRS,
   GREENHOUSE_WORK_SPOT,
   GYM_STATIONS,
@@ -23,10 +22,12 @@ import {
   LAB_WORK_SPOT,
   MODULE_FLOOR_LENGTH,
   PROBLEM_SPOTS,
-  QUARTERS_LANE_Z,
-  QUARTERS_MODULES,
+  QUARTERS_CENTERS,
+  QUARTERS_YAW,
   TUBES,
+  bedFeetLocalX,
   headroomAt,
+  quartersPoint,
 } from './base/layout';
 
 /** Rotina visual dentro da base (GDD, "Atividades dentro da base", B): segundos sem ordem até ir à academia, de exercício e de descanso. */
@@ -38,11 +39,9 @@ const WALK_SPEED = 1.3;
 const NIGHT_WALK_SPEED = 2.2;
 /** Indo consertar a estufa: apressado (o conserto só começa quando ele chega). */
 const TASK_WALK_SPEED = 2.4;
+/** Túnel sul: da estufa até o primeiro módulo de quartos. */
+const QUARTERS_TUBE = TUBES[2];
 /** Deitar na cama: sentar na beirada e deitar; levantar: sentar de novo e ficar de pé (s). */
-/** Manutenção do rover pelo cientista: tirar as amostras e revisar (s). */
-const ROVER_SERVICE_SECONDS = 8;
-/** Túnel da garagem (sul): começa na estufa e termina na porta da garagem. */
-const GARAGE_TUBE = TUBES[2];
 const SIT_DOWN_SECONDS = 0.8;
 const LIE_DOWN_SECONDS = 1.4;
 const SIT_UP_SECONDS = 1.2;
@@ -61,19 +60,24 @@ const FLOOR_Y = HABITAT_FLOOR_Y;
 /** Quem volta de fora aparece aqui: dentro do laboratório, junto à porta do airlock. */
 const DOOR_INSIDE = new THREE.Vector3(HABITAT_POSITION.x, FLOOR_Y, HABITAT_POSITION.z + 0.6);
 /**
- * Ao lado da cama, de pé de costas para ela (de frente para o corredor), com o quadril na mesma linha (x) em que ele vai
- * ficar deitado: anda até aqui, vira para o corredor, senta na beirada e deita (Astronaut.bedBlend).
+ * Ao lado da cama, de pé de costas para ela (de frente para o corredor), com o quadril na mesma linha em que ele vai
+ * ficar deitado: anda até aqui, vira para o corredor, senta na beirada e deita (Astronaut.bedBlend). No referencial do
+ * módulo de quartos (src/scene/base/layout.ts, quartersPoint).
  */
 const BESIDE_BED_GAP = 0.5;
-const BESIDE_BED_Z = CORRIDOR_Z + BED_FRONT_Z + BESIDE_BED_GAP;
+const BESIDE_BED_LZ = BED_FRONT_Z + BESIDE_BED_GAP;
+/** Quadril do boneco deitado, no referencial do módulo: 0,55 m antes dos pés, para o lado do travesseiro (−x). */
+const LYING_HIP_LOCAL = 0.55;
+/** Centro da cama (profundidade, no referencial do módulo). */
+const BED_Z_LOCAL = BED_FRONT_Z - BED_DEPTH / 2;
+/** De costas para a cama, no mundo (os quartos ficam num módulo girado). */
+const FACING_OUT = FACING_OUT_OF_BED + QUARTERS_YAW;
 /**
- * Alojamento: anda pela faixa QUARTERS_LANE_Z (hoje o próprio eixo do casco: camas, armários e divisórias ficam atrás
- * de ROOM_FURNITURE_FRONT_Z, então o corredor é reto). Se a faixa mudar, ele entra e sai dela nas portas de cada módulo.
+ * Raio sul (quartos): o corredor é o eixo dos dois módulos (x do centro deles), do túnel até a ponta do segundo.
+ * Camas, armários e divisórias ficam atrás de ROOM_FURNITURE_FRONT_Z, então quem passa anda reto.
  */
-const QUARTERS_XS = QUARTERS_MODULES.map((ox) => HABITAT_POSITION.x + ox);
-const QUARTERS_PORT = MODULE_FLOOR_LENGTH / 2;
-const QUARTERS_OUTER = QUARTERS_PORT + 0.2;
-const QUARTERS_INNER = QUARTERS_PORT - 0.2;
+const SOUTH_AXIS_X = QUARTERS_CENTERS[0].x;
+const SOUTH_END_Z = QUARTERS_CENTERS[QUARTERS_CENTERS.length - 1].z + MODULE_FLOOR_LENGTH / 2;
 /** Olha o teto até esta distância à frente (m), para já chegar abaixado na boca do túnel. */
 const HEADROOM_LOOKAHEAD = 0.8;
 /** Parado no posto, olha às vezes para um colega a até esta distância (m). */
@@ -94,9 +98,6 @@ export interface RoutineFrame {
   isOutside(role: Role): boolean;
   /** Está dentro do habitat (não na câmara de descompressão)? */
   inHabitat(role: Role): boolean;
-  /** O rover está na garagem esperando a tripulação (manutenção) e onde ele está. */
-  roverWaiting?: boolean;
-  roverAt?: THREE.Vector3;
   /** Está consertando um problema de dentro (a estufa)? */
   onInsideTask(role: Role): boolean;
   /** Qual tarefa de dentro: vazamento, colheita ou análise (cada uma tem o seu lugar). */
@@ -104,9 +105,8 @@ export interface RoutineFrame {
 }
 
 /** `task` = conserto da estufa; `harvest` e `analysis` = tarefas opcionais (colher, analisar). */
-/** `rover` = o cientista na garagem, tirando as amostras e fazendo a manutenção do rover (só visual). */
-type Activity = 'post' | 'gym' | 'bed' | 'task' | 'harvest' | 'analysis' | 'rover' | 'sleep';
-const WORK: Activity[] = ['task', 'harvest', 'analysis', 'rover'];
+type Activity = 'post' | 'gym' | 'bed' | 'task' | 'harvest' | 'analysis' | 'sleep';
+const WORK: Activity[] = ['task', 'harvest', 'analysis'];
 
 /**
  * Um passo do caminho: andar até um ponto, virar para os pés da cama (`face`), deitar na cama (`lie`, de pé ao lado
@@ -136,8 +136,6 @@ interface Walker {
   wasInside: boolean;
   /** Tempo já passado no passo de deitar ou levantar (s). */
   stepTime: number;
-  /** Quanto falta da manutenção do rover (s). */
-  serviceLeft: number;
 }
 
 /**
@@ -159,11 +157,9 @@ export class CrewRoutine {
   private exerciseShown = false;
   /** Primeira vez que alguém chega para trabalhar na estufa (o jogo mostra o fato da estufa inflável da NASA). */
   onFirstGreenhouse: () => void = () => {};
-  /** O cientista terminou a manutenção do rover: o jogo libera o rover para uma busca extra. */
-  onRoverServiced: () => void = () => {};
   private greenhouseShown = false;
   private readonly walkers = Object.fromEntries(
-    ROLES.map((r) => [r, { at: 'post', idle: 0, left: 0, station: 0, rested: true, pos: HABITAT_SPOTS[r].clone(), path: [], going: null, placed: false, wasInside: false, stepTime: 0, serviceLeft: ROVER_SERVICE_SECONDS } as Walker]),
+    ROLES.map((r) => [r, { at: 'post', idle: 0, left: 0, station: 0, rested: true, pos: HABITAT_SPOTS[r].clone(), path: [], going: null, placed: false, wasInside: false, stepTime: 0 } as Walker]),
   ) as Record<Role, Walker>;
 
   constructor(private readonly crew: Crew) {}
@@ -177,7 +173,6 @@ export class CrewRoutine {
   /** Onde fica cada atividade (para onde ele anda). */
   private spotOf(r: Role, activity: Activity, station: number): THREE.Vector3 {
     if (activity === 'task') return GREENHOUSE_WORK_SPOT;
-    if (activity === 'rover') return GARAGE_SERVICE_SPOT;
     if (activity === 'harvest') return HARVEST_WORK_SPOT;
     if (activity === 'analysis') return LAB_WORK_SPOT;
     if (activity === 'gym') return GYM_STATIONS[station].pos;
@@ -187,74 +182,72 @@ export class CrewRoutine {
 
   /** Onde ele fica de pé ao lado da cama: na frente dela, com o quadril na linha em que vai ficar deitado. */
   private besideBed(r: Role): THREE.Vector3 {
-    const hip = Astronaut.lyingHip(BED_SPOTS[r]);
-    return new THREE.Vector3(hip.x, FLOOR_Y, BESIDE_BED_Z);
+    return quartersPoint(BED_ROOMS[r].module, bedFeetLocalX(r) - LYING_HIP_LOCAL, FLOOR_Y, BESIDE_BED_LZ);
   }
 
   /**
    * Na cama, de 0 a 1 em cada fase (levantar é o mesmo ao contrário): `sit` = de pé de costas para a cama até sentado
    * na beirada; `lie` = de sentado até deitado com a cabeça no travesseiro (vai deitando para trás e pondo as pernas na
-   * cama). Devolve o quanto está deitado (k), o quanto está sentado e onde fica o quadril.
+   * cama). Devolve o quanto está deitado (k), o quanto está sentado e onde fica o quadril. As contas são no referencial
+   * do módulo de quartos (lz = profundidade: o fundo do quarto em −z).
    */
   private bedPose(r: Role, phase: 'sit' | 'lie', u: number): { k: number; sit: number; hip: THREE.Vector3 } {
     const e = THREE.MathUtils.smootherstep(u, 0, 1);
-    const stand = Astronaut.standingHip(this.besideBed(r));
-    const lie = Astronaut.lyingHip(BED_SPOTS[r]);
-    const seat = new THREE.Vector3(lie.x, FLOOR_Y + BED_TOP + SIT_HIP_ABOVE_MATTRESS, HABITAT_POSITION.z + BED_FRONT_Z - SIT_INTO_BED);
-    if (phase === 'sit') return { k: 0, sit: e, hip: stand.lerp(seat, e) };
+    const m = BED_ROOMS[r].module;
+    const lx = bedFeetLocalX(r) - LYING_HIP_LOCAL;
+    const standY = FLOOR_Y + LYING_HIP_LOCAL;
+    const seatY = FLOOR_Y + BED_TOP + SIT_HIP_ABOVE_MATTRESS;
+    const seatZ = BED_FRONT_Z - SIT_INTO_BED;
+    const lieY = BED_SPOTS[r].y;
+    if (phase === 'sit') return { k: 0, sit: e, hip: quartersPoint(m, lx, THREE.MathUtils.lerp(standY, seatY, e), THREE.MathUtils.lerp(BESIDE_BED_LZ, seatZ, e)) };
     // Deitando: o quadril sobe cedo (as costas não entram no colchão), entra na cama aos poucos e as pernas só esticam
     // no fim, já em cima da cama.
     const L = BED_LIE;
-    const hip = new THREE.Vector3(
-      lie.x,
-      THREE.MathUtils.lerp(seat.y, lie.y, THREE.MathUtils.smoothstep(u, 0, L.riseEnd)),
-      THREE.MathUtils.lerp(seat.z, lie.z, THREE.MathUtils.smootherstep(u, L.intoStart, 1)),
-    );
-    return { k: e, sit: 1 - THREE.MathUtils.smoothstep(u, L.legsStart, 1), hip };
+    const y = THREE.MathUtils.lerp(seatY, lieY, THREE.MathUtils.smoothstep(u, 0, L.riseEnd));
+    const z = THREE.MathUtils.lerp(seatZ, BED_Z_LOCAL, THREE.MathUtils.smootherstep(u, L.intoStart, 1));
+    return { k: e, sit: 1 - THREE.MathUtils.smoothstep(u, L.legsStart, 1), hip: quartersPoint(m, lx, y, z) };
   }
 
-  /** Onde se anda no corredor central neste x (no alojamento, a faixa da frente). */
-  private corridorZ(x: number): number {
-    return QUARTERS_XS.some((qx) => Math.abs(x - qx) < QUARTERS_INNER) ? CORRIDOR_Z + QUARTERS_LANE_Z : CORRIDOR_Z;
+  /** Está no raio sul (o corredor dos quartos ou o túnel até eles)? */
+  private inSouth(p: THREE.Vector3): boolean {
+    return p.z > QUARTERS_TUBE.from.z - 0.3 && Math.abs(p.x - SOUTH_AXIS_X) < 2.6 && p.z < SOUTH_END_Z + 0.5;
   }
 
-  /** Pontos do corredor de um x a outro, entrando e saindo da faixa do alojamento nas portas dele. */
-  private corridor(fromX: number, toX: number): THREE.Vector3[] {
-    const gates = QUARTERS_XS.flatMap((qx) => [
-      new THREE.Vector3(qx + QUARTERS_OUTER, FLOOR_Y, CORRIDOR_Z),
-      new THREE.Vector3(qx + QUARTERS_INNER, FLOOR_Y, CORRIDOR_Z + QUARTERS_LANE_Z),
-      new THREE.Vector3(qx - QUARTERS_INNER, FLOOR_Y, CORRIDOR_Z + QUARTERS_LANE_Z),
-      new THREE.Vector3(qx - QUARTERS_OUTER, FLOOR_Y, CORRIDOR_Z),
-    ]);
-    const lo = Math.min(fromX, toX);
-    const hi = Math.max(fromX, toX);
-    const between = gates.filter((g) => g.x > lo + 0.01 && g.x < hi - 0.01).sort((a, b) => (toX > fromX ? a.x - b.x : b.x - a.x));
-    return [
-      new THREE.Vector3(fromX, FLOOR_Y, this.corridorZ(fromX)),
-      ...between,
-      new THREE.Vector3(toX, FLOOR_Y, this.corridorZ(toX)),
-    ];
+  /** Ponto no eixo do raio sul (o corredor dos quartos). */
+  private southAxis(z: number): THREE.Vector3 {
+    return new THREE.Vector3(SOUTH_AXIS_X, FLOOR_Y, z);
   }
 
   /**
    * Caminho pelo corredor central: sai do lugar (levantando da cama: senta e fica de pé), anda pelo corredor e entra
-   * no lugar (deitando: de costas para a cama, senta na beirada e deita; ou descendo a escada da estufa). Sempre pelos pontos certos, nunca
-   * atravessando cama, casco ou canteiro.
+   * no lugar (deitando: de costas para a cama, senta na beirada e deita; ou descendo a escada da estufa). Os quartos
+   * ficam no raio sul: de lá até o corredor leste-oeste, pelo eixo dos módulos de quartos, pelo túnel e pelo braço sul
+   * da passarela. Sempre pelos pontos certos, nunca atravessando cama, casco ou canteiro.
    */
-  private route(r: Role, from: THREE.Vector3, to: THREE.Vector3, fromBed: boolean, toBed: boolean, stairIndex: number | null, toGarage = false): Step[] {
-    const stand = (p: THREE.Vector3): Step => ({ kind: 'walk', to: p.clone() });
+  private route(r: Role, from: THREE.Vector3, to: THREE.Vector3, fromBed: boolean, toBed: boolean, stairIndex: number | null): Step[] {
+    const walk = (p: THREE.Vector3): Step => ({ kind: 'walk', to: p.clone() });
     const side = this.besideBed(r);
     const steps: Step[] = [];
     if (fromBed) steps.push({ kind: 'rise', to: side.clone() }, { kind: 'stand', to: side.clone() });
+    const start = fromBed ? side : from;
+    const target = toBed ? side : to;
+    const fromS = this.inSouth(start);
+    const toS = this.inSouth(target);
     // Descendo para a estufa: pela escada daquela tarefa (conserto: norte; colheita: sul).
     const stair = stairIndex === null ? null : GREENHOUSE_STAIRS[stairIndex];
-    const corridorX = stair ? stair.top.x : toGarage ? GARAGE_TUBE.from.x : to.x;
-    steps.push(...this.corridor(from.x, corridorX).map(stand));
-    if (stair) steps.push(stand(stair.top), stand(stair.bottom));
-    // Para a garagem: pelo braço sul da passarela e pelo túnel, descendo até o piso da garagem.
-    if (toGarage) steps.push(...this.garagePath().map(stand));
-    if (toBed) steps.push(stand(side), { kind: 'face', to: side.clone() }, { kind: 'sit', to: side.clone() }, { kind: 'lie', to: to.clone() });
-    else steps.push(stand(to));
+    if (fromS && toS) {
+      // Dentro do raio sul: direto pelo eixo.
+      steps.push(walk(this.southAxis(start.z)), walk(this.southAxis(target.z)));
+    } else {
+      if (fromS) steps.push(walk(this.southAxis(start.z)), walk(this.southAxis(QUARTERS_TUBE.to.z)), walk(this.southAxis(QUARTERS_TUBE.from.z)));
+      const fromX = fromS ? SOUTH_AXIS_X : start.x;
+      const toX = toS ? SOUTH_AXIS_X : stair ? stair.top.x : to.x;
+      steps.push(walk(new THREE.Vector3(fromX, FLOOR_Y, CORRIDOR_Z)), walk(new THREE.Vector3(toX, FLOOR_Y, CORRIDOR_Z)));
+      if (toS) steps.push(walk(this.southAxis(QUARTERS_TUBE.from.z)), walk(this.southAxis(QUARTERS_TUBE.to.z)), walk(this.southAxis(target.z)));
+      if (stair) steps.push(walk(stair.top), walk(stair.bottom));
+    }
+    if (toBed) steps.push(walk(side), { kind: 'face', to: side.clone() }, { kind: 'sit', to: side.clone() }, { kind: 'lie', to: to.clone() });
+    else steps.push(walk(to));
     // Tira pontos repetidos (já está no corredor, ou o destino fica no corredor). Virar, deitar e levantar ficam.
     return steps.filter((st, i) => st.kind !== 'walk' || st.to.distanceTo(i === 0 ? from : steps[i - 1].to) > 0.05);
   }
@@ -275,22 +268,6 @@ export class CrewRoutine {
       from = st.to;
     }
     return best;
-  }
-
-  /** Da passarela até dentro da garagem: braço sul, túnel, e desce até o piso da garagem (um pouco mais baixo). */
-  private garagePath(): THREE.Vector3[] {
-    const x = GARAGE_TUBE.from.x;
-    return [
-      new THREE.Vector3(x, FLOOR_Y, GARAGE_TUBE.from.z),
-      new THREE.Vector3(x, FLOOR_Y, GARAGE_TUBE.to.z),
-      new THREE.Vector3(x, GARAGE_FLOOR_Y, GARAGE_TUBE.to.z + 0.45),
-    ];
-  }
-
-  /** Saindo da garagem: o mesmo caminho ao contrário, até a passarela. */
-  private leaveGarage(from: THREE.Vector3): Step[] {
-    const inGarage = from.z > GARAGE_TUBE.to.z - 0.2 && Math.abs(from.x - GARAGE_POSITION.x) < 2;
-    return inGarage ? this.garagePath().reverse().map((p) => ({ kind: 'walk', to: p })) : [];
   }
 
   /** Saindo da estufa (sobe pela escada mais perto) antes de ir ao corredor. */
@@ -381,8 +358,6 @@ export class CrewRoutine {
         : kind === 'harvest' ? 'harvest'
         : kind === 'analysis' ? 'analysis'
         : kind ? 'task'
-        // O rover voltou e espera a tripulação: o cientista livre vai à garagem (não interrompe quem já está lá).
-        : r === 'scientist' && f.roverWaiting && f.awake && !f.alert && (w.going === 'rover' || w.at === 'post') ? 'rover'
         : w.at;
 
       // Mudou de atividade: calcula o caminho até o novo lugar.
@@ -398,9 +373,9 @@ export class CrewRoutine {
         const goingToBed = (w.going === 'bed' || w.going === 'sleep') && w.path.length > 0;
         w.going = activity;
         if (!((inBed || goingToBed) && toBed)) {
-          const leave = [...this.leaveGreenhouse(w.pos), ...this.leaveGarage(w.pos)];
+          const leave = this.leaveGreenhouse(w.pos);
           const start = leave.length ? leave[leave.length - 1].to : w.pos;
-          w.path = [...leave, ...this.route(r, start, this.spotOf(r, activity, w.station), inBed, toBed, activity === 'task' ? 0 : activity === 'harvest' ? HARVEST_STAIR : null, activity === 'rover')];
+          w.path = [...leave, ...this.route(r, start, this.spotOf(r, activity, w.station), inBed, toBed, activity === 'task' ? 0 : activity === 'harvest' ? HARVEST_STAIR : null)];
           w.stepTime = 0;
         }
       }
@@ -415,17 +390,17 @@ export class CrewRoutine {
         const phase = bedStep.kind === 'sit' || bedStep.kind === 'stand' ? 'sit' : 'lie';
         const forward = bedStep.kind === 'sit' || bedStep.kind === 'lie';
         const { k, sit, hip } = this.bedPose(r, phase, forward ? t : 1 - t);
-        a.bedBlend(k, sit, hip, FLOOR_Y, dt); // os pés nunca entram no chão
+        a.bedBlend(k, sit, hip, FLOOR_Y, dt, QUARTERS_YAW); // os pés nunca entram no chão
         if (w.stepTime >= dur) {
           w.path.shift();
           w.stepTime = 0;
           if (bedStep.kind === 'lie') {
-            a.setLying(true);
+            a.setLying(true, QUARTERS_YAW);
             w.pos.copy(BED_SPOTS[r]);
           } else if (bedStep.kind === 'stand') {
-            a.bedBlend(0, 0, hip, FLOOR_Y, 0);
+            a.bedBlend(0, 0, hip, FLOOR_Y, 0, QUARTERS_YAW);
             a.setLying(false);
-            a.model.rotation.set(0, FACING_OUT_OF_BED, 0);
+            a.model.rotation.set(0, FACING_OUT, 0);
             w.pos.copy(bedStep.to);
           } else w.pos.copy(a.root.position);
         } else w.pos.copy(a.root.position);
@@ -435,9 +410,9 @@ export class CrewRoutine {
       if (bedStep?.kind === 'face') {
         a.setLying(false);
         a.root.position.copy(w.pos);
-        a.faceHeading(FACING_OUT_OF_BED, dt);
+        a.faceHeading(FACING_OUT, dt);
         a.idle(dt);
-        const left = Math.atan2(Math.sin(FACING_OUT_OF_BED - a.model.rotation.y), Math.cos(FACING_OUT_OF_BED - a.model.rotation.y));
+        const left = Math.atan2(Math.sin(FACING_OUT - a.model.rotation.y), Math.cos(FACING_OUT - a.model.rotation.y));
         if (Math.abs(left) < 0.02) w.path.shift();
         continue;
       }
@@ -473,7 +448,7 @@ export class CrewRoutine {
       // Chegou: a pose do lugar.
       if (activity === 'sleep' || activity === 'bed') {
         a.root.position.copy(BED_SPOTS[r]);
-        a.setLying(true);
+        a.setLying(true, QUARTERS_YAW);
         a.idle(dt);
       } else if (activity === 'gym') {
         const st = GYM_STATIONS[w.station];
@@ -486,22 +461,9 @@ export class CrewRoutine {
           this.greenhouseShown = true;
           this.onFirstGreenhouse();
         }
-        // Trabalhando: de frente para o trabalho (vazamento, plantas, bancada ou rover), nunca para a câmera.
+        // Trabalhando: de frente para o trabalho (vazamento, plantas ou bancada), nunca para a câmera.
         a.setLying(false);
         a.root.position.copy(w.pos);
-        if (activity === 'rover') {
-          // Tira as amostras e revisa o rover; pronto, libera ele para uma busca extra e vai descansar depois.
-          a.faceToward(f.roverAt ?? GARAGE_POSITION, dt);
-          a.tinker(dt);
-          w.idle = 0;
-          w.serviceLeft -= dt;
-          if (w.serviceLeft <= 0) {
-            w.serviceLeft = ROVER_SERVICE_SECONDS;
-            w.rested = false;
-            this.onRoverServiced();
-          }
-          continue;
-        }
         a.faceToward(activity === 'harvest' ? PROBLEM_SPOTS.harvest : activity === 'analysis' ? LAB_BENCH_LOOK : PROBLEM_SPOTS.greenhouseLeak, dt);
         a.idle(dt);
       } else {

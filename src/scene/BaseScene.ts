@@ -151,20 +151,6 @@ export class BaseScene {
     return this.rover.isWaiting;
   }
 
-  /**
-   * O rover está na garagem esperando a tripulação (revisão automática feita, já saiu neste sol)? Só de dia e com
-   * ciência no plano, para a busca extra dele poder sair.
-   */
-  get roverNeedsCrew(): boolean {
-    const s = this.state;
-    return !!s && !s.night && s.scienceBlocks > 0 && this.rover.needsCrew;
-  }
-
-  /** O cientista terminou a manutenção do rover: ele sai para uma busca extra (só visual, sem tubos). */
-  releaseRover(): void {
-    this.rover.releaseForSurvey();
-  }
-
   /** Amostras que o rover já coletou neste sol (o painel mostra os tubos enchendo). */
   get roverSamplesToday(): number {
     return this.rover.samplesToday;

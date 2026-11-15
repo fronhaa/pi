@@ -25,7 +25,15 @@ const LOOK_AROUND = 0.6;
 const HIP_HEIGHT = 0.55;
 const Q_LIE = new THREE.Quaternion().setFromRotationMatrix(LIE_BASIS);
 const Q_FACING_OUT = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0));
-/** Direção (convenção do andar) de quem fica de pé ao lado da cama, de costas para ela: olhando para o corredor (+Z). */
+/** Uma pose girada em volta do eixo vertical (o giro do módulo onde está a cama). */
+function yawed(q: THREE.Quaternion, yaw: number): THREE.Quaternion {
+  return new THREE.Quaternion().setFromAxisAngle(UP_AXIS, yaw).multiply(q);
+}
+const UP_AXIS = new THREE.Vector3(0, 1, 0);
+/**
+ * Direção (convenção do andar) de quem fica de pé ao lado da cama, de costas para ela: olhando para o corredor (+Z do
+ * módulo). Num módulo girado, some o giro dele.
+ */
 export const FACING_OUT_OF_BED = Math.PI;
 /** Pontos do corpo que podem encostar no chão ao deitar: cantos das botas e o capacete (no referencial do model). */
 const HELMET_CENTER = new THREE.Vector3(0, 1.45, 0);
@@ -166,14 +174,14 @@ export class Astronaut {
   private lying = false;
 
   /** Deitado na cama (dormindo ou descansando), ou de volta em pé. */
-  setLying(on: boolean): void {
+  setLying(on: boolean, yaw = 0): void {
     if (on === this.lying) return;
     this.lying = on;
     // Deitado não fica curvado (a postura só vale em pé).
     this.crouch = 0;
     this.posture.rotation.x = 0;
     this.posture.position.y = 0;
-    if (on) this.model.quaternion.setFromRotationMatrix(LIE_BASIS);
+    if (on) this.model.quaternion.copy(yawed(Q_LIE, yaw));
     else this.model.rotation.set(0, this.model.rotation.y, 0);
     // Deitado, no tamanho LYING_SCALE (hoje o normal).
     this.model.scale.setScalar(on ? LYING_SCALE : 1);
@@ -193,8 +201,8 @@ export class Astronaut {
   }
 
   /** Onde fica o quadril de quem está deitado com os pés em `feet` (a posição da cama). */
-  static lyingHip(feet: THREE.Vector3): THREE.Vector3 {
-    return new THREE.Vector3(0, HIP_HEIGHT * LYING_SCALE, 0).applyQuaternion(Q_LIE).add(feet);
+  static lyingHip(feet: THREE.Vector3, yaw = 0): THREE.Vector3 {
+    return new THREE.Vector3(0, HIP_HEIGHT * LYING_SCALE, 0).applyQuaternion(yawed(Q_LIE, yaw)).add(feet);
   }
 
   /** Onde fica o quadril de quem está em pé em `feet`. */
@@ -207,12 +215,13 @@ export class Astronaut {
    * `hip`; `sit` é o quanto está sentado (0 em pé, 1 sentado na beirada; pose `sit` do chibi). Sem pular nem deslizar
    * deitado no ar; nada do corpo abaixo de `floorY`.
    */
-  bedBlend(k: number, sit: number, hip: THREE.Vector3, floorY: number, dt: number): void {
+  bedBlend(k: number, sit: number, hip: THREE.Vector3, floorY: number, dt: number, yaw = 0): void {
     this.lying = k >= 1;
     this.crouch = 0;
     this.posture.rotation.x = 0;
     this.posture.position.y = 0;
-    this.model.quaternion.copy(Q_FACING_OUT).slerp(Q_LIE, k);
+    // O giro do módulo (yaw) vale para as duas poses: a cama pode estar num módulo girado (quartos no raio sul).
+    this.model.quaternion.copy(yawed(Q_FACING_OUT, yaw)).slerp(yawed(Q_LIE, yaw), k);
     const scale = THREE.MathUtils.lerp(1, LYING_SCALE, k);
     this.model.scale.setScalar(scale);
     const hipOffset = new THREE.Vector3(0, HIP_HEIGHT * scale, 0).applyQuaternion(this.model.quaternion);
@@ -324,13 +333,6 @@ export class Astronaut {
       this.freeHeading = this.restHeading + (Math.random() * 2 - 1) * LOOK_AROUND;
     }
     if (this.freeHeading !== null) this.turnTo(this.freeHeading, dt);
-  }
-
-  /** Mexendo em algo parado (manutenção do rover): segura o tablet (clipe `interact`). */
-  tinker(dt: number): void {
-    if (!this.chibi) return this.idle(dt);
-    this.playChibi('interact');
-    this.chibi.update(dt);
   }
 
   /** Pulo (Espaço): toca o clipe `jump` uma vez. */

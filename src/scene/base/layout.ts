@@ -15,11 +15,14 @@ import type { ProblemKind } from '@/sim/types';
  * Arranjo da base (concept art ARC-001/ARC-002, "Conceitos de Bases Lunar e Marciana", vista superior):
  * a CÚPULA da estufa é o núcleo, no centro; os módulos saem dela como raios, ligados por túneis:
  *
- *   academia─alojamento ═ CÚPULA ═ laboratório ─ comunicação (antena)   painéis solares
- *                    ║          (porta do airlock)     bateria
- *                 GARAGEM do rover (com rampa, virada para a câmera)
- *                    |
- *                  rampa
+ *         academia ═ ESTUFA ═ laboratório ─ comunicação (antena)   painéis solares
+ *                       ║         (porta do airlock)     bateria
+ *                 quartos A (engenheiro e médico)
+ *                       |
+ *                 quartos B (comandante e cientista)
+ *
+ * O rover de ciência não tem garagem: como o Perseverance, explora a cratera e passa a noite onde parar, com os tubos
+ * de amostra guardados dentro dele (docs/ciencia-marte.md, F23 a F25; ADR 0011).
  *
  * Os módulos são o mesmo research-base.glb (o design não muda, só a posição). Mudou um centro? Os pontos de
  * dentro (camas, academia, postos) acompanham, porque são medidos a partir daqui.
@@ -77,21 +80,8 @@ export const SHELTER_CENTER = new THREE.Vector3(-13.5, 0, 8.5);
 
 /** Comprimento útil do piso em cada módulo (entre as portas de acoplamento, ±3,25 m no modelo). */
 export const MODULE_FLOOR_LENGTH = 6.5 * HABITAT_SCALE;
-/**
- * Alojamento, medido a partir do laboratório: do outro lado da cúpula (raio oeste), ligado a ela por um túnel.
- * O interior (quartos, camas) e os pontos de dentro usam este deslocamento.
- */
-export const QUARTERS_OFFSET_X = 2 * (DOME_CENTER.x - HABITAT_POSITION.x);
-/** A academia encaixa na ponta do alojamento, como antes (port_b na port_a). */
-/**
- * Quartos individuais (ADR 0010, como a NASA recomenda e como é na CHAPEA, F15 e F18): dois módulos de quartos, cada um
- * com dois quartos separados por uma divisória. O segundo encaixa na ponta do primeiro (port_b na port_a), e a academia
- * vem depois dele.
- */
-export const QUARTERS_B_OFFSET_X = QUARTERS_OFFSET_X - 7 * HABITAT_SCALE;
-/** Os dois módulos de quartos (deslocamento em x a partir do laboratório). */
-export const QUARTERS_MODULES = [QUARTERS_OFFSET_X, QUARTERS_B_OFFSET_X] as const;
-export const GYM_OFFSET_X = QUARTERS_B_OFFSET_X - 7 * HABITAT_SCALE;
+/** Academia: o módulo do raio oeste, do outro lado da estufa, ligado a ela por um túnel (deslocamento a partir do laboratório). */
+export const GYM_OFFSET_X = 2 * (DOME_CENTER.x - HABITAT_POSITION.x);
 
 /**
  * Base de comunicação (comm-base.glb, docs/base-comunicacao-e-bateria.md): bloco com a torre de antena e a luz
@@ -132,48 +122,37 @@ export const POSTS: Record<Role, THREE.Vector3> = {
 };
 
 /**
- * Garagem do rover: o mesmo módulo, no raio sul (virado para a câmera), com o casco correndo em Z.
- * Em 100% de escala, como os outros módulos: o rover (~2,7 m de altura) cabe dentro.
- * Depois de uma expedição o rover sobe a rampa, entrega as amostras e fica em revisão (src/scene/base/Rover.ts).
+ * Quartos individuais (ADR 0010, como a NASA recomenda e como é na CHAPEA, F15 e F18) no **raio sul** (ADR 0011): dois
+ * módulos de quartos, o primeiro ligado à estufa pelo túnel sul e o segundo encaixado na ponta dele (port_b na port_a).
+ * O casco corre em Z (o modelo corre em X: giro QUARTERS_YAW). Cada módulo tem dois quartos separados por uma divisória.
  */
-export const GARAGE_SCALE = 1;
-export const GARAGE_POSITION = new THREE.Vector3(DOME_CENTER.x, 0, DOME_CENTER.z + TUBE_END + PORT * GARAGE_SCALE);
-/** Giro do módulo (o modelo corre em X; aqui corre em Z). */
-export const GARAGE_ROTATION_Y = Math.PI / 2;
-/** Piso da garagem: onde o rover fica (a rampa sobe até aqui). */
-export const GARAGE_FLOOR_Y = 1.25;
-/** Rampa na ponta da garagem: do topo (na porta de acoplamento) ao pé, no chão. */
-export const GARAGE_RAMP = {
-  top: new THREE.Vector3(GARAGE_POSITION.x, GARAGE_FLOOR_Y, GARAGE_POSITION.z + PORT * GARAGE_SCALE + 0.15),
-  foot: new THREE.Vector3(GARAGE_POSITION.x, 0, GARAGE_POSITION.z + PORT * GARAGE_SCALE + 4.6),
-  width: 2.3,
-} as const;
+export const QUARTERS_YAW = Math.PI / 2;
+export const QUARTERS_CENTERS = [0, 1].map(
+  (i) => new THREE.Vector3(DOME_CENTER.x, 0, DOME_CENTER.z + TUBE_END + PORT * HABITAT_SCALE + i * 7 * HABITAT_SCALE),
+);
 /**
- * Caminho do rover para entrar: chega ao ponto de aproximação (fora da base, em frente à rampa), vai reto
- * até o pé da rampa, sobe e para no meio da garagem. Para sair, faz o caminho ao contrário, de ré.
- * `heading` = para onde o nariz aponta ao entrar (−Z).
+ * Ponto de um módulo de quartos no referencial dele (`lx` ao longo do casco, `lz` de lado: o fundo dos quartos em −z,
+ * o corredor no eixo) para o mundo. Com o giro de 90°, +x do módulo aponta para a estufa e o fundo dos quartos fica a oeste.
  */
-export const ROVER_DOCK = {
-  approach: new THREE.Vector3(GARAGE_POSITION.x, 0, GARAGE_RAMP.foot.z + 4),
-  foot: GARAGE_RAMP.foot,
-  top: GARAGE_RAMP.top,
-  inside: new THREE.Vector3(GARAGE_POSITION.x, GARAGE_FLOOR_Y, GARAGE_POSITION.z),
-  heading: Math.PI / 2,
-} as const;
-/** Meio comprimento do rover (rover.glb): estacionado, o nariz fica a isto do centro da garagem, virado para o túnel. */
-const ROVER_HALF_LENGTH = 1.3;
+export function quartersPoint(module: number, lx: number, y: number, lz: number): THREE.Vector3 {
+  const c = QUARTERS_CENTERS[module];
+  const cos = Math.cos(QUARTERS_YAW);
+  const sin = Math.sin(QUARTERS_YAW);
+  return new THREE.Vector3(c.x + lx * cos + lz * sin, y, c.z - lx * sin + lz * cos);
+}
+
 /**
- * Onde o cientista fica para tirar as amostras e fazer a manutenção do rover estacionado: na frente do nariz dele,
- * entre o rover e o túnel da estufa.
+ * Onde o rover de ciência começa a partida: lá fora, perto da base (sem garagem: ele passa a noite onde parar, F23).
+ * Fora das caixas de colisão e longe do caminho da tripulação.
  */
-export const GARAGE_SERVICE_SPOT = new THREE.Vector3(GARAGE_POSITION.x, GARAGE_FLOOR_Y, ROVER_DOCK.inside.z - ROVER_HALF_LENGTH - 0.75);
+export const ROVER_START = new THREE.Vector3(8.5, 0, 13);
 
 export const TUBES: readonly { from: THREE.Vector3; to: THREE.Vector3 }[] = [
   // Leste: laboratório.
   { from: new THREE.Vector3(DOME_CENTER.x + TUBE_START, TUBE_Y, DOME_CENTER.z), to: new THREE.Vector3(DOME_CENTER.x + TUBE_END, TUBE_Y, DOME_CENTER.z) },
   // Oeste: alojamento.
   { from: new THREE.Vector3(DOME_CENTER.x - TUBE_START, TUBE_Y, DOME_CENTER.z), to: new THREE.Vector3(DOME_CENTER.x - TUBE_END, TUBE_Y, DOME_CENTER.z) },
-  // Sul: garagem.
+  // Sul: quartos.
   { from: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START), to: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_END) },
 ];
 /**
@@ -205,11 +184,7 @@ export const ROOM_LOCKER_Z = ROOM_FURNITURE_FRONT_Z - 0.07 - 0.25;
 export const BED_FRONT_Z = ROOM_FURNITURE_FRONT_Z;
 /** Centro da cama, encostada no fundo do quarto. */
 export const BED_Z = BED_FRONT_Z - BED_DEPTH / 2;
-/**
- * Faixa por onde se anda dentro do alojamento (relativa ao eixo do casco): no meio, como nos outros módulos (o corredor
- * fica livre, sem desviar das camas).
- */
-export const QUARTERS_LANE_Z = 0;
+
 
 /** Chão da estufa, dentro da cúpula (em cima da base da cúpula), onde ficam os canteiros. */
 export const GREENHOUSE_FLOOR_Y = 0.4;
@@ -217,7 +192,7 @@ export const GREENHOUSE_FLOOR_Y = 0.4;
 export const WALKWAY_WIDTH = 1.2;
 /**
  * Passarela da cúpula, na altura do piso dos módulos: cruza de leste a oeste (laboratório ↔ alojamento) e tem um
- * braço para o sul, até o túnel da garagem do rover. Os canteiros ficam embaixo.
+ * braço para o sul, até o túnel dos quartos. Os canteiros ficam embaixo.
  */
 export const WALKWAY = {
   east: new THREE.Vector3(TUBES[0].from.x, HABITAT_FLOOR_Y, DOME_CENTER.z),
@@ -231,7 +206,7 @@ export const STAIR_WIDTH = 0.8;
 /**
  * Escadas da passarela para os canteiros, uma de cada lado (norte e sul), para colher e cuidar das plantas.
  * `top` fica na borda da passarela, `bottom` no chão da estufa; `harvest` é onde o astronauta para, no canteiro.
- * A do sul fica do lado oeste, para não bater no braço da garagem.
+ * A do sul fica do lado oeste, para não bater no braço dos quartos.
  */
 export const GREENHOUSE_STAIRS = [-1, 1].map((side) => {
   // side = −1: lado norte (−Z), a leste; side = +1: lado sul (+Z), a oeste.
@@ -284,8 +259,8 @@ export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
   commander: new THREE.Vector3(HABITAT_POSITION.x - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
   scientist: new THREE.Vector3(HABITAT_POSITION.x + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
   // No alojamento, no corredor do meio: virando para olhar em volta, não encosta nas camas.
-  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + QUARTERS_LANE_Z + 0.05),
-  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + QUARTERS_LANE_Z + 0.05),
+  engineer: quartersPoint(0, -1.0, HABITAT_FLOOR_Y, 0.05),
+  medic: quartersPoint(0, 1.0, HABITAT_FLOOR_Y, 0.05),
 };
 
 /** Centro da cama de cada quarto em relação ao centro do módulo (um quarto em cada metade). */
@@ -296,24 +271,23 @@ export const ROOM_LOCKER_DX = 0.42;
 const LYING_LENGTH = 1.85 * LYING_SCALE;
 
 /**
- * Cama de cada papel (cabeça no travesseiro em −X): onde dorme à noite e descansa. Engenheiro e médico no primeiro
- * módulo de quartos (perto dos postos deles), comandante e cientista no segundo. Um quarto para cada um.
+ * Quarto de cada papel: módulo de quartos (0 = perto da estufa) e lado (−1 ou 1). Engenheiro e médico no primeiro (perto
+ * dos postos deles), comandante e cientista no segundo. Um quarto para cada um.
  */
-export const BED_SPOTS: Record<Role, THREE.Vector3> = {
-  engineer: bedSpot(QUARTERS_OFFSET_X, -1),
-  medic: bedSpot(QUARTERS_OFFSET_X, 1),
-  commander: bedSpot(QUARTERS_B_OFFSET_X, -1),
-  scientist: bedSpot(QUARTERS_B_OFFSET_X, 1),
+export const BED_ROOMS: Record<Role, { module: 0 | 1; side: -1 | 1 }> = {
+  engineer: { module: 0, side: -1 },
+  medic: { module: 0, side: 1 },
+  commander: { module: 1, side: -1 },
+  scientist: { module: 1, side: 1 },
 };
-
-function bedSpot(moduleX: number, side: -1 | 1): THREE.Vector3 {
-  // O boneco deitado tem os pés na origem: a origem fica na ponta da cama, longe do travesseiro.
-  return new THREE.Vector3(
-    HABITAT_POSITION.x + moduleX + side * ROOM_BED_DX + LYING_LENGTH / 2,
-    HABITAT_FLOOR_Y + BED_LEVEL + BED_BODY_Y,
-    HABITAT_POSITION.z + BED_Z,
-  );
+/** Pés do boneco deitado no referencial do módulo (a cabeça vai para −x do módulo, no travesseiro). */
+export function bedFeetLocalX(r: Role): number {
+  return BED_ROOMS[r].side * ROOM_BED_DX + LYING_LENGTH / 2;
 }
+/** Cama de cada papel: onde ficam os pés de quem dorme (no mundo). */
+export const BED_SPOTS = Object.fromEntries(
+  (Object.keys(BED_ROOMS) as Role[]).map((r) => [r, quartersPoint(BED_ROOMS[r].module, bedFeetLocalX(r), HABITAT_FLOOR_Y + BED_LEVEL + BED_BODY_Y, BED_Z)]),
+) as Record<Role, THREE.Vector3>;
 
 /**
  * Aparelhos da academia que um astronauta usa (F9: esteira e bicicleta, como na Estação Espacial).
@@ -345,8 +319,8 @@ export const HABITAT_LOOK: Record<Role, THREE.Vector3> = {
   commander: new THREE.Vector3(HABITAT_POSITION.x - 0.9, HABITAT_FLOOR_Y + 1.3, HABITAT_POSITION.z + BACK_Z - 0.2),
   scientist: new THREE.Vector3(HABITAT_POSITION.x + 0.9, HABITAT_FLOOR_Y + 1.3, HABITAT_POSITION.z + BACK_Z - 0.2),
   // No alojamento, o armário do seu quarto.
-  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - ROOM_LOCKER_DX, HABITAT_FLOOR_Y + 1, HABITAT_POSITION.z + BACK_Z),
-  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + ROOM_LOCKER_DX, HABITAT_FLOOR_Y + 1, HABITAT_POSITION.z + BACK_Z),
+  engineer: quartersPoint(0, -ROOM_LOCKER_DX, HABITAT_FLOOR_Y + 1, ROOM_LOCKER_Z),
+  medic: quartersPoint(0, ROOM_LOCKER_DX, HABITAT_FLOOR_Y + 1, ROOM_LOCKER_Z),
 };
 
 /**

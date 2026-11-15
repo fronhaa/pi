@@ -16,11 +16,6 @@ import {
   TUBE_RADIUS,
   WALKWAY,
   WALKWAY_WIDTH,
-  GARAGE_FLOOR_Y,
-  GARAGE_POSITION,
-  GARAGE_RAMP,
-  GARAGE_ROTATION_Y,
-  GARAGE_SCALE,
   BIKE_DX,
   GYM_DX,
   TREADMILL_DX,
@@ -30,8 +25,8 @@ import {
   HABITAT_SCALE,
   MODULE_FLOOR_LENGTH,
   MODULE_FLOOR_WIDTH,
-  QUARTERS_MODULES,
-  QUARTERS_OFFSET_X,
+  QUARTERS_CENTERS,
+  QUARTERS_YAW,
   ROOM_BED_DX,
   ROOM_FURNITURE_FRONT_Z,
   ROOM_LOCKER_Z,
@@ -81,8 +76,8 @@ export class Habitat {
   readonly root = new THREE.Group();
   /** Habitat simples, só até a base de pesquisa (.glb) carregar ou se ela falhar. */
   private readonly fallback = new THREE.Group();
-  /** Casco simples da garagem (fora do grupo `fallback`, que está em outra escala). */
-  private garageFallback: THREE.Object3D | null = null;
+  /** Cascos simples dos módulos de quartos (raio sul, girados; fora do grupo `fallback`). */
+  private readonly southFallback: THREE.Object3D[] = [];
   private readonly windows = new THREE.MeshBasicMaterial({ color: PALETTE.window });
   /** Vidros das janelas dos módulos .glb: acendem à noite (luz de dentro). */
   private readonly windowGlass: THREE.MeshToonMaterial[] = [];
@@ -110,7 +105,7 @@ export class Habitat {
       w.position.set(wx, 3.2, 1.55);
       fb.add(w);
     }
-    for (const ox of [...QUARTERS_MODULES, GYM_OFFSET_X]) {
+    for (const ox of [GYM_OFFSET_X]) {
       const extra = hull.clone();
       extra.position.x = ox / HABITAT_SCALE; // o grupo inteiro está em HABITAT_SCALE
       fb.add(extra);
@@ -123,29 +118,32 @@ export class Habitat {
     opening.position.set(0, 0.9 / HABITAT_SCALE, 3.61 / HABITAT_SCALE);
     this.root.add(fb);
 
-    const garageHull = hull.clone();
-    garageHull.scale.setScalar(GARAGE_SCALE);
-    garageHull.position.set(GARAGE_POSITION.x, 2.65 * GARAGE_SCALE, GARAGE_POSITION.z);
-    garageHull.rotation.y = GARAGE_ROTATION_Y;
-    this.garageFallback = garageHull;
-    this.root.add(garageHull);
+    // Quartos no raio sul: o mesmo casco, girado (o casco corre em Z).
+    for (const c of QUARTERS_CENTERS) {
+      const q = hull.clone();
+      q.scale.setScalar(HABITAT_SCALE);
+      q.position.set(c.x, 2.65 * HABITAT_SCALE, c.z);
+      q.rotation.y = QUARTERS_YAW;
+      this.southFallback.push(q);
+      this.root.add(q);
+    }
 
     this.buildInterior();
-    this.buildGarage();
+    this.buildQuarters();
     this.buildTubes();
 
-    // Colisão: laboratório (raio leste), alojamento + academia (raio oeste), garagem e rampa (raio sul),
-    // túneis, torre do airlock e o armário de amostras ao lado da porta.
+    // Colisão: laboratório (raio leste), academia (raio oeste), os dois módulos de quartos (raio sul), túneis, torre
+    // do airlock e o armário de amostras ao lado da porta.
     const { x, z } = HABITAT_POSITION;
     const halfX = 3.6 * HABITAT_SCALE;
     const halfZ = 2.5 * HABITAT_SCALE;
     addObstacle(obstacles, x, z, halfX, halfZ);
-    addObstacle(obstacles, x + (QUARTERS_OFFSET_X + GYM_OFFSET_X) / 2, z, halfX + (QUARTERS_OFFSET_X - GYM_OFFSET_X) / 2, halfZ);
+    addObstacle(obstacles, x + GYM_OFFSET_X, z, halfX, halfZ);
     addObstacle(obstacles, x, z + 2.4, 1.0, 1.5);
     addObstacle(obstacles, x - 1.5, z + 3.06, 0.6, 0.35);
-    addObstacle(obstacles, GARAGE_POSITION.x, GARAGE_POSITION.z, 2.5 * GARAGE_SCALE, 3.6 * GARAGE_SCALE);
-    const ramp = GARAGE_RAMP;
-    addObstacle(obstacles, ramp.foot.x, (ramp.top.z + ramp.foot.z) / 2, ramp.width / 2, (ramp.foot.z - ramp.top.z) / 2);
+    const q0 = QUARTERS_CENTERS[0];
+    const q1 = QUARTERS_CENTERS[QUARTERS_CENTERS.length - 1];
+    addObstacle(obstacles, q0.x, (q0.z + q1.z) / 2, halfZ, (q1.z - q0.z) / 2 + halfX);
     for (const t of TUBES) {
       const len = t.from.distanceTo(t.to);
       const alongX = Math.abs(t.to.x - t.from.x) > Math.abs(t.to.z - t.from.z);
@@ -154,46 +152,56 @@ export class Habitat {
   }
 
   /**
-   * Garagem do rover: piso dentro do casco (o rover estaciona aqui) e a rampa da ponta até o chão,
-   * com corrimãos. O módulo em si é o mesmo dos outros (modelo simples ou .glb).
+   * Alojamento: quartos individuais (ADR 0010) nos dois módulos do raio sul (ADR 0011). Cada módulo é montado no
+   * referencial dele (x ao longo do casco, fundo dos quartos em −z) e girado com QUARTERS_YAW. Piso e luminária, uma
+   * divisória entre os dois quartos (do fundo até a frente das camas: o corredor do meio fica livre) e, em cada quarto,
+   * uma cama baixa (de um andar) e um armário ao lado da divisória.
    */
-  private buildGarage(): void {
-    const g = GARAGE_POSITION;
-    const floor = toonMesh(new THREE.BoxGeometry(2.2, 0.08, MODULE_FLOOR_LENGTH / HABITAT_SCALE), PALETTE.tech, 0);
-    floor.position.set(g.x, GARAGE_FLOOR_Y - 0.04, g.z);
-    this.root.add(floor);
-    // Luminária, como nas cabines: o casco faz sombra e o rover estacionado não fica no escuro.
-    const light = new THREE.PointLight(0xffe6c0, CABIN_LIGHT_INTENSITY, 6, 1.6);
-    light.position.set(g.x, GARAGE_FLOOR_Y + 2.6 * GARAGE_SCALE, g.z);
-    this.root.add(light);
-
-    const { top, foot, width } = GARAGE_RAMP;
-    const run = foot.z - top.z;
-    const rise = top.y - foot.y;
-    const length = Math.hypot(run, rise);
-    const slope = Math.atan2(rise, run);
-    const ramp = new THREE.Group();
-    ramp.position.set(top.x, (top.y + foot.y) / 2, (top.z + foot.z) / 2);
-    ramp.rotation.x = slope; // a ponta de +Z (o pé) desce até o chão
-    const deck = toonMesh(new THREE.BoxGeometry(width, 0.12, length), PALETTE.tech, 0.03);
-    ramp.add(deck);
-    // Faixas de aderência, para ler como rampa de longe.
-    for (let i = 0; i < 6; i++) {
-      const strip = toonMesh(new THREE.BoxGeometry(width * 0.9, 0.03, 0.12), PALETTE.light, 0);
-      strip.position.set(0, 0.075, -length / 2 + ((i + 0.5) / 6) * length);
-      ramp.add(strip);
-    }
-    for (const side of [-1, 1]) {
-      const rail = toonMesh(new THREE.BoxGeometry(0.08, 0.08, length), PALETTE.accent, 0);
-      rail.position.set((side * width) / 2, 0.55, 0);
-      ramp.add(rail);
-      for (const k of [-0.45, 0, 0.45]) {
-        const post = toonMesh(new THREE.BoxGeometry(0.06, 0.55, 0.06), PALETTE.tech, 0);
-        post.position.set((side * width) / 2, 0.28, k * length);
-        ramp.add(post);
+  private buildQuarters(): void {
+    const y = HABITAT_FLOOR_Y;
+    const lampMat = new THREE.MeshBasicMaterial({ color: 0xfff1d0 });
+    const wallMat = seeThroughHull(toonMaterial(HULL_COLORS.shell), 0.45);
+    const wallFront = ROOM_FURNITURE_FRONT_Z;
+    for (const c of QUARTERS_CENTERS) {
+      const room = new THREE.Group();
+      room.position.set(c.x, 0, c.z);
+      room.rotation.y = QUARTERS_YAW;
+      const floor = toonMesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH, 0.08, MODULE_FLOOR_WIDTH), PALETTE.tech, 0);
+      floor.position.set(0, y - 0.04, 0);
+      room.add(floor);
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH * 0.6, 0.05, 0.25), lampMat);
+      lamp.position.set(0, y + 2.45, 0);
+      room.add(lamp);
+      const light = new THREE.PointLight(0xffe6c0, CABIN_LIGHT_INTENSITY, 4.5, 1.6);
+      light.position.set(0, y + 2.3, 0.2);
+      room.add(light);
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.05, ROOM_WALL_HEIGHT, wallFront - ROOM_WALL_BACK_Z), wallMat);
+      wall.position.set(0, y + ROOM_WALL_HEIGHT / 2, (wallFront + ROOM_WALL_BACK_Z) / 2);
+      wall.renderOrder = 1.5;
+      room.add(wall);
+      for (const side of [-1, 1]) {
+        const bx = side * ROOM_BED_DX;
+        // Estrado com quatro pés, aberto embaixo: sentado na beirada, ele recolhe os pés para baixo da cama.
+        for (const [lx, lz] of [[-0.88, -1], [0.88, -1], [-0.88, 1], [0.88, 1]]) {
+          const leg = toonMesh(new THREE.BoxGeometry(0.06, BED_LEVEL - 0.09, 0.06), PALETTE.tech, 0);
+          leg.position.set(bx + lx, y + (BED_LEVEL - 0.09) / 2, BED_Z + lz * (BED_DEPTH / 2 - 0.05));
+          room.add(leg);
+        }
+        const bed = toonMesh(new THREE.BoxGeometry(1.9, BED_THICKNESS, BED_DEPTH), PALETTE.light, 0.04);
+        bed.position.set(bx, y + BED_LEVEL, BED_Z);
+        room.add(bed);
+        const blanket = toonMesh(new THREE.BoxGeometry(1.3, 0.08, BED_DEPTH + 0.02), PALETTE.panel, 0);
+        blanket.position.set(bx + 0.25, y + BED_LEVEL + 0.12, BED_Z);
+        room.add(blanket);
+        const pillow = toonMesh(new THREE.BoxGeometry(0.4, 0.12, BED_DEPTH - 0.15), 0xffffff, 0);
+        pillow.position.set(bx - 0.7, y + BED_LEVEL + 0.14, BED_Z);
+        room.add(pillow);
+        const locker = toonMesh(new THREE.BoxGeometry(0.36, 1.6, 0.5), PALETTE.tech, 0.03);
+        locker.position.set(side * ROOM_LOCKER_DX, y + 0.8, ROOM_LOCKER_Z);
+        room.add(locker);
       }
+      this.root.add(room);
     }
-    this.root.add(ramp);
   }
 
   /** Túneis pressurizados ligando a cúpula a cada módulo (vista superior do concept art). */
@@ -226,7 +234,7 @@ export class Habitat {
 
   /**
    * Passarela da cúpula, na altura do piso dos módulos (src/scene/crewRoutine.ts anda por ela): cruza de leste a
-   * oeste (laboratório ↔ alojamento) e tem um braço para o sul, até o túnel da garagem. Dos dois lados, uma escada
+   * oeste (laboratório ↔ academia) e tem um braço para o sul, até o túnel dos quartos. Dos dois lados, uma escada
    * desce até os canteiros (colheita e manutenção das plantas). Corrimão laranja com abertura nas escadas e no braço.
    */
   private buildWalkway(): void {
@@ -255,7 +263,7 @@ export class Habitat {
         this.root.add(post);
       }
     };
-    // Trechos entre as aberturas (escadas e braço da garagem) de cada lado da passarela leste-oeste.
+    // Trechos entre as aberturas (escadas e braço dos quartos) de cada lado da passarela leste-oeste.
     const sideRail = (z: number, gaps: [number, number][]) => {
       let from = west.x;
       for (const [g0, g1] of [...gaps].sort((p, q) => p[0] - q[0])) {
@@ -314,7 +322,7 @@ export class Habitat {
     // Um piso por módulo: entre eles ficam as portas de acoplamento (um piso contínuo aparecia por fora).
     // Cada cabine tem luminária no teto: o casco faz sombra e o sol não entra, então a luz de dentro é dela.
     const lampMat = new THREE.MeshBasicMaterial({ color: 0xfff1d0 });
-    for (const ox of [0, ...QUARTERS_MODULES, GYM_OFFSET_X]) {
+    for (const ox of [0, GYM_OFFSET_X]) {
       const floor = toonMesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH, 0.08, MODULE_FLOOR_WIDTH), PALETTE.tech, 0);
       floor.position.set(ox, y - 0.04, 0);
       inside.add(floor);
@@ -351,39 +359,6 @@ export class Habitat {
         const jar = toonMesh(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 10), jarColors[(i + (level > 1 ? 1 : 0)) % 3], 0);
         jar.position.set(-2.3 + i * 0.15, y + level, BACK_Z + 0.08);
         inside.add(jar);
-      }
-    }
-
-    // Alojamento: quartos individuais (ADR 0010). Em cada módulo de quartos, dois quartos separados por uma
-    // divisória que vai do fundo até perto da faixa do corredor; em cada quarto, uma cama baixa (de um andar) e um
-    // armário ao lado da divisória.
-    const wallMat = seeThroughHull(toonMaterial(HULL_COLORS.shell), 0.45);
-    const wallFront = ROOM_FURNITURE_FRONT_Z; // até a frente das camas: o corredor do meio fica livre
-    for (const mx of QUARTERS_MODULES) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.05, ROOM_WALL_HEIGHT, wallFront - ROOM_WALL_BACK_Z), wallMat);
-      wall.position.set(mx, y + ROOM_WALL_HEIGHT / 2, (wallFront + ROOM_WALL_BACK_Z) / 2);
-      wall.renderOrder = 1.5;
-      inside.add(wall);
-      for (const side of [-1, 1]) {
-        const bx = mx + side * ROOM_BED_DX;
-        // Estrado com quatro pés, aberto embaixo: sentado na beirada, ele recolhe os pés para baixo da cama.
-        for (const [lx, lz] of [[-0.88, -1], [0.88, -1], [-0.88, 1], [0.88, 1]]) {
-          const leg = toonMesh(new THREE.BoxGeometry(0.06, BED_LEVEL - 0.09, 0.06), PALETTE.tech, 0);
-          leg.position.set(bx + lx, y + (BED_LEVEL - 0.09) / 2, BED_Z + lz * (BED_DEPTH / 2 - 0.05));
-          inside.add(leg);
-        }
-        const bed = toonMesh(new THREE.BoxGeometry(1.9, BED_THICKNESS, BED_DEPTH), PALETTE.light, 0.04);
-        bed.position.set(bx, y + BED_LEVEL, BED_Z);
-        inside.add(bed);
-        const blanket = toonMesh(new THREE.BoxGeometry(1.3, 0.08, BED_DEPTH + 0.02), PALETTE.panel, 0);
-        blanket.position.set(bx + 0.25, y + BED_LEVEL + 0.12, BED_Z);
-        inside.add(blanket);
-        const pillow = toonMesh(new THREE.BoxGeometry(0.4, 0.12, BED_DEPTH - 0.15), 0xffffff, 0);
-        pillow.position.set(bx - 0.7, y + BED_LEVEL + 0.14, BED_Z);
-        inside.add(pillow);
-        const locker = toonMesh(new THREE.BoxGeometry(0.36, 1.6, 0.5), PALETTE.tech, 0.03);
-        locker.position.set(mx + side * ROOM_LOCKER_DX, y + 0.8, ROOM_LOCKER_Z);
-        inside.add(locker);
       }
     }
 
@@ -446,12 +421,11 @@ export class Habitat {
 
   /** Troca o módulo simples pela base de pesquisa .glb. */
   useModel(m: SceneryModel): void {
-    // Alojamento: o mesmo bloco, acoplado pela porta de acoplamento do lado esquerdo (como o doc do modelo
+    // Academia (oeste) e quartos (sul): o mesmo bloco, acoplado pelas portas de acoplamento (como o doc do modelo
     // prevê). Uma porta só para a base inteira: sem torre do airlock, sem armário, sem observatório.
-    // A academia encaixa do mesmo jeito no alojamento.
     // Cabines em HABITAT_SCALE; a torre do airlock e o armário ficam em 100% e no mesmo lugar de antes.
     m.root.scale.setScalar(HABITAT_SCALE);
-    const extras = [...QUARTERS_MODULES, GYM_OFFSET_X].map((ox) => {
+    const extras = [GYM_OFFSET_X].map((ox) => {
       const module = m.root.clone(true);
       for (const name of ['access_tower', 'sample_station', 'observatory_base', 'observatory_ring', 'observatory', 'dish', 'dish_pole']) {
         const o = module.getObjectByName(name);
@@ -465,14 +439,15 @@ export class Habitat {
       this.root.add(module);
       return module;
     });
-    // Garagem do rover: o mesmo módulo (sem torre, armário, observatório e placa), virado para a câmera.
-    const garage = extras[0].clone(true);
-    garage.scale.setScalar(GARAGE_SCALE);
-    garage.position.copy(GARAGE_POSITION);
-    garage.rotation.y = GARAGE_ROTATION_Y;
-    this.root.add(garage);
-    extras.push(garage);
-    if (this.garageFallback) this.garageFallback.visible = false;
+    // Quartos no raio sul: o mesmo módulo (sem torre, armário, observatório e placa), girado.
+    for (const c of QUARTERS_CENTERS) {
+      const q = extras[0].clone(true);
+      q.position.copy(c);
+      q.rotation.y = QUARTERS_YAW;
+      this.root.add(q);
+      extras.push(q);
+    }
+    for (const f of this.southFallback) f.visible = false;
 
     for (const name of ['access_tower', 'sample_station']) {
       const o = m.root.getObjectByName(name);
