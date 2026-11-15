@@ -7,7 +7,7 @@ import { Mission } from '@/sim/mission';
 import type { EnergyPlan, GameState, Problem, Resources, SolReport } from '@/sim/types';
 import { ROLES, type Role } from '@/sim/crew';
 import { needsEva } from '@/sim/eva';
-import { CONFIG, type Location } from '@/sim/config';
+import { CONFIG, tuning, type Difficulty, type Location } from '@/sim/config';
 import { pickHistorical } from '@/sim/historical';
 import { loadFlares, type FlareSource } from '@/data/flares';
 import { isFirstGame, loadMissions, markPlayed, type MissionSource } from '@/data/missions';
@@ -22,6 +22,7 @@ import { Hud } from '@/ui/Hud';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CrewBubble } from '@/ui/CrewBubble';
 import { showCard, showEnd, showMissionStart, showReport, showTutorial } from '@/ui/dialogs';
+import { preferredLevel, saveLevel } from '@/data/level';
 import { playLaunchIntro, prefersReducedMotion } from '@/ui/LaunchIntro';
 import { LaunchScene } from '@/scene/LaunchScene';
 import { showPlaceChoice3D } from '@/ui/PlaceChoice';
@@ -90,6 +91,8 @@ export class Game {
   private mission!: Mission;
   /** Onde fica a base (solo). O modo em grupo é sempre em Marte, por enquanto. */
   private location: Location = 'mars';
+  /** Nível do jogo solo (src/sim/config.ts, DIFFICULTY). Em grupo, o servidor usa o Médio. */
+  private difficulty: Difficulty = 'medium';
   private plan: EnergyPlan = { life: 3, shield: 1, science: 3 };
   private night = false;
   private stormNight = false;
@@ -377,8 +380,19 @@ export class Game {
       this.startCoop(resume.url, resume.saved); // recarregou a página no meio de uma partida em grupo
       return;
     }
-    const url = coopServerUrl();
-    showPlaceChoice3D(this.showLaunchPad(), (place) => {
+    this.pickPlace(true);
+  }
+
+  /**
+   * Tela 3D de escolha: Marte ou Lua, com os níveis embaixo de cada planeta (um toque escolhe lugar e nível; o nível
+   * vale para o modo sozinho, no grupo quem escolhe é o dono da sala). Com servidor de grupo e Marte, pergunta
+   * sozinho ou em grupo. `allowGroup` = false no "Jogar de novo" do modo sozinho.
+   */
+  private pickPlace(allowGroup: boolean): void {
+    const url = allowGroup ? coopServerUrl() : null;
+    showPlaceChoice3D(this.showLaunchPad(), preferredLevel(), (place, level) => {
+      this.difficulty = level;
+      saveLevel(level);
       if (url && place === 'mars') showModeChoice(() => this.startSolo(place), () => this.startGroupTrip(url));
       else this.startSolo(place);
     });
@@ -586,7 +600,7 @@ export class Game {
       return;
     }
     // Treino (sóis 1 a 3, sem problemas): um dia curto para ver o Sol cruzar o céu e os painéis trabalharem.
-    this.dayLength = m.state.problems.length === 0 ? INTRO_DAY_SECONDS : CONFIG.problems.daySeconds;
+    this.dayLength = m.state.problems.length === 0 ? INTRO_DAY_SECONDS : tuning(m.state.difficulty).daySeconds;
     this.phase = 'day';
     this.dayElapsed = 0;
     this.paused = false;
@@ -707,8 +721,8 @@ export class Game {
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
     // Marte: missão histórica real, se houver; senão, erupções reais sorteadas; senão, simuladas.
     // Lua: erupções reais sorteadas (o atraso das missões históricas é Terra-Marte; não serve para a Lua).
-    const historical = this.location === 'mars' ? pickHistorical(this.missions.missions, seed, isFirstGame()) : null;
-    this.mission = new Mission(seed, this.flares.flares, historical, this.location);
+    const historical = this.location === 'mars' ? pickHistorical(this.missions.missions, seed, isFirstGame(), this.difficulty) : null;
+    this.mission = new Mission(seed, this.flares.flares, historical, this.location, this.difficulty);
     this.bubble.hide();
     // Solo começa pelo treino (a base fechada); em grupo, sem treino.
     this.intro.reset(!this.coop);
@@ -801,10 +815,8 @@ export class Game {
   private finish(): void {
     markPlayed();
     this.hud.setState(this.mission.state);
-    // Jogar de novo: escolhe o lugar outra vez (dá para experimentar Marte e Lua e comparar).
-    showEnd(this.mission.state, () => {
-      showPlaceChoice3D(this.showLaunchPad(), (place) => this.startSolo(place));
-    });
+    // Jogar de novo: escolhe o lugar e o nível outra vez (dá para comparar Marte e Lua, ou subir de nível).
+    showEnd(this.mission.state, () => this.pickPlace(false));
   }
 
   /** Bateria prevista para depois da noite (a mesma prévia do plano; solo ou servidor). Só para a cena, de dia. */
@@ -846,7 +858,7 @@ export class Game {
   private dayTime(): number {
     if (this.night) return 1.15;
     if (this.phase === 'day') {
-      const total = this.coop ? CONFIG.problems.daySeconds : this.dayLength;
+      const total = this.coop ? tuning(this.current.difficulty).daySeconds : this.dayLength;
       const elapsed = this.coop ? total - (this.coop.dayRemaining ?? total) : this.dayElapsed;
       return 0.25 + 0.6 * THREE.MathUtils.clamp(elapsed / total, 0, 1);
     }

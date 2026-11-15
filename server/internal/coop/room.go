@@ -31,7 +31,8 @@ type Room struct {
 	game       *Game
 	flares     []sim.Flare
 	missions   []sim.HistoricalMission
-	firstGame  bool // primeira partida da sala: só missão histórica de força média (como no solo)
+	firstGame  bool   // primeira partida da sala: só missão histórica de força média (como no solo)
+	level      string // nível da próxima partida (o dono da sala escolhe no saguão); padrão sim.DefaultLevel
 	seeds      func() (uint32, uint32)
 	lastActive time.Time
 	nextNumber int
@@ -48,7 +49,7 @@ type Room struct {
 
 func newRoom(code string, flares []sim.Flare, missions []sim.HistoricalMission, seeds func() (uint32, uint32)) *Room {
 	return &Room{
-		Code: code, owners: map[Role]string{}, flares: flares, missions: missions, firstGame: true,
+		Code: code, owners: map[Role]string{}, flares: flares, missions: missions, firstGame: true, level: sim.DefaultLevel,
 		seeds: seeds, lastActive: time.Now(), nextNumber: 1, TimeScale: 1,
 	}
 }
@@ -142,6 +143,18 @@ func (r *Room) apply(pid string, a Action) error {
 		if r.owners[a.Role] == pid {
 			delete(r.owners, a.Role)
 		}
+	case "level":
+		// Só o dono da sala escolhe o nível, antes da partida (ou depois do fim, para a próxima).
+		if pid != r.hostID {
+			return ErrNotYourRole
+		}
+		if r.game != nil && r.game.Phase != PhaseEnded {
+			return ErrWrongPhase
+		}
+		if !sim.IsLevel(a.Level) {
+			return ErrInvalidInput
+		}
+		r.level = a.Level
 	case "start":
 		if pid != r.hostID {
 			return ErrNotYourRole
@@ -226,11 +239,11 @@ func (r *Room) start() error {
 	_, hasEarth := r.owners[Earth]
 	seed, coopSeed := r.seeds()
 	// Missão histórica real, se houver; senão, erupções reais sorteadas; senão, simuladas (igual ao solo).
-	hist := sim.PickHistorical(r.missions, seed, r.firstGame)
+	hist := sim.PickHistorical(r.missions, seed, r.firstGame, r.level)
 	r.firstGame = false
 	r.crew = nil
 	r.eva = nil
-	r.game = NewGame(seed, coopSeed, r.flares, hist, !hasEarth)
+	r.game = NewGame(seed, coopSeed, r.flares, hist, !hasEarth, r.level)
 	return nil
 }
 
@@ -336,6 +349,7 @@ type MarsView struct {
 	Day         *DayView             `json:"day,omitempty"`        // só na fase "day"
 	CommsDown   bool                 `json:"commsDown"`
 	Historical  *HistoricalView      `json:"historical,omitempty"`
+	Difficulty  string               `json:"difficulty"` // nível desta partida
 	// Prévia do plano atual (mesma conta do fim do sol). Com jogador na Terra, sem a tempestade
 	// de amanhã: avisar é papel da Terra.
 	Preview json.RawMessage `json:"preview,omitempty"`
@@ -357,8 +371,10 @@ type StateMsg struct {
 	You       PlayerView   `json:"you"`
 	Players   []PlayerView `json:"players"`
 	AutoEarth bool         `json:"autoEarth"`
-	Mars      *MarsView    `json:"mars,omitempty"`
-	Earth     *EarthView   `json:"earth,omitempty"`
+	// Nível escolhido pelo dono da sala para a próxima partida (no saguão e no fim).
+	Level string     `json:"level"`
+	Mars  *MarsView  `json:"mars,omitempty"`
+	Earth *EarthView `json:"earth,omitempty"`
 	// Última posição conhecida de cada astronauta (para quem acabou de entrar ou reconectou).
 	Crew []CrewPos `json:"crew,omitempty"`
 	// Dupla em EVA e quem a comanda (só durante o dia).
@@ -390,7 +406,7 @@ func (r *Room) viewFor(id string) StateMsg {
 			you = v
 		}
 	}
-	msg := StateMsg{T: "state", Code: r.Code, Phase: PhaseLobby, You: you, Players: players}
+	msg := StateMsg{T: "state", Code: r.Code, Phase: PhaseLobby, You: you, Players: players, Level: r.level}
 	g := r.game
 	if g == nil {
 		return msg
@@ -415,7 +431,7 @@ func (r *Room) viewFor(id string) StateMsg {
 	if isMars || ended || len(you.Roles) == 0 {
 		mv := &MarsView{
 			Sol: s.Sol, Res: s.Res, Blocks: s.Blocks, Plan: g.Plan, PendingCard: s.PendingCard,
-			Messages: g.MarsMessages(), Outcome: s.Outcome, LastReport: last,
+			Messages: g.MarsMessages(), Outcome: s.Outcome, LastReport: last, Difficulty: s.Difficulty,
 		}
 		if last != nil {
 			mv.ReportCard = s.CardSols[last.Sol]
@@ -429,7 +445,7 @@ func (r *Room) viewFor(id string) StateMsg {
 		}
 		mv.CommsDown = s.CommsDown
 		if g.Phase == PhaseDay {
-			mv.Day = &DayView{Remaining: max(0, int(sim.Config.ProblemsDaySeconds-g.DayElapsed+0.999)), Paused: g.Paused}
+			mv.Day = &DayView{Remaining: max(0, int(g.DaySeconds()-g.DayElapsed+0.999)), Paused: g.Paused}
 		}
 		if h := s.Historical; h != nil {
 			mv.Historical = &HistoricalView{ID: h.ID, Difficulty: h.Difficulty, StartUtc: h.StartUtc}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -24,7 +25,7 @@ func TestStateRoundTrip(t *testing.T) {
 		if seed%2 == 0 {
 			fl = flares
 		}
-		m := NewMission(seed, fl, hist)
+		m := NewMission(seed, fl, hist, "medium")
 		r := NewRng(seed ^ 0x5bd1e995)
 		check := func(step string) {
 			t.Helper()
@@ -86,7 +87,7 @@ func TestStateRoundTrip(t *testing.T) {
 }
 
 func TestRulesRefuseInvalidActions(t *testing.T) {
-	m := NewMission(5, nil, nil)
+	m := NewMission(5, nil, nil, "medium")
 	if m.IsPlanValid(EnergyPlan{Life: 99}) {
 		t.Fatal("plano acima dos blocos deveria ser inválido")
 	}
@@ -116,18 +117,18 @@ func TestHistoricalMissions(t *testing.T) {
 		t.Skip("sem public/data/missions.json")
 	}
 	for seed := uint32(1); seed < 40; seed++ {
-		h := PickHistorical(missions, seed, true)
+		h := PickHistorical(missions, seed, true, "medium")
 		if h == nil || h.Difficulty != "medium" {
 			t.Fatalf("seed %d: primeira partida deveria ser missão média", seed)
 		}
-		if m := NewMission(seed, nil, h); m.State.Historical == nil || m.State.Historical.ID != h.ID {
+		if m := NewMission(seed, nil, h, "medium"); m.State.Historical == nil || m.State.Historical.ID != h.ID {
 			t.Fatal("a missão deveria usar a missão histórica escolhida")
 		}
 	}
 }
 
 func TestMissionsAreIsolated(t *testing.T) {
-	a, b := NewMission(1, nil, nil), NewMission(1, nil, nil)
+	a, b := NewMission(1, nil, nil, "medium"), NewMission(1, nil, nil, "medium")
 	if a.State.PendingCard != nil {
 		_, _ = a.AnswerCard(a.State.PendingCard.Options[0].ID)
 	}
@@ -187,4 +188,34 @@ func loadMissionsForTest(t *testing.T) []HistoricalMission {
 		return nil
 	}
 	return ParseMissions(raw)
+}
+
+// Níveis (src/sim/config.ts, DIFFICULTY): o servidor lê do TypeScript e a missão nasce com o nível pedido.
+func TestLevelsComeFromTypeScript(t *testing.T) {
+	want := map[string]float64{"easy": 90, "medium": 75, "hard": 60}
+	for level, s := range want {
+		if !IsLevel(level) || DaySeconds(level) != s {
+			t.Fatalf("nível %s: IsLevel=%v DaySeconds=%v (esperado %v)", level, IsLevel(level), DaySeconds(level), s)
+		}
+	}
+	if IsLevel("impossible") || DaySeconds("impossible") != Config.ProblemsDaySeconds {
+		t.Fatal("nível desconhecido não vale e usa o dia de sempre")
+	}
+}
+
+func TestMissionLevelChangesOnlyGameScale(t *testing.T) {
+	easy, medium, hard := NewMission(3, nil, nil, "easy"), NewMission(3, nil, nil, "medium"), NewMission(3, nil, nil, "hard")
+	if easy.State.Difficulty != "easy" || hard.State.Difficulty != "hard" {
+		t.Fatalf("nível no estado: %q %q", easy.State.Difficulty, hard.State.Difficulty)
+	}
+	if !(easy.State.Blocks > medium.State.Blocks && medium.State.Blocks > hard.State.Blocks) {
+		t.Fatalf("blocos por nível: %d %d %d", easy.State.Blocks, medium.State.Blocks, hard.State.Blocks)
+	}
+	// Dado real da NASA não muda com o nível: as tempestades (sol, força, atraso) são as mesmas.
+	if !reflect.DeepEqual(easy.State.Storms, medium.State.Storms) || !reflect.DeepEqual(medium.State.Storms, hard.State.Storms) {
+		t.Fatal("as tempestades não podem mudar com o nível")
+	}
+	if NewMission(3, nil, nil, "impossible").State.Difficulty != "medium" {
+		t.Fatal("nível desconhecido vira medium")
+	}
 }

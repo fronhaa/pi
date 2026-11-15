@@ -180,15 +180,35 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 ## Escolha e viagem (`src/scene/LaunchScene.ts`)
 
 - **O foguete já está no espaço**, em órbita da Terra (órbita de espera, F37): não há decolagem nem base de lançamento.
-- **Tela de escolha (Marte ou Lua):** câmera de longe: a Terra embaixo, a órbita tracejada e o foguete dando a volta
-  com o motor desligado (maior que o real, para não virar um pontinho). Marte e Lua em 3D presos à câmera, com noção de
-  profundidade: a Lua grande, perto da Terra; Marte pequeno, no alto do outro lado e lá no fundo (`PICK_PORTRAIT`,
-  `PICK_LANDSCAPE`). A criança toca no planeta: botões de verdade
+- **No celular** (toque como ponteiro principal ou sistema móvel; `?map=0|1` força), a tela de escolha é a
+  **clássica**: câmera de longe, a Terra embaixo, a órbita tracejada e o foguete dando a volta; Marte e Lua em 3D
+  presos à câmera, a Lua grande perto da Terra e Marte pequeno, no alto e lá no fundo (`PICK_PORTRAIT`,
+  `PICK_LANDSCAPE`). Sem os nomes do Sol e da Terra e sem o aviso de escala. A viagem é a mesma do computador
+  (abaixo), rumo ao planeta como aparece na tela. Pedido do time: na tela pequena, o mapa ficava miúdo.
+- **No computador, tela de escolha (Marte ou Lua): mapa do Sistema Solar visto de cima**, com as posições de **hoje calculadas**
+  (`src/scene/solarSystem.ts`, F38 e F39): o Sol no meio (bola amarela com contorno e halo, a luz da cena sai dele),
+  as órbitas tracejadas da Terra (azul) e de Marte (laranja), Marte onde está hoje e a Lua em volta da Terra, na fase
+  de hoje (dá para ver o lado escuro). Distâncias e tamanhos **fora de escala** (`AU`, `MOON_DIST`, `MARS_R`…):
+  a ordem, as órbitas e as direções são as de verdade, e a tela diz isso no rodapé ("Posições de hoje, calculadas com
+  dados da NASA. Distâncias fora de escala."). Nomes "☀️ Sol" e "🌍 Terra: você está aqui" por cima; o da Terra vai
+  para cima quando a Lua está embaixo dela. O foguete dá a volta na Terra com o motor desligado (cresce com a
+  distância da câmera, para não virar um pontinho). A câmera enquadra o Sol, a Terra com a Lua e Marte
+  (`frameMap`), com espaço para o título e para os botões. A criança toca no planeta: botões de verdade
   (`src/ui/PlaceChoice.ts`) do tamanho do planeta, com nome e dica curta; o planeta cresce sob o dedo ou o mouse.
-- **Viagem (~13 a 15 s, só visual, devagar para a criança ler):** ao escolher, os planetas da escolha somem, o motor liga e o foguete acelera em
-  volta da Terra até o ponto de saída (sempre o mais à esquerda, onde a tangente aponta para cima). Ali aparece
-  "Motor ligado!" e ele sai da órbita para cima; a câmera vai para trás dele SEM girar (girar de ponta-cabeça ficava
-  ruim no celular), aparecem linhas de velocidade e o destino crescendo, e ele entra no planeta.
+  Com o mouse em cima (ou foco do teclado, ou o primeiro toque no celular), os 3 níveis da missão aparecem embaixo
+  do planeta, em botões empilhados (nome da missão e, embaixo, a idade recomendada: Marte 7+, 9+, 11+; Lua 7+, 10+, 12+); o botão do planeta não sai da tela (16 px de margem).
+- **Viagem (~13 a 15 s, só visual, devagar para a criança ler), igual no celular e no computador:** ao escolher,
+  o motor liga ("Motor ligado!" já no toque) e o foguete **ganha velocidade dando a volta na Terra** (curva de
+  Hermite: começa no ritmo da órbita, corre no meio e chega à saída com `OMEGA_DEPART`, moderada; 0,8 a 2,6 s), com a
+  câmera ainda de longe. O ponto de saída é onde a reta tangente à órbita passa pelo destino (`tangentDeparture`;
+  no mapa, onde a Lua ou Marte estão hoje; na clássica, o ponto da tela onde o planeta aparece, levado para o plano
+  da Terra): ele sai apontando para o planeta, sempre se afastando da Terra, e acelera devagar (`TRIP`: até a Lua,
+  mais calmo que até Marte). O tempo da viagem conta da saída (`begin` devolve quanto falta; o texto por cima usa
+  `--go`). O planeta que não foi escolhido some logo; o escolhido VIRA o destino, sem corte (começa onde estava, do
+  mesmo tamanho na tela, e desliza até a frente do foguete, `destStart`), e o Sol e as órbitas do mapa somem aos
+  poucos (`mapFade`). A câmera desce até o foguete e gira para ele subir na tela: no celular, no máximo 75° (`MAX_ROLL`:
+  de ponta-cabeça ficava ruim; lá os planetas ficam acima da Terra); no mapa, gira tudo enquanto desce. Aparecem as linhas de velocidade e o destino crescendo, e na chegada o
+  foguete para na superfície do planeta (`ARRIVE_K`), sem entrar nele.
 - **Sem engasgo no toque (celular):** tudo fica pronto na tela de carregamento (`Game.prepare`): modelos 3D da base
   e da tripulação, física, shaders da base (`compileAsync`) e a cena da escolha e da viagem montada e preparada
   (`LaunchScene.warmUp`: mostra por um instante o que fica escondido, espera os shaders e desenha uma vez). Na tela de

@@ -1,6 +1,6 @@
-import type { FlareClass, Location } from './config.ts';
+import type { Difficulty, FlareClass, Location } from './config.ts';
 
-export type { Location };
+export type { Difficulty, Location };
 
 /**
  * Evento solar que dispara uma tempestade. `real` = veio do DONKI (com data e link).
@@ -117,6 +117,8 @@ export interface GameState {
   seed: number;
   /** Onde fica a base (docs/game-design.md, "Base lunar"). */
   location: Location;
+  /** Nível da missão (src/sim/config.ts, DIFFICULTY). Muda só a escala do jogo, nunca dado real. */
+  difficulty: Difficulty;
   /** Missão histórica em jogo, ou null quando as tempestades são sorteadas (erupções ou simuladas). */
   historical: HistoricalMission | null;
   sol: number;

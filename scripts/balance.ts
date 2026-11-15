@@ -1,13 +1,13 @@
 /**
- * Teste de equilíbrio: joga N partidas por estratégia com a simulação real (src/sim).
- * Uso: npm run balance   (N padrão 2000; BALANCE_N=500 npm run balance)
+ * Teste de equilíbrio: joga N partidas por estratégia com a simulação real (src/sim), nos 3 níveis.
+ * Uso: npm run balance   (N padrão 2000; BALANCE_N=500 npm run balance; BALANCE_LEVEL=hard npm run balance)
  *
  * Forma esperada (docs/game-design.md, "Equilíbrio esperado"):
  *   - Só ciência: perde sempre.            - Só segurança: sobrevive, sempre 1 estrela.
  *   - Ignora a blindagem: perde às vezes.  - Atenta: sobrevive, maioria 3 estrelas.
  */
 import { readFileSync } from 'node:fs';
-import { CONFIG } from '../src/sim/config.ts';
+import { CONFIG, DIFFICULTIES, tuning, type Difficulty } from '../src/sim/config.ts';
 import { Mission } from '../src/sim/mission.ts';
 import { PROBLEMS } from '../src/sim/problems.ts';
 import { parseMissions } from '../src/sim/historical.ts';
@@ -115,10 +115,10 @@ const strategies: Strategy[] = [
   },
 ];
 
-function run(strategy: Strategy, flares: Flare[], historical: HistoricalMission | null = null, location: Location = 'mars') {
+function run(strategy: Strategy, flares: Flare[], historical: HistoricalMission | null = null, location: Location = 'mars', level: Difficulty = 'medium') {
   const tally = { lostLife: 0, lostDose: 0, stars: [0, 0, 0, 0] };
   for (let seed = 1; seed <= N; seed++) {
-    const m = new Mission(seed, flares, historical, location);
+    const m = new Mission(seed, flares, historical, location, level);
     while (m.state.outcome.status === 'playing') {
       if (m.state.pendingCard) {
         m.answerCard(strategy.card(m));
@@ -142,30 +142,35 @@ function run(strategy: Strategy, flares: Flare[], historical: HistoricalMission 
 
 const pct = (n: number) => `${((n / N) * 100).toFixed(0)}%`.padStart(4);
 
-const realFlares = loadRealFlares();
-for (const location of ['mars', 'moon'] as const) for (const [label, flares] of [['erupções reais do DONKI', realFlares], ['erupções simuladas', []]] as const) {
-  if (label.includes('reais') && flares.length === 0) {
-    console.log('(sem public/data/donki-flares.json; pulando dados reais)\n');
-    continue;
-  }
-  const where = location === 'moon' ? 'LUA' : 'Marte';
-  console.log(`\n[${where}] ${N} partidas por estratégia, ${label}${flares.length ? ` (${flares.length})` : ''}\n`);
-  console.log('Estratégia'.padEnd(38), 'vida 0', 'dose', ' 1★ ', ' 2★ ', ' 3★');
-  for (const s of strategies) {
-    const t = run(s, flares as Flare[], null, location);
-    console.log(s.name.padEnd(38), pct(t.lostLife).padStart(6), pct(t.lostDose), pct(t.stars[1]), pct(t.stars[2]), pct(t.stars[3]));
-  }
-}
+const LEVEL_NAME: Record<Difficulty, string> = { easy: 'FÁCIL', medium: 'MÉDIO', hard: 'DIFÍCIL' };
+const only = process.env.BALANCE_LEVEL as Difficulty | undefined;
+const levels = DIFFICULTIES.filter((l) => !only || l === only);
+const header = () => console.log('Estratégia'.padEnd(38), 'vida 0', 'dose', ' 1★ ', ' 2★ ', ' 3★');
+const row = (s: Strategy, t: ReturnType<typeof run>) =>
+  console.log(s.name.padEnd(38), pct(t.lostLife).padStart(6), pct(t.lostDose), pct(t.stars[1]), pct(t.stars[2]), pct(t.stars[3]));
 
-// Missões históricas: tempestades fixas por missão, então cada uma é testada separadamente.
+const realFlares = loadRealFlares();
 const historical = loadHistorical();
-if (historical.length === 0) console.log('\n(sem public/data/missions.json; pulando missões históricas)');
-for (const h of historical) {
-  const storms = h.storms.map((x) => `sol ${x.sol} ${x.flare.label}`).join(', ');
-  console.log(`\n${N} partidas por estratégia, missão histórica ${h.id} (${h.difficulty}; ${storms})\n`);
-  console.log('Estratégia'.padEnd(38), 'vida 0', 'dose', ' 1★ ', ' 2★ ', ' 3★');
-  for (const s of strategies) {
-    const t = run(s, [], h);
-    console.log(s.name.padEnd(38), pct(t.lostLife).padStart(6), pct(t.lostDose), pct(t.stars[1]), pct(t.stars[2]), pct(t.stars[3]));
+for (const level of levels) {
+  console.log(`\n================ NÍVEL ${LEVEL_NAME[level]} ================`);
+  for (const location of ['mars', 'moon'] as const) for (const [label, flares] of [['erupções reais do DONKI', realFlares], ['erupções simuladas', []]] as const) {
+    if (label.includes('reais') && flares.length === 0) {
+      console.log('(sem public/data/donki-flares.json; pulando dados reais)\n');
+      continue;
+    }
+    const where = location === 'moon' ? 'LUA' : 'Marte';
+    console.log(`\n[${LEVEL_NAME[level]} · ${where}] ${N} partidas por estratégia, ${label}${flares.length ? ` (${flares.length})` : ''}\n`);
+    header();
+    for (const s of strategies) row(s, run(s, flares as Flare[], null, location, level));
+  }
+
+  // Missões históricas do nível (Fácil: só as médias; Difícil: só as fortes): tempestades fixas, uma por vez.
+  if (historical.length === 0) console.log('\n(sem public/data/missions.json; pulando missões históricas)');
+  const want = tuning(level).historical;
+  for (const h of historical.filter((x) => want === 'any' || x.difficulty === want)) {
+    const storms = h.storms.map((x) => `sol ${x.sol} ${x.flare.label}`).join(', ');
+    console.log(`\n[${LEVEL_NAME[level]}] ${N} partidas por estratégia, missão histórica ${h.id} (${h.difficulty}; ${storms})\n`);
+    header();
+    for (const s of strategies) row(s, run(s, [], h, 'mars', level));
   }
 }

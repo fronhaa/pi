@@ -49,10 +49,16 @@ export function taskTime(kind: ProblemKind): number {
  * Sorteia os problemas do dia: só a partir do sol 3, 1 ou 2 por dia, tipos diferentes.
  * `exclude`: tipos que já continuam de ontem (não aparecem duas vezes no mesmo lugar).
  */
-export function scheduleProblems(sol: number, rng: Rng, nextUid: () => number, exclude: ProblemKind[] = []): Problem[] {
+export function scheduleProblems(
+  sol: number,
+  rng: Rng,
+  nextUid: () => number,
+  exclude: ProblemKind[] = [],
+  perDay: { min: number; max: number } = { min: CONFIG.problems.minPerDay, max: CONFIG.problems.maxPerDay },
+): Problem[] {
   const c = CONFIG.problems;
   if (sol < c.firstSol) return [];
-  const count = rng.int(c.minPerDay, c.maxPerDay);
+  const count = rng.int(perDay.min, perDay.max);
   const problems = rng
     .shuffle(PROBLEM_KINDS.filter((k) => !exclude.includes(k)))
     .slice(0, count)

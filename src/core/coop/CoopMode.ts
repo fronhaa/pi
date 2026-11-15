@@ -9,7 +9,7 @@ import type { CrewMotion } from '@/scene/crewMotion';
 import type { ProblemMarkers } from '@/scene/ProblemMarkers';
 import type { Hud } from '@/ui/Hud';
 import type { OffscreenArrows } from '@/ui/OffscreenArrows';
-import { showCard, showEnd } from '@/ui/dialogs';
+import { showCard, showEnd, showLevelChoice } from '@/ui/dialogs';
 import { Lobby, showEarthTurn } from '@/ui/coop';
 import { formatDate, t } from '@/i18n';
 import { CoopClient } from '@/net/CoopClient';
@@ -105,6 +105,7 @@ export class CoopMode {
       claim: (role) => client.send({ t: 'claim', role }),
       release: (role) => client.send({ t: 'release', role }),
       start: () => client.send({ t: 'start' }),
+      level: (level) => client.send({ t: 'level', level }),
       leave: () => this.leave(),
     });
     client.onState = (s) => this.onState(s);
@@ -364,9 +365,13 @@ export class CoopMode {
       this.endShown = true;
       showEnd(view, () => {
         if (s.you.host) {
-          this.endShown = false;
-          this.historyToastShown = false;
-          this.client.send({ t: 'start' });
+          // Jogar de novo: o dono da sala pode trocar o nível antes da próxima partida.
+          showLevelChoice(s.level ?? 'medium', (level) => {
+            this.endShown = false;
+            this.historyToastShown = false;
+            this.client.send({ t: 'level', level });
+            this.client.send({ t: 'start' });
+          });
         } else {
           h.hud.toast(t('coop.again.wait'));
         }
@@ -421,6 +426,8 @@ export class CoopMode {
     return {
       seed: 0,
       location: 'mars',
+      // Nível da partida (o dono da sala escolheu); servidor antigo não manda = Médio.
+      difficulty: m?.difficulty ?? s.level ?? 'medium',
       historical: null,
       sol: m?.sol ?? e?.sol ?? 1,
       res: m?.res ?? e?.res ?? this.host.localState.res,

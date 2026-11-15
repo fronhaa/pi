@@ -100,7 +100,7 @@ de um passo.
    `src/scenarios/index.ts`. Cor nova vai em `PALETTE`/`MOON_PALETTE` (`src/render/toon.ts`) e em
    [estilo-visual.md](estilo-visual.md).
 3. **Textos:** só o que muda, num arquivo como `src/i18n/moon.ts`, ligado em `src/i18n/index.ts` (`t()`).
-4. **Escolha do lugar:** `showPlaceChoice` em `src/ui/dialogs.ts` e as chaves `place.*` em `src/i18n/strings/ui.ts`.
+4. **Escolha do lugar (e do nível):** `showPlaceChoice3D` em `src/ui/PlaceChoice.ts` e as chaves `place.*` e `level.*` em `src/i18n/strings/ui.ts`.
 5. **Ciência:** todo fato do lugar entra antes em `docs/ciencia-marte.md`, com fonte. Regra nova vai para o GDD.
 6. **Modo em grupo:** hoje é só Marte (ADR 0007). Levar um lugar para o grupo mexe no protocolo (área 5).
 

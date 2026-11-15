@@ -17,6 +17,8 @@ datas reais de 2023 a 2025. Energia, suporte de vida, blindagem e dose são **n�
 | Minutos que cada mensagem leva da Terra a Marte | **REAL** (dado baixado) | JPL Horizons |
 | Fotos da Terra, de Marte e da Lua na viagem | **REAL** | Apollo 17, sondas Viking, Apollo 11 |
 | Tempo da viagem (203 dias até Marte, 4 dias até a Lua) | **REAL** | Perseverance (2021) e Apollo 11 (1969) |
+| Posições do Sol, da Terra, de Marte e da Lua no mapa da tela de escolha (no computador; no celular a tela é a clássica, sem mapa) | **REAL** (calculado para hoje, não ao vivo; distâncias e tamanhos fora de escala) | JPL, "Approximate Positions of the Planets" (Tabela 1, 1800–2050), e NASA GSFC, "Phases of the Moon 2001 to 2100": fichas [F38 e F39](ciencia-marte.md#f38-onde-estão-a-terra-e-marte-hoje-calculado) |
+| Níveis da missão (Primeira missão, Normal, Expert) e idade recomendada | **INTERPRETADO**: escala do jogo; as tempestades e os atrasos reais são os mesmos em todos os níveis | `DIFFICULTY` em `src/sim/config.ts`; idades em `src/ui/level.ts` ([game-design.md](game-design.md#níveis-de-dificuldade)) |
 | Fatos nos balões e nos relatórios ("💡…") | **REAL**, simplificado para criança | Fichas em [ciencia-marte.md](ciencia-marte.md) e [game-design.md](game-design.md) |
 | Dose de radiação (0 a 100) | **INTERPRETADO**: escala do jogo, não é mSv | Fórmula em [game-design.md](game-design.md#sistemas-e-regras) |
 | Energia, bateria, suporte de vida, blindagem, ciência | **INTERPRETADO**: números do jogo | `src/sim/config.ts` |

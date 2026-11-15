@@ -51,6 +51,8 @@
 | F35 | Foto real: Marte inteiro | Mosaico de cerca de 1000 imagens das sondas Viking | [NASA Photojournal: PIA00407](https://photojournal.jpl.nasa.gov/catalog/PIA00407) | Cartão de foto na viagem (Marte) | Foto (crédito NASA/JPL/USGS) |
 | F36 | Foto real: a Lua cheia | A Lua fotografada pela Apollo 11 na volta para a Terra, em 21/07/1969 | [NASA Image Library: AS11-44-6667](https://images.nasa.gov/details/as11-44-6667) | Cartão de foto na viagem (Lua) | Foto (crédito NASA) |
 | F37 | O foguete entra em órbita antes de ir | Apollo 11 e Perseverance: primeiro uma órbita da Terra (de espera), depois o motor liga de novo e a nave sai rumo ao destino | [NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/); [NASA (2020)](https://www.nasa.gov/news-release/nasa-ula-launch-mars-2020-perseverance-rover-mission-to-red-planet/) | Tela de escolha (em órbita) e saída da órbita | Contexto (como se viaja) |
+| F38 | Terra e Marte giram em volta do Sol; dá para calcular onde estão hoje | Elementos keplerianos e taxas por século (JPL, Tabela 1, válida de 1800 a 2050); "EM Bary" é o baricentro Terra-Lua | [NASA JPL SSD: Approximate Positions of the Planets](https://ssd.jpl.nasa.gov/planets/approx_pos.html) | Mapa do Sistema Solar na tela de escolha (posições de hoje, calculadas) | Contexto (Sistema Solar) |
+| F39 | A Lua gira em volta da Terra; a fase diz onde ela está | Luas novas de 2026 (UT) e mês sinódico médio de 29,530588 dias | [NASA GSFC: Phases of the Moon 2001 to 2100](https://eclipse.gsfc.nasa.gov/phase/phases2001.html) | Lua em volta da Terra no mapa, na fase de hoje | Contexto (Sistema Solar) |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -301,10 +303,27 @@ Cartões de foto que passam ao lado do foguete na intro (`src/scene/LaunchScene.
 
 - **Fato (Lua):** a Apollo 11 foi lançada **"into an initial Earth-orbit of 114 by 116 miles"**. **"Two hours, 44 minutes and one-and-a-half revolutions after launch, the S-IVB stage reignited for a second burn of five minutes, 48 seconds, placing Apollo 11 into a translunar orbit."** ([NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/))
 - **Fato (Marte):** **"The ULA Atlas V's Centaur upper stage initially placed the Mars 2020 spacecraft into a parking orbit around Earth. The engine fired for a second time and the spacecraft separated from the Centaur as expected."** ([NASA, 2020](https://www.nasa.gov/news-release/nasa-ula-launch-mars-2020-perseverance-rover-mission-to-red-planet/))
-- **Criança (PT):** "Estamos em órbita da Terra. Toque num planeta!" e "🔥 Motor ligado! Saímos da órbita da Terra rumo a Marte/à Lua."
-- **Criança (EN):** "We are in orbit around Earth. Tap a planet!" e "🔥 Engine on! We leave Earth orbit for Mars/the Moon."
+- **Criança (PT):** "Estamos em órbita da Terra. Toque num planeta e escolha a missão!" e "🔥 Motor ligado! Saímos da órbita da Terra rumo a Marte/à Lua."
+- **Criança (EN):** "We are in orbit around Earth. Tap a planet and pick your mission!" e "🔥 Engine on! We leave Earth orbit for Mars/the Moon."
 - **No jogo:** o foguete começa em órbita na tela de escolha e sai dela ao escolher (`src/scene/LaunchScene.ts`, `rocketPath`); textos em `src/ui/PlaceChoice.ts` e `src/ui/LaunchIntro.ts`.
 - **Atenção:** a cena é cartoon: a órbita é bem mais alta que a real e a decolagem não aparece (o jogo começa com a nave já em órbita). Não dizer que a órbita "pega carona na gravidade": as fontes só dizem que a nave fica numa órbita de espera e depois liga o motor de novo.
+- Conferido em 15/11/2026.
+
+### F38. Onde estão a Terra e Marte hoje (calculado)
+
+- **Fato:** o JPL publica um método para calcular a posição aproximada dos planetas: elementos keplerianos e suas taxas por século, **"with respect to the mean ecliptic and equinox of J2000"**, e uma tabela **"valid for the time-interval 1800 AD - 2050 AD"**. A página avisa que **"the elements are not valid outside the given time-interval over which they were fit"**. Na tabela, **"EM Bary = Earth/Moon Barycenter"**. Erro nominal no período 1800–2050: Terra 20" em longitude; Marte 40". ([NASA JPL SSD: Approximate Positions of the Planets](https://ssd.jpl.nasa.gov/planets/approx_pos.html))
+- **Valores usados (Tabela 1):** EM Bary a = 1,00000261 ua, e = 0,01671123, I = −0,00001531°, L = 100,46457166°, ϖ = 102,93768193°, Ω = 0°; Marte a = 1,52371034 ua, e = 0,09339410, I = 1,84969142°, L = −4,55343205°, ϖ = −23,94362959°, Ω = 49,55953891°; mais as taxas por século da mesma tabela (em `src/scene/solarSystem.ts`).
+- **Criança (PT):** "🛰️ Posições de hoje, calculadas com dados da NASA. Distâncias fora de escala."
+- **Criança (EN):** "🛰️ Today’s positions, calculated with NASA data. Distances not to scale."
+- **No jogo:** tela de escolha no computador (`src/scene/LaunchScene.ts`; no celular fica a tela clássica, sem mapa): Sol no meio, órbitas da Terra e de Marte e Marte onde está hoje; o foguete sai rumo à direção de verdade do destino.
+- **Atenção:** é cálculo, não "ao vivo". As distâncias e os tamanhos ficam fora de escala (Marte fica a mais de 100 vezes a distância da Lua). A altura fora do plano da eclíptica (menos de 2° em Marte) fica de fora. Depois de 2050 a tabela não vale: o código usa a última data válida.
+- Conferido em 15/11/2026.
+
+### F39. Onde está a Lua hoje (pela fase)
+
+- **Fato:** o catálogo da NASA/GSFC traz **"the date and time ([Universal Time]) of all phases of the Moon"**. Luas novas de 2026 (UT): 18/01 19:52, 17/02 12:01, 19/03 01:23, 17/04 11:52, 16/05 20:01, 15/06 02:54, 14/07 09:43, 12/08 17:37, 11/09 03:27, 10/10 15:50, 09/11 07:02, 09/12 00:52. **"For the year 2000, the length of the mean synodic month (New Moon to New Moon) is 29.530588 days"**. ([NASA GSFC: Phases of the Moon 2001 to 2100](https://eclipse.gsfc.nasa.gov/phase/phases2001.html))
+- **No jogo:** a Lua fica em volta da Terra no ângulo da fase de hoje: na lua nova, na direção do Sol; na cheia, do lado oposto (`moonAngle` em `src/scene/solarSystem.ts`). A luz do mapa sai do Sol, então dá para ver a parte iluminada.
+- **Atenção:** depois da última lua nova da lista (09/12/2026), conta com o mês sinódico médio: o erro cresce devagar (menos de 1 dia por ano). Atualizar a lista a cada ano.
 - Conferido em 15/11/2026.
 
 ## Ligação com os objetivos de aprendizagem

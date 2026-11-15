@@ -396,11 +396,19 @@ body.pre-mission #ui, body.pre-mission .crew-bubble, body.pre-mission .offscreen
 .place3d-head { position: absolute; top: max(20px, env(safe-area-inset-top)); left: 16px; right: 16px; text-align: center; }
 .place3d-head h2 { margin: 0; font-size: clamp(28px, 6vw, 44px); text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35); }
 .place3d-head p { margin: 6px 0 0; font-size: clamp(16px, 3.6vw, 20px); color: #E9E1F2; }
-.place3d-planet { position: absolute; transform: translateX(-50%); pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; width: max(var(--planet, 120px), 150px); max-width: 46vw; padding: var(--planet, 120px) 0 0; background: none; border: 0; border-radius: 24px; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.place3d-planet:focus-visible { outline: 4px solid #FFD27A; outline-offset: 4px; }
+.place3d-note { position: absolute; left: 16px; right: 16px; bottom: max(12px, env(safe-area-inset-bottom)); margin: 0; text-align: center; font-size: clamp(12px, 3vw, 14px); color: #C9BFD6; }
+.place3d-label { position: absolute; transform: translateX(-50%); white-space: nowrap; font-size: clamp(13px, 3.4vw, 16px); font-weight: 700; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45); pointer-events: none; }
+.place3d-planet { position: absolute; transform: translateX(-50%); pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; width: max(var(--planet, 120px), 170px); max-width: 46vw; }
+.place3d-pick { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding: var(--planet, 120px) 0 0; background: none; border: 0; border-radius: 24px; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.place3d-pick:focus-visible { outline: 4px solid #FFD27A; outline-offset: 4px; }
 .place3d-name { background: var(--paper); color: var(--ink); border: var(--border); border-radius: 999px; padding: 6px 18px; font-size: clamp(18px, 4.6vw, 24px); font-weight: 700; box-shadow: 0 4px 0 rgba(71, 60, 58, 0.35); transition: transform 0.15s; }
 .place3d-mars .place3d-name { background: var(--accent, #E8792B); color: #FFFFFF; }
-.place3d-planet:hover .place3d-name, .place3d-planet:focus-visible .place3d-name { transform: scale(1.08); }
+.place3d-planet:hover .place3d-name, .place3d-planet:focus-within .place3d-name, .place3d-planet.open .place3d-name { transform: scale(1.08); }
+/* Níveis da missão: aparecem com o mouse em cima (só onde há mouse), com o foco do teclado ou depois do toque. */
+.place3d-levels { display: none; flex-direction: column; gap: 6px; width: 100%; }
+@media (hover: hover) { .place3d-planet:hover .place3d-levels { display: flex; } }
+.place3d-planet:focus-within .place3d-levels, .place3d-planet.open .place3d-levels { display: flex; }
+.place3d-level { width: 100%; padding: 8px 12px; font-family: var(--font); font-size: clamp(14px, 3.6vw, 17px); white-space: nowrap; }
 .place3d-hint { font-size: clamp(13px, 3.4vw, 16px); line-height: 1.25; text-align: center; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
 .launch-intro { position: fixed; inset: 0; z-index: 60; background: transparent; overflow: hidden; font-family: var(--font); color: var(--ink); transition: opacity 0.4s, background-color 0.25s; }
 .launch-intro.launch-closing { background: #1B1630; }
@@ -421,3 +429,9 @@ body.pre-mission #ui, body.pre-mission .crew-bubble, body.pre-mission .offscreen
 /* Reduzir movimento: a cena 3D fica parada no destino; aparece só o fato. */
 .launch-reduced .launch-fact { animation: none; opacity: 1; }
 .launch-reduced .launch-note { display: none; }
+
+/* Botão de nível: nome da missão e, embaixo, a idade recomendada (src/ui/level.ts). */
+.level-btn, .place3d-level { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.15; }
+.level-name { font-weight: 700; }
+.level-age { font-size: 0.82em; font-weight: 700; opacity: 0.9; }
+.level-chosen { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
