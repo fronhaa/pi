@@ -70,19 +70,8 @@ const pt = {
   'tutorial.2.text': 'Divida os blocos de energia entre vida, blindagem e ciência. Mais Sol dá mais blocos, e a sobra vai para a bateria.',
   'tutorial.3.text': 'Com aviso de tempestade solar, reforce a blindagem. Com sombra nas montanhas, guarde bateria!',
 
-  'data.donki.use': 'Cada tempestade solar do jogo usa uma erupção real registrada pela NASA. Ela tem data e classe: M = média, X = forte. A dose do jogo é uma escala nossa, não medida na Lua.',
-  'data.rad.name': 'LND: radiação medida no chão da Lua',
-  'data.rad.badge': 'medido em 2019',
-  'data.rad.use': 'A sonda chinesa Chang’e 4 mediu a radiação no chão da Lua. Foram uns 1,4 mSv por dia. É cerca de 2 vezes o que o Curiosity mediu em Marte. A dose do jogo é uma escala diferente.',
-  'data.rad.link': 'https://doi.org/10.1126/sciadv.aaz1334',
-  'data.radlab.use': 'Em breve: medições reais feitas na ISS, em órbita da Terra. Não são da Lua.',
-  'data.marstrek.name': 'Moon Trek: relevo da Lua',
-  'data.marstrek.use': 'Em breve: o terreno real do polo sul da Lua. Hoje o terreno é gerado pelo jogo.',
-  'data.marstrek.link': 'https://trek.nasa.gov/moon/',
-
   'scene.loadingPhysics': 'Carregando a física da Lua…',
   'crew.fact.gravity': 'Na Lua, você pesa bem menos do que na Terra. O mesmo pulo vai umas 6 vezes mais alto!',
-  'crew.fact.source': 'Fonte: NASA',
 
   // Treino dos dias 1 a 3 (src/i18n/strings/intro.ts): na Lua não há tempestade de poeira; o treino é a sombra.
   'intro.badge': '🎓 Treino · dia {sol} de 3',
@@ -164,19 +153,8 @@ const en: Record<keyof typeof pt, string> = {
   'tutorial.2.text': 'Split the energy blocks between life, shielding and science. More Sun means more blocks, and leftovers go to the battery.',
   'tutorial.3.text': 'When a solar storm is coming, reinforce the shielding. When mountains cast shadows, save battery!',
 
-  'data.donki.use': 'Each game solar storm uses a real flare recorded by NASA. It has a date and a class: M = medium, X = strong. The game’s dose is our own scale, not measured on the Moon.',
-  'data.rad.name': 'LND: radiation measured on the ground on the Moon',
-  'data.rad.badge': 'measured in 2019',
-  'data.rad.use': 'China’s Chang’e 4 lander measured radiation on the Moon’s surface. It was about 1.4 mSv per day. That is about 2 times what Curiosity measured on Mars. The game’s dose is a different scale.',
-  'data.rad.link': 'https://doi.org/10.1126/sciadv.aaz1334',
-  'data.radlab.use': 'Coming soon: real measurements taken on the ISS, in Earth orbit. They are not from the Moon.',
-  'data.marstrek.name': 'Moon Trek: Moon terrain',
-  'data.marstrek.use': 'Coming soon: the real terrain of the lunar south pole. Today the terrain is made by the game.',
-  'data.marstrek.link': 'https://trek.nasa.gov/moon/',
-
   'scene.loadingPhysics': 'Loading Moon physics…',
   'crew.fact.gravity': 'On the Moon, you weigh much less than on Earth. The same jump goes about 6 times higher!',
-  'crew.fact.source': 'Source: NASA',
 
   'intro.badge': '🎓 Training · day {sol} of 3',
   'intro.1.base.text': 'It is at the Moon’s south pole. The crew lives inside.',

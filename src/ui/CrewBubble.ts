@@ -22,14 +22,13 @@ export class CrewBubble {
   private readonly tmp = new THREE.Vector3();
 
   /** `anchor` dá o ponto no mundo (em cima da cabeça) a cada quadro; null = o astronauta sumiu (some o balão). */
-  show(title: string, text: string, source: string | undefined, anchor: () => THREE.Vector3 | null): void {
+  show(title: string, text: string, anchor: () => THREE.Vector3 | null): void {
     this.hide();
     this.anchor = anchor;
     this.left = BUBBLE_SECONDS;
     this.el = h('button', { class: 'crew-bubble panel', type: 'button', role: 'status', onclick: () => this.hide() },
       h('strong', { class: 'crew-bubble-title' }, title),
       h('span', {}, text),
-      source ? h('small', {}, source) : null,
     );
     this.el.style.visibility = 'hidden'; // até o primeiro update posicionar
     document.body.append(this.el);

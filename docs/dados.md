@@ -6,7 +6,7 @@ Aqui fica **de onde vem cada dado, como foi coletado e como atualizar**.
 Regras:
 - Ordem de carregamento (ver [game-design.md](game-design.md#dados-reais-da-nasa)): **ao vivo** → **dados reais baixados** (`public/data/`, com a data) → **simulado**. A interface mostra um selo honesto com qual deles está em uso; dado baixado nunca é chamado de "ao vivo".
 - Todo evento guarda o `link` para a página original na NASA, para qualquer pessoa conferir.
-- O jogo pode **escalar** números para a jogabilidade, mas a tela "Dados da NASA" mostra o valor real.
+- O jogo pode **escalar** números para a jogabilidade; o valor real fica em [fontes-nasa.md](fontes-nasa.md), não na tela ([ADR 0013](decisoes/0013-fontes-da-nasa-so-na-documentacao.md)).
 - **Previsão é previsão:** se o dado vem de modelo, o jogo diz "a NASA previu", nunca "aconteceu em Marte".
 
 ## Tempestades solares: DONKI

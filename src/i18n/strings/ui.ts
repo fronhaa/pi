@@ -7,7 +7,6 @@ export const pt = {
   'game.title': 'Artemis Quest',
   'game.subtitle': 'Mars Exploration · Cratera Jezero, Marte',
   'top.sol': 'Sol {sol} de {total}',
-  'top.nasaData': 'Dados da NASA',
   'top.lang': 'Idioma',
   'top.help': 'Como jogar',
 
@@ -133,9 +132,7 @@ export const pt = {
   'launch.title': 'Viagem até a base',
   'launch.skip': 'Pular',
   'launch.fact.mars': 'O Perseverance levou 203 dias para chegar a Marte. Quase 7 meses!',
-  'launch.source.mars': 'Fonte: NASA (2021)',
   'launch.fact.moon': 'A Apollo 11 levou só 4 dias para chegar à Lua.',
-  'launch.source.moon': 'Fonte: NASA, missão Apollo 11 (1969)',
   'launch.burn.title': '🔥 Motor ligado!',
   'launch.burn.mars': 'Saímos da órbita da Terra rumo a Marte.',
   'launch.burn.moon': 'Saímos da órbita da Terra rumo à Lua.',
@@ -143,7 +140,6 @@ export const pt = {
   'launch.photo.earth': 'A Terra vista pela Apollo 17 (1972)',
   'launch.photo.mars': 'Marte visto pelas sondas Viking',
   'launch.photo.moon': 'A Lua vista pela Apollo 11 (1969)',
-  'tutorial.sources': 'Fontes: dados da NASA',
 
   'scene.loadingPhysics': 'Carregando a física de Marte…',
   'hover.select': 'clique para escolher',
@@ -175,7 +171,6 @@ export const en: Record<keyof typeof pt, string> = {
   'game.title': 'Artemis Quest',
   'game.subtitle': 'Mars Exploration · Jezero Crater, Mars',
   'top.sol': 'Sol {sol} of {total}',
-  'top.nasaData': 'NASA data',
   'top.lang': 'Language',
   'top.help': 'How to play',
 
@@ -300,9 +295,7 @@ export const en: Record<keyof typeof pt, string> = {
   'launch.title': 'Trip to the base',
   'launch.skip': 'Skip',
   'launch.fact.mars': 'Perseverance took 203 days to reach Mars. Almost 7 months!',
-  'launch.source.mars': 'Source: NASA (2021)',
   'launch.fact.moon': 'Apollo 11 took only 4 days to reach the Moon.',
-  'launch.source.moon': 'Source: NASA, Apollo 11 mission (1969)',
   'launch.burn.title': '🔥 Engine on!',
   'launch.burn.mars': 'We leave Earth orbit for Mars.',
   'launch.burn.moon': 'We leave Earth orbit for the Moon.',
@@ -310,7 +303,6 @@ export const en: Record<keyof typeof pt, string> = {
   'launch.photo.earth': 'Earth seen by Apollo 17 (1972)',
   'launch.photo.mars': 'Mars seen by the Viking orbiters',
   'launch.photo.moon': 'The Moon seen by Apollo 11 (1969)',
-  'tutorial.sources': 'Data sources (NASA)',
 
   'scene.loadingPhysics': 'Loading Mars physics…',
   'hover.select': 'click to select',
