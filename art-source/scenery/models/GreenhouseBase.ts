@@ -194,8 +194,9 @@ export function buildLegs(root: THREE.Object3D, tex: BlockTex): void {
 
 // ---------- tubo de acesso (igual ao da Base de Pesquisa) ----------
 
-export function buildAccessTower(root: THREE.Object3D, tex: BlockTex): void {
-  const tw = group(root, 'access_tower');
+/** `dz` desloca o tubo para a frente (blocos grandes, de raio maior que o da estufa). */
+export function buildAccessTower(root: THREE.Object3D, tex: BlockTex, dz = 0): void {
+  const tw = group(root, 'access_tower', [0, 0, dz]);
   const body = scaleUV(new THREE.CylinderGeometry(SHAFT_R, SHAFT_R, SHAFT_H, 40, 1, true), 3);
   mk(tw, body, C.hull, { name: 'access_tower_body', pos: [0, SHAFT_H / 2, SHAFT_Z], outline: 0.02, mat: { map: tex.box } });
   mk(tw, clean(new THREE.SphereGeometry(SHAFT_R, 32, 10, 0, Math.PI * 2, 0, Math.PI / 2)), C.hull, { name: 'access_tower_top', pos: [0, SHAFT_H, SHAFT_Z], scale: [1, 0.45, 1], outline: 0.025 });
