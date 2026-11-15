@@ -33,3 +33,7 @@ o rover **não volta a uma base**. Ele começa a partida lá fora (`ROVER_START`
 ciência, as **3 primeiras paradas de estudo enchem tubos** (a regra dos tubos é de `src/sim/day.ts`); depois ele segue
 explorando e **fotografando**, com o braço guardado, sem encher tubos. Os tubos ficam **guardados dentro dele**. À noite
 (ou sem blocos de ciência) ele **para onde estiver** e continua no sol seguinte.
+
+**Rastros:** as rodas deixam marcas no chão (`RoverTracks`, duas por passo de 0,4 m), que desbotam até a cor do chão em
+60 sóis: os rastros do Curiosity duram meses até o vento apagar, e a tempestade de poeira global de 2007 não apagou os do
+Opportunity (F26). Na Lua não desbotam (sem vento).
