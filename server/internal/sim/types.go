@@ -157,7 +157,9 @@ type HistoricalMission struct {
 type GameState struct {
 	Seed uint32 `json:"seed"`
 	// Location: "mars" ou "moon". As salas do servidor são sempre "mars" (base lunar só no solo, por enquanto).
-	Location     string             `json:"location"`
+	Location string `json:"location"`
+	// Difficulty: "easy", "medium" ou "hard" (src/sim/config.ts, DIFFICULTY). Na sala, quem escolhe é o dono.
+	Difficulty   string             `json:"difficulty"`
 	Historical   *HistoricalMission `json:"historical"`
 	Sol          int                `json:"sol"`
 	Res          Resources          `json:"res"`

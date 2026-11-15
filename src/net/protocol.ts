@@ -1,4 +1,4 @@
-import type { Card, EnergyPlan, Flare, Message, Outcome, Problem, Resources, ScheduledStorm, SolReport } from '@/sim/types';
+import type { Card, Difficulty, EnergyPlan, Flare, Message, Outcome, Problem, Resources, ScheduledStorm, SolReport } from '@/sim/types';
 import type { Mission } from '@/sim/mission';
 import { ROLES, ROLE_DEFS } from '@/sim/crew';
 
@@ -76,6 +76,8 @@ export interface MarsView {
   day?: { remaining: number; paused: boolean };
   commsDown: boolean;
   historical?: { id: number; difficulty: string; startUtc: string };
+  /** Nível desta partida (o dono da sala escolheu antes de começar). Servidor antigo: ausente (= Médio). */
+  difficulty?: Difficulty;
   /** Prévia do plano atual (só na fase "mars", sem carta pendente). */
   preview?: PlanPreview;
 }
@@ -102,6 +104,8 @@ export interface CoopState {
   you: PlayerView;
   players: PlayerView[];
   autoEarth: boolean;
+  /** Nível que o dono da sala escolheu para a próxima partida (saguão e fim). Servidor antigo: ausente. */
+  level?: Difficulty;
   mars?: MarsView;
   earth?: EarthView;
   /** Última posição conhecida de cada astronauta (para quem acabou de entrar ou reconectou). */
@@ -122,6 +126,7 @@ export type ClientAction =
   | { t: 'rejoin'; code: string; token: string }
   | { t: 'claim' | 'release'; role: CoopRole }
   | { t: 'start' }
+  | { t: 'level'; level: Difficulty }
   | { t: 'earth'; option: EarthOption }
   | { t: 'card'; option: string }
   | { t: 'blocks'; key: keyof EnergyPlan; value: number }

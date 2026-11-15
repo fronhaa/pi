@@ -227,6 +227,68 @@ var JezeroSim = (function(exports) {
 			askEarthScience: -3
 		}
 	};
+	var DIFFICULTIES = [
+		"easy",
+		"medium",
+		"hard"
+	];
+	/**
+	* Níveis da missão. O Médio é o jogo de sempre (os números do CONFIG acima). A idade recomendada de cada nível
+	* (diferente em Marte e na Lua) fica na interface: RECOMMENDED_AGE em src/ui/level.ts.
+	*
+	* NUNCA muda com o nível o que vem de dado real da NASA: a força de cada tempestade solar (classe da erupção do
+	* DONKI, `solarStorms.intensity`), o atraso real das mensagens, as datas das missões históricas e os fatos de
+	* docs/ciencia-marte.md. O nível muda só quanta energia, folga e pressa a tripulação tem.
+	*/
+	var DIFFICULTY = {
+		easy: {
+			extraBlocks: 2,
+			batteryStart: 70,
+			lifeStart: 80,
+			cards: 2,
+			problemsPerDay: {
+				min: 1,
+				max: 1
+			},
+			daySeconds: 90,
+			scienceGoal: 80,
+			showForecast: true,
+			historical: "medium"
+		},
+		medium: {
+			extraBlocks: 0,
+			batteryStart: CONFIG.battery.start,
+			lifeStart: CONFIG.life.start,
+			cards: CONFIG.cards.perGame,
+			problemsPerDay: {
+				min: CONFIG.problems.minPerDay,
+				max: CONFIG.problems.maxPerDay
+			},
+			daySeconds: CONFIG.problems.daySeconds,
+			scienceGoal: CONFIG.science.goal,
+			showForecast: true,
+			historical: "any"
+		},
+		hard: {
+			extraBlocks: -1,
+			batteryStart: 40,
+			lifeStart: 70,
+			cards: 5,
+			problemsPerDay: {
+				min: 1,
+				max: 2
+			},
+			daySeconds: 60,
+			scienceGoal: 100,
+			showForecast: false,
+			historical: "any"
+		}
+	};
+	/** Números do nível. Sem nível (estado antigo, servidor antigo), é o Médio. */
+	function tuning(difficulty) {
+		var _DIFFICULTY;
+		return (_DIFFICULTY = DIFFICULTY[difficulty !== null && difficulty !== void 0 ? difficulty : "medium"]) !== null && _DIFFICULTY !== void 0 ? _DIFFICULTY : DIFFICULTY.medium;
+	}
 	/** Dose máxima para a 3ª estrela (na Lua é mais alta: a dose de todo dia é o dobro). */
 	function doseFor3(location) {
 		return location === "moon" ? CONFIG.moon.doseFor3 : CONFIG.stars.doseFor3;
@@ -432,10 +494,13 @@ var JezeroSim = (function(exports) {
 	* Sorteia os problemas do dia: só a partir do sol 3, 1 ou 2 por dia, tipos diferentes.
 	* `exclude`: tipos que já continuam de ontem (não aparecem duas vezes no mesmo lugar).
 	*/
-	function scheduleProblems(sol, rng, nextUid, exclude = []) {
+	function scheduleProblems(sol, rng, nextUid, exclude = [], perDay = {
+		min: CONFIG.problems.minPerDay,
+		max: CONFIG.problems.maxPerDay
+	}) {
 		const c = CONFIG.problems;
 		if (sol < c.firstSol) return [];
-		const count = rng.int(c.minPerDay, c.maxPerDay);
+		const count = rng.int(perDay.min, perDay.max);
 		const problems = rng.shuffle(PROBLEM_KINDS.filter((k) => !exclude.includes(k))).slice(0, count).map((kind) => ({
 			uid: nextUid(),
 			kind,
@@ -606,8 +671,10 @@ var JezeroSim = (function(exports) {
 		* @param historical missão histórica: tempestades e atraso das mensagens vêm dela, com datas reais (só Marte:
 		*   o atraso é Terra-Marte)
 		* @param location Marte (padrão) ou Lua (docs/game-design.md, "Base lunar")
+		* @param difficulty nível (padrão: Médio, o jogo de sempre). Muda só a escala do jogo; as tempestades reais e os
+		*   atrasos reais são os mesmos em todos os níveis. Os sorteios também: a mesma semente dá os mesmos sóis.
 		*/
-		constructor(seed, realFlares = [], historical = null, location = "mars") {
+		constructor(seed, realFlares = [], historical = null, location = "mars", difficulty = "medium") {
 			_defineProperty(this, "state", void 0);
 			_defineProperty(this, "rng", void 0);
 			_defineProperty(
@@ -635,7 +702,16 @@ var JezeroSim = (function(exports) {
 				"carryOver",
 				[]
 			);
+			_defineProperty(
+				this,
+				/** Números do nível (src/sim/config.ts, DIFFICULTY). */
+				"tuning",
+				void 0
+			);
 			this.rng = createRng(seed);
+			const level = DIFFICULTIES.includes(difficulty) ? difficulty : "medium";
+			this.tuning = tuning(level);
+			const tune = this.tuning;
 			const moon = location === "moon";
 			if (moon) historical = null;
 			const storms = historical ? this.historicalStorms(historical) : this.scheduleStorms(realFlares, moon);
@@ -648,18 +724,19 @@ var JezeroSim = (function(exports) {
 			const dustStormSol = moon ? 0 : eventSol;
 			const shadowSol = moon ? eventSol : 0;
 			const cardSols = /* @__PURE__ */ new Map();
-			const sols = this.rng.shuffle(range(CONFIG.cards.firstSol, CONFIG.cards.lastSol).filter((s) => s !== eventSol)).slice(0, CONFIG.cards.perGame);
-			const ids = this.rng.shuffle(moon ? MOON_CARD_POOL : CARD_POOL).slice(0, CONFIG.cards.perGame);
+			const sols = this.rng.shuffle(range(CONFIG.cards.firstSol, CONFIG.cards.lastSol).filter((s) => s !== eventSol)).slice(0, tune.cards);
+			const ids = this.rng.shuffle(moon ? MOON_CARD_POOL : CARD_POOL).slice(0, tune.cards);
 			sols.forEach((s, i) => cardSols.set(s, ids[i]));
 			const sunlight = moon ? this.sunProfile(shadowSol) : [];
 			this.state = {
 				seed,
 				location,
+				difficulty: level,
 				historical,
 				sol: 0,
 				res: {
-					battery: CONFIG.battery.start,
-					life: CONFIG.life.start,
+					battery: tune.batteryStart,
+					life: tune.lifeStart,
 					shield: CONFIG.shield.start,
 					dose: CONFIG.dose.start,
 					science: 0,
@@ -774,7 +851,7 @@ var JezeroSim = (function(exports) {
 			this.nextCommsDown = false;
 			s.messages = s.commsDown ? [{ kind: "noSignal" }] : this.buildMessages(sol);
 			const carried = this.carryOver.map((p) => p.kind);
-			s.problems = [...this.carryOver, ...scheduleProblems(sol, this.rng, () => ++this.uid, carried)];
+			s.problems = [...this.carryOver, ...scheduleProblems(sol, this.rng, () => ++this.uid, carried, this.tuning.problemsPerDay)];
 			this.carryOver = [];
 			const cardId = s.cardSols.get(sol);
 			if (cardId) {
@@ -834,11 +911,12 @@ var JezeroSim = (function(exports) {
 		}
 		/**
 		* Blocos do dia, reduzidos na proporção da poeira, mínimo 2.
-		* Marte: 10. Lua: 12 com Sol pleno, vezes a luz do Sol de hoje.
+		* Marte: 10. Lua: 14 com Sol pleno, vezes a luz do Sol de hoje. O nível soma ou tira blocos antes (`extraBlocks`).
 		*/
 		updateBlocks() {
 			const { panelBlocks, minBlocks } = CONFIG.energy;
-			const light = this.state.location === "moon" ? CONFIG.moon.sun.fullBlocks * this.sunlightToday() / 100 : panelBlocks;
+			const extra = this.tuning.extraBlocks;
+			const light = this.state.location === "moon" ? (CONFIG.moon.sun.fullBlocks + extra) * this.sunlightToday() / 100 : panelBlocks + extra;
 			this.state.blocks = Math.max(minBlocks, Math.round(light * (1 - this.state.res.dust / 100)));
 		}
 		answerCard(optionId) {
@@ -1202,7 +1280,7 @@ var JezeroSim = (function(exports) {
 		}
 		stars() {
 			const r = this.state.res;
-			if (r.science < CONFIG.science.goal) return 1;
+			if (r.science < this.tuning.scienceGoal) return 1;
 			if (r.dose >= doseFor3(this.state.location)) return 2;
 			return 3;
 		}
@@ -1252,9 +1330,14 @@ var JezeroSim = (function(exports) {
 		}
 		return out;
 	}
-	/** Primeira partida: só missões de força média; depois, qualquer uma (GDD, "Regras"). */
-	function pickHistorical(missions, seed, firstGame) {
-		const pool = firstGame ? missions.filter((m) => m.difficulty === "medium") : missions;
+	/**
+	* Sorteia a missão histórica (GDD, "Regras"). Nível Médio: na primeira partida só as de força média; depois, qualquer
+	* uma. Fácil: só as de força média. Difícil: só as fortes. As tempestades e as datas são as reais em todos os níveis.
+	*/
+	function pickHistorical(missions, seed, firstGame, difficulty = "medium") {
+		const want = tuning(difficulty).historical;
+		const only = want === "any" ? firstGame ? "medium" : null : want;
+		const pool = only ? missions.filter((m) => m.difficulty === only) : missions;
 		const list = pool.length > 0 ? pool : missions;
 		return list.length > 0 ? createRng(seed ^ 2654435769).pick(list) : null;
 	}
@@ -1296,11 +1379,14 @@ var JezeroSim = (function(exports) {
 		const s = current().state;
 		return JSON.stringify(_objectSpread2(_objectSpread2({}, s), {}, { cardSols: Object.fromEntries(s.cardSols) }));
 	}
-	/** `location` é opcional: o servidor Go de hoje não manda e a sala fica em Marte (Lua só no solo, por enquanto). */
-	function newMission(seed, flaresJson, historicalJson, location) {
+	/**
+	* `location` e `difficulty` são opcionais. O servidor manda "mars" e o nível que o dono da sala escolheu; sem nível,
+	* Médio (Lua só no solo, por enquanto).
+	*/
+	function newMission(seed, flaresJson, historicalJson, location, difficulty) {
 		const flares = JSON.parse(flaresJson);
 		const historical = JSON.parse(historicalJson);
-		mission = new Mission(seed >>> 0, flares, historical, location === "moon" ? "moon" : "mars");
+		mission = new Mission(seed >>> 0, flares, historical, location === "moon" ? "moon" : "mars", difficulty !== null && difficulty !== void 0 ? difficulty : "medium");
 	}
 	/**
 	* Aplica qualquer interação (src/sim/actions.ts) e devolve o resultado em JSON.
@@ -1364,12 +1450,16 @@ var JezeroSim = (function(exports) {
 	function parseMissionsJson(raw) {
 		return JSON.stringify(parseMissions(JSON.parse(raw)));
 	}
-	function pickHistoricalJson(missionsJson, seed, firstGame) {
-		return JSON.stringify(pickHistorical(JSON.parse(missionsJson), seed >>> 0, firstGame));
+	function pickHistoricalJson(missionsJson, seed, firstGame, difficulty) {
+		const level = difficulty !== null && difficulty !== void 0 ? difficulty : "medium";
+		return JSON.stringify(pickHistorical(JSON.parse(missionsJson), seed >>> 0, firstGame, level));
 	}
-	/** Números de jogo que o servidor também usa (relógio do dia, atraso das mensagens da Terra). */
+	/**
+	* Números de jogo que o servidor também usa (relógio do dia, atraso das mensagens da Terra). `difficulty` traz os
+	* níveis: o servidor valida o nível escolhido pelo dono da sala e usa a duração do dia de cada um.
+	*/
 	function config() {
-		return JSON.stringify(CONFIG);
+		return JSON.stringify(_objectSpread2(_objectSpread2({}, CONFIG), {}, { difficulty: DIFFICULTY }));
 	}
 	exports.answerCard = answerCard;
 	exports.apply = apply;

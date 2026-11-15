@@ -1,4 +1,4 @@
-import { CONFIG, doseFor3, type FlareClass, type Location } from './config.ts';
+import { CONFIG, DIFFICULTIES, doseFor3, tuning, type Difficulty, type FlareClass, type Location, type Tuning } from './config.ts';
 import { CARDS, CARD_IDS, MARS_ONLY_CARDS, applyCardOption, clamp, onCardDrawn } from './cards.ts';
 import { createRng, type Rng } from './rng.ts';
 import { PROBLEMS, scheduleProblems, taskBattery } from './problems.ts';
@@ -27,15 +27,29 @@ export class Mission {
   private nextCommsDown = false;
   /** Problemas que continuam no próximo sol (trabalho pela metade em noite de tempestade). */
   private carryOver: Problem[] = [];
+  /** Números do nível (src/sim/config.ts, DIFFICULTY). */
+  readonly tuning: Tuning;
 
   /**
    * @param realFlares erupções reais para sortear (usadas quando não há missão histórica)
    * @param historical missão histórica: tempestades e atraso das mensagens vêm dela, com datas reais (só Marte:
    *   o atraso é Terra-Marte)
    * @param location Marte (padrão) ou Lua (docs/game-design.md, "Base lunar")
+   * @param difficulty nível (padrão: Médio, o jogo de sempre). Muda só a escala do jogo; as tempestades reais e os
+   *   atrasos reais são os mesmos em todos os níveis. Os sorteios também: a mesma semente dá os mesmos sóis.
    */
-  constructor(seed: number, realFlares: Flare[] = [], historical: HistoricalMission | null = null, location: Location = 'mars') {
+  constructor(
+    seed: number,
+    realFlares: Flare[] = [],
+    historical: HistoricalMission | null = null,
+    location: Location = 'mars',
+    difficulty: Difficulty = 'medium',
+  ) {
     this.rng = createRng(seed);
+    // Nível desconhecido (ex.: texto vindo de fora) vira o Médio.
+    const level: Difficulty = DIFFICULTIES.includes(difficulty) ? difficulty : 'medium';
+    this.tuning = tuning(level);
+    const tune = this.tuning;
     const moon = location === 'moon';
     if (moon) historical = null;
     const storms = historical ? this.historicalStorms(historical) : this.scheduleStorms(realFlares, moon);
@@ -53,8 +67,8 @@ export class Mission {
     const cardSols = new Map<number, (typeof CARD_IDS)[number]>();
     const sols = this.rng
       .shuffle(range(CONFIG.cards.firstSol, CONFIG.cards.lastSol).filter((s) => s !== eventSol))
-      .slice(0, CONFIG.cards.perGame);
-    const ids = this.rng.shuffle(moon ? MOON_CARD_POOL : CARD_POOL).slice(0, CONFIG.cards.perGame);
+      .slice(0, tune.cards);
+    const ids = this.rng.shuffle(moon ? MOON_CARD_POOL : CARD_POOL).slice(0, tune.cards);
     sols.forEach((s, i) => cardSols.set(s, ids[i]));
     // Luz do Sol de cada dia na Lua (sorteada por último: em Marte nada muda na sequência).
     const sunlight = moon ? this.sunProfile(shadowSol) : [];
@@ -62,11 +76,12 @@ export class Mission {
     this.state = {
       seed,
       location,
+      difficulty: level,
       historical,
       sol: 0,
       res: {
-        battery: CONFIG.battery.start,
-        life: CONFIG.life.start,
+        battery: tune.batteryStart,
+        life: tune.lifeStart,
         shield: CONFIG.shield.start,
         dose: CONFIG.dose.start,
         science: 0,
@@ -194,7 +209,7 @@ export class Mission {
     // Antena desalinhada: os avisos da Terra deste sol se perdem (a tempestade vem do mesmo jeito).
     s.messages = s.commsDown ? [{ kind: 'noSignal' }] : this.buildMessages(sol);
     const carried = this.carryOver.map((p) => p.kind);
-    s.problems = [...this.carryOver, ...scheduleProblems(sol, this.rng, () => ++this.uid, carried)];
+    s.problems = [...this.carryOver, ...scheduleProblems(sol, this.rng, () => ++this.uid, carried, this.tuning.problemsPerDay)];
     this.carryOver = [];
 
     const cardId = s.cardSols.get(sol);
@@ -235,11 +250,13 @@ export class Mission {
 
   /**
    * Blocos do dia, reduzidos na proporção da poeira, mínimo 2.
-   * Marte: 10. Lua: 12 com Sol pleno, vezes a luz do Sol de hoje.
+   * Marte: 10. Lua: 14 com Sol pleno, vezes a luz do Sol de hoje. O nível soma ou tira blocos antes (`extraBlocks`).
    */
   private updateBlocks(): void {
     const { panelBlocks, minBlocks } = CONFIG.energy;
-    const light = this.state.location === 'moon' ? (CONFIG.moon.sun.fullBlocks * this.sunlightToday()) / 100 : panelBlocks;
+    const extra = this.tuning.extraBlocks;
+    const light =
+      this.state.location === 'moon' ? ((CONFIG.moon.sun.fullBlocks + extra) * this.sunlightToday()) / 100 : panelBlocks + extra;
     this.state.blocks = Math.max(minBlocks, Math.round(light * (1 - this.state.res.dust / 100)));
   }
 
@@ -504,7 +521,7 @@ export class Mission {
 
   private stars(): 1 | 2 | 3 {
     const r = this.state.res;
-    if (r.science < CONFIG.science.goal) return 1;
+    if (r.science < this.tuning.scienceGoal) return 1;
     if (r.dose >= doseFor3(this.state.location)) return 2;
     return 3;
   }

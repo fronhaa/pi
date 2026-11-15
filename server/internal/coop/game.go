@@ -72,9 +72,9 @@ type Game struct {
 
 // NewGame começa uma partida. coopSeed alimenta só os sorteios do modo coop (atraso das
 // mensagens da Terra), para não mexer nos sorteios da missão (que seguem o jogo solo).
-func NewGame(seed, coopSeed uint32, flares []sim.Flare, historical *sim.HistoricalMission, autoEarth bool) *Game {
+func NewGame(seed, coopSeed uint32, flares []sim.Flare, historical *sim.HistoricalMission, autoEarth bool, level string) *Game {
 	g := &Game{
-		Mission:   sim.NewMission(seed, flares, historical),
+		Mission:   sim.NewMission(seed, flares, historical, level),
 		Plan:      sim.EnergyPlan{Life: 3, Shield: 1, Science: 3},
 		AutoEarth: autoEarth,
 		coopRng:   sim.NewRng(coopSeed),
@@ -190,7 +190,7 @@ func (g *Game) StartDay() error {
 }
 
 // Tick avança o relógio do dia (chamado pela sala). Abre os problemas na hora e termina o
-// dia aos ProblemsDaySeconds ou quando tudo foi consertado. Devolve se algo mudou.
+// dia na duração do nível (sim.DaySeconds) ou quando tudo foi consertado. Devolve se algo mudou.
 func (g *Game) Tick(dt float64) bool {
 	if g.Phase != PhaseDay || g.Paused {
 		return false
@@ -208,7 +208,7 @@ func (g *Game) Tick(dt float64) bool {
 			allDone = false
 		}
 	}
-	if g.DayElapsed >= sim.Config.ProblemsDaySeconds || allDone {
+	if g.DayElapsed >= g.DaySeconds() || allDone {
 		_ = g.endDay()
 		return true
 	}
@@ -373,4 +373,9 @@ func (g *Game) MarsMessages() []MarsMessage {
 		}
 	}
 	return out
+}
+
+// DaySeconds: duração do dia desta partida (depende do nível escolhido pelo dono da sala).
+func (g *Game) DaySeconds() float64 {
+	return sim.DaySeconds(g.Mission.State.Difficulty)
 }

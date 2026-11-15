@@ -229,6 +229,54 @@ Qualquer mudança nos números deve manter essa forma: as duas estratégias extr
 
 **Com as cartas do rover** (MOXIE e "Caminho do rover", 2026-11-14, 1.000 partidas por estratégia, erupções reais, simuladas e as 6 missões): a forma se mantém em todos os cenários. As estratégias extremas continuam falhando sempre, "ignora a blindagem" não mudou, e a estratégia atenta (que pega o atalho e resgata o rover) termina com 1 estrela um pouco menos vezes (ex.: erupções reais, de 9% para 5%).
 
+## Níveis de dificuldade
+
+No jogo solo, o nível é escolhido na mesma tela do lugar ("Para onde vamos?", planetas 3D): com o mouse em cima de
+Marte ou da Lua (ou com o foco do teclado), os 3 níveis aparecem embaixo do planeta; no celular, o primeiro toque no
+planeta abre os níveis. Tocar num nível escolhe o lugar e o nível juntos (`src/ui/PlaceChoice.ts`). Fica marcado o
+último nível jogado; na primeira partida, a Primeira missão. Cada botão mostra o nome da missão e a idade recomendada
+naquele lugar (Marte 7+, 9+, 11+; Lua 7+, 10+, 12+, porque o mesmo nível é mais difícil na Lua: veja a tabela de
+equilíbrio abaixo; `RECOMMENDED_AGE` em `src/ui/level.ts`); a dica de cada nível aparece ao parar o mouse no botão.
+Os números ficam em `src/sim/config.ts` (`DIFFICULTY`) e a escolha em `src/core/Game.ts` (`choosePlaceAndLevel`).
+No modo em grupo, o dono da sala escolhe no saguão e, ao jogar de novo, na janela "🎯 Escolha a missão"
+(`showLevelChoice`).
+
+**Regra de ouro: dado real da NASA nunca muda com o nível.** Nos 3 níveis são iguais a força de cada tempestade solar
+(classe da erupção do DONKI), os sóis das tempestades, o atraso real das mensagens, as datas das missões históricas,
+a tempestade de poeira e a luz do Sol na Lua. O teste `tests/sim/difficulty.test.ts` confere isso. O nível muda só a
+escala do jogo (INTERPRETADO): quanta energia, folga e pressa a tripulação tem.
+
+| | 🌱 Primeira missão (Fácil) | 🚀 Missão normal (Médio) | 🔥 Missão expert (Difícil) |
+| --- | --- | --- | --- |
+| Idade recomendada em Marte (aparece no botão) | 7+ anos (e quem joga pela primeira vez) | 9+ anos | 11+ anos |
+| Idade recomendada na Lua | 7+ anos | 10+ anos | 12+ anos |
+| Blocos por sol (Marte; na Lua, soma ao Sol pleno) | 12 | 10 | 9 |
+| Bateria / suporte de vida no começo | 70 / 80 | 50 / 70 | 40 / 70 |
+| Cartas de decisão | 2 | 4 | 5 |
+| Problemas por dia | 1 | 1 a 2 | 1 a 2 |
+| Duração do dia | 90 s | 75 s | 60 s |
+| Ciência para a 2ª estrela | 80 | 100 | 100 |
+| Prévia da noite (setas e "a base passa bem") | sim | sim | **não**: a criança faz a conta (os avisos de tempestade da Terra continuam) |
+| Missões históricas (Marte) | só as de força média | médias na 1ª partida; depois, todas | todas |
+
+A tela final mostra o nível junto das estrelas (3★ no Fácil não é 3★ no Difícil). **No modo em grupo, quem criou a
+sala escolhe o nível** no saguão; os outros veem qual foi. No fim, ao jogar de novo, o dono da sala pode trocar o nível
+(`docs/servidor-coop.md`).
+
+**Equilíbrio dos níveis** (`npm run balance`, 2.000 partidas por estratégia, 2026-11-15, erupções reais do DONKI;
+o robô joga sem erro, então a criança acha cada nível mais difícil do que a tabela):
+
+| Estratégia "reage aos alertas" | Fácil | Médio | Difícil |
+| --- | --- | --- | --- |
+| Marte, erupções sorteadas: 3★ | 86% | 44% | 34% |
+| Lua: 3★ | 64% | 27% | 22% |
+| Missões históricas de força média: 3★ | 98% a 100% | 13% a 20% | 12% a 17% |
+
+Nos 3 níveis, "só ciência" perde sempre e "só segurança" fica com 1 estrela: a lição de energia × proteção é a mesma.
+Medido e descartado no Difícil: 2 a 3 problemas por dia (cada conserto lá fora soma dose, e ninguém tirava 3★) e só as
+missões históricas fortes (0% de 3★ mesmo jogando perfeito). A pressão do Difícil vem da energia curta, das cartas a
+mais, do dia curto e da conta sem prévia, que o robô do `balance` não sente.
+
 ## Base lunar
 
 Ao entrar, a criança escolhe primeiro **Marte** ou **Lua** (tela 3D "Para onde vamos?"; aparece de novo em "Jogar de novo"). Depois, se o jogo tem servidor de grupo, escolhe **sozinho** ou **em grupo**: só em Marte, porque o servidor de grupo roda só Marte (na Lua vai direto para o modo sozinho). Em seguida vem a viagem; no grupo, a sala de espera abre quando o foguete chega. Quem recarrega a página no meio de uma partida em grupo volta direto para ela (`Game.chooseMode`).
@@ -972,7 +1020,7 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 
 ### Prévia do plano de energia
 
-Ao lado de cada linha do plano aparece o resultado previsto para esta noite ("Vida: 70 → 76"), em verde quando sobe e vermelho quando cai, e acima do botão os avisos: bateria acabando, tempestade esta noite (com a dose), tempestade de amanhã (com a dose que daria com a blindagem desta noite), suporte de vida em perigo e dose passando de 50 (perde a 3ª estrela). A criança vê a troca **antes** de decidir. A prévia usa o mesmo cálculo do fim do sol (`src/sim/day.ts`), então nunca mostra um número diferente do que acontece; ela não conta os problemas do dia, que ainda não apareceram, e diz isso.
+Ao lado de cada linha do plano aparece o resultado previsto para esta noite ("Vida: 70 → 76"), em verde quando sobe e vermelho quando cai, e acima do botão os avisos: bateria acabando, tempestade esta noite (com a dose), tempestade de amanhã (com a dose que daria com a blindagem desta noite), suporte de vida em perigo e dose passando de 50 (perde a 3ª estrela). A criança vê a troca **antes** de decidir. A prévia usa o mesmo cálculo do fim do sol (`src/sim/day.ts`), então nunca mostra um número diferente do que acontece; ela não conta os problemas do dia, que ainda não apareceram, e diz isso. Na Missão expert (nível Difícil) a prévia não mostra o resultado da noite, só os avisos de tempestade, e a criança faz a conta ([Níveis de dificuldade](#níveis-de-dificuldade)).
 
 ### Linguagem
 

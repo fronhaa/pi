@@ -3,7 +3,7 @@ import type { RecentSun } from '@/data/flares';
 import type { EnergyPlan, Flare, GameState, ProblemKind, Resources } from '@/sim/types';
 import { PROBLEMS, taskBattery } from '@/sim/problems';
 import type { Mission } from '@/sim/mission';
-import { CONFIG as SIM, doseFor3 } from '@/sim/config';
+import { CONFIG as SIM, doseFor3, tuning } from '@/sim/config';
 
 /** Prévia calculada pela simulação (Mission.previewSol). */
 export type PlanPreview = ReturnType<Mission['previewSol']>;
@@ -266,15 +266,16 @@ export class Hud {
     const today = this.tubesToday();
     const tubesCls = level((tubesLeft / CONFIG.samples.tubes) * 100);
     const sci = Math.round(r.science);
+    const goal = tuning(this.state?.difficulty).scienceGoal;
     patchChildren(this.goal, [
       h('button', {
         class: 'goal top-chip', type: 'button', 'aria-label': t('a11y.helpFor', { name: t('res.science') }),
         onclick: () => openHelp('help.science', t('res.science')),
       },
-        h('span', { class: 'lbl-long' }, `⭐ ${t('goal.science', { n: sci, goal: CONFIG.science.goal })}`),
-        h('span', { class: 'lbl-short' }, `⭐ ${sci}/${CONFIG.science.goal}`),
-        h('span', { class: 'sol-track goal-track', role: 'meter', 'aria-label': t('res.science'), 'aria-valuemin': 0, 'aria-valuemax': CONFIG.science.goal, 'aria-valuenow': sci },
-          h('i', { style: `width:${Math.min(100, (sci / CONFIG.science.goal) * 100)}%` })),
+        h('span', { class: 'lbl-long' }, `⭐ ${t('goal.science', { n: sci, goal })}`),
+        h('span', { class: 'lbl-short' }, `⭐ ${sci}/${goal}`),
+        h('span', { class: 'sol-track goal-track', role: 'meter', 'aria-label': t('res.science'), 'aria-valuemin': 0, 'aria-valuemax': goal, 'aria-valuenow': sci },
+          h('i', { style: `width:${Math.min(100, (sci / goal) * 100)}%` })),
       ),
       // Tubos só aparecem no topo quando estão acabando (o custo de hoje já aparece no plano, na linha da ciência).
       tubesLeft <= CONFIG.samples.perExpedition * TUBES_LOW_EXPEDITIONS
@@ -434,6 +435,9 @@ export class Hud {
 
     // Prévia: o resultado previsto de cada linha, recalculado a cada + ou −.
     const pv = blocked ? null : this.cb.preview?.(this.getPlan()) ?? null;
+    // Missão expert (src/sim/config.ts, `showForecast`): a criança faz a conta da noite. Os avisos de tempestade
+    // continuam, porque vêm da Terra (dado real), não da prévia.
+    const forecast = tuning(s.difficulty).showForecast;
     const fmt = (n: number) => (Math.round(n * 10) / 10).toLocaleString(getLang() === 'pt' ? 'pt-BR' : 'en');
     const arrow = (from: number, to: number, label?: string) => {
       const d = Math.round((to - from) * 10) / 10;
@@ -441,7 +445,7 @@ export class Hud {
       return h('span', { class: `forecast ${cls}` }, `${label ? label + ' ' : ''}${fmt(from)} → ${fmt(to)}`);
     };
     const forecastFor = (k: PlanKey) => {
-      if (!pv) return null;
+      if (!pv || !forecast) return null;
       if (k === 'life') return arrow(s.res.life, pv.after.life, t('preview.tonight'));
       if (k === 'shield') return arrow(s.res.shield, pv.after.shield, t('preview.tonight'));
       const gain = pv.stormTonight && pv.sciGain > 0 ? t('preview.scienceStorm', { n: fmt(pv.sciGain) }) : `+${fmt(pv.sciGain)}`;
@@ -452,9 +456,13 @@ export class Hud {
     };
     const warnings: { text: string; tone: 'bad' | 'warn' | 'info' }[] = [];
     if (pv) {
-      if (pv.missing > 0) warnings.push({ text: t('preview.batteryShort', { life: fmt(pv.lifeLost) }), tone: 'bad' });
+      // Tempestade (hoje ou amanhã): aparece em todos os níveis, porque o aviso vem da Terra.
       if (pv.stormTonight) warnings.push({ text: t('preview.stormTonight', { strength: t(`storm.strength.${pv.stormTonight.cls}` as StringKey), dose: pv.stormDose, shield: Math.round(Math.min(SIM.shield.max, Math.max(0, s.res.shield + pv.shieldDelta))) }), tone: 'bad' });
       if (pv.stormTomorrow) warnings.push({ text: t('preview.stormTomorrow', { strength: t(`storm.strength.${pv.stormTomorrow.cls}` as StringKey), dose: pv.doseTomorrowIfNow, shield: Math.round(pv.after.shield) }), tone: 'warn' });
+    }
+    // Resultado da noite (bateria, vida, dose): só fora da missão expert.
+    if (pv && forecast) {
+      if (pv.missing > 0) warnings.unshift({ text: t('preview.batteryShort', { life: fmt(pv.lifeLost) }), tone: 'bad' });
       if (pv.after.life <= 0) warnings.push({ text: t('preview.lifeZero'), tone: 'bad' });
       else if (pv.after.life <= 25) warnings.push({ text: t('preview.lifeLow', { v: fmt(pv.after.life) }), tone: 'bad' });
       if (pv.after.dose >= SIM.dose.max) warnings.push({ text: t('preview.doseMax'), tone: 'bad' });
@@ -490,12 +498,13 @@ export class Hud {
       ),
       ...PLAN_KEYS.map(row),
       h('div', { class: 'plan-row battery' },
-        h('div', { class: 'name' }, t('plan.battery'), pv ? arrow(s.res.battery, pv.after.battery, t('preview.afterNight')) : null, h('small', {}, t('plan.hint.battery', { cost: pv?.nightCost ?? this.cb.nightCost?.() ?? SIM.battery.nightCost }))),
+        h('div', { class: 'name' }, t('plan.battery'), pv && forecast ? arrow(s.res.battery, pv.after.battery, t('preview.afterNight')) : null, h('small', {}, t('plan.hint.battery', { cost: pv?.nightCost ?? this.cb.nightCost?.() ?? SIM.battery.nightCost }))),
         h('span'), h('div', { class: 'count' }, String(leftover)), h('span'),
       ),
       ...(pv ? [h('div', { class: 'preview', 'aria-live': 'polite' },
         ...warnings.map((w) => h('p', { class: `warn tone-${w.tone}` }, w.text)),
-        warnings.length === 0 ? h('p', { class: 'warn tone-ok' }, t('preview.allGood')) : null,
+        !forecast ? h('p', { class: 'warn tone-info' }, t('preview.expert'))
+          : warnings.length === 0 ? h('p', { class: 'warn tone-ok' }, t('preview.allGood')) : null,
         s.problems.length > 0 ? h('p', { class: 'note' }, t('preview.noProblems')) : null,
       )] : []),
       h('div', { class: 'plan-actions' },

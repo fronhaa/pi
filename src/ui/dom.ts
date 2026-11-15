@@ -70,6 +70,8 @@ export interface DialogAction {
   label: string;
   primary?: boolean;
   onClick: () => void;
+  /** Conteúdo do botão no lugar do texto (ex.: nome do nível + "Fácil"); `label` vira o nome para leitor de tela. */
+  content?: Node[];
 }
 
 /**
@@ -102,7 +104,7 @@ export function openDialog(opts: {
     previous?.focus?.();
   };
   const buttons = opts.actions.map((a) =>
-    h('button', { class: `btn${a.primary ? ' primary' : ''}`, type: 'button', onclick: () => { close(); a.onClick(); } }, a.label),
+    h('button', { class: `btn${a.primary ? ' primary' : ''}${a.content ? ' level-btn' : ''}`, type: 'button', 'aria-label': a.content ? a.label : undefined, onclick: () => { close(); a.onClick(); } }, ...(a.content ?? [a.label])),
   );
   const dialog = h(
     'div',

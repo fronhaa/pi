@@ -45,4 +45,5 @@ adiciona a linha na tabela abaixo. Preencha, abra PR e discuta lá.
 | [0012](0012-sois-de-introducao.md) | Sóis de introdução | Aceito |
 | [0013](0013-fontes-da-nasa-so-na-documentacao.md) | Fontes da NASA só na documentação | Aceito |
 | [0014](0014-app-instalavel-e-modo-solo-offline-pwa.md) | App instalável e modo solo offline (PWA) | Aceito |
+| [0015](0015-niveis-de-dificuldade-so-com-escala-de-jogo.md) | Níveis de dificuldade só com escala de jogo | Proposto |
 <!-- adr-index:fim (não remova, usado pelo scripts/new-adr.mjs) -->

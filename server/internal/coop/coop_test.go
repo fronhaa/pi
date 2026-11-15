@@ -21,7 +21,7 @@ import (
 // ---------- regras (sem rede) ----------
 
 func TestEarthMessageArrivesNextSol(t *testing.T) {
-	g := NewGame(1, 2, nil, nil, false)
+	g := NewGame(1, 2, nil, nil, false, "medium")
 	if g.Phase != PhaseEarth {
 		t.Fatalf("com jogador na Terra, o sol começa na vez da Terra; fase = %s", g.Phase)
 	}
@@ -55,8 +55,8 @@ func TestEarthMessageArrivesNextSol(t *testing.T) {
 }
 
 func TestMarsOnlyGetsAutomaticAlertsWithoutEarthPlayer(t *testing.T) {
-	auto := NewGame(7, 7, nil, nil, true)
-	withEarth := NewGame(7, 7, nil, nil, false)
+	auto := NewGame(7, 7, nil, nil, true, "medium")
+	withEarth := NewGame(7, 7, nil, nil, false, "medium")
 	for auto.Mission.State.Outcome.Status == "playing" && withEarth.Mission.State.Outcome.Status == "playing" {
 		for _, m := range withEarth.MarsMessages() {
 			if m.Kind == "stormAlert" || m.Kind == "dustAlert" || m.Kind == "allClear" {
@@ -81,7 +81,7 @@ func TestMarsOnlyGetsAutomaticAlertsWithoutEarthPlayer(t *testing.T) {
 }
 
 func TestEarthForecastSeesStormsBeforeMars(t *testing.T) {
-	g := NewGame(3, 3, nil, nil, false)
+	g := NewGame(3, 3, nil, nil, false, "medium")
 	seen := false
 	for g.Mission.State.Outcome.Status == "playing" {
 		for _, f := range g.Forecast() {
@@ -104,7 +104,7 @@ func TestEarthForecastSeesStormsBeforeMars(t *testing.T) {
 // Regressão: carta que reduz os blocos (painéis empoeirados) não pode travar o "Terminar o sol".
 func TestCardThatCutsBlocksKeepsPlanValid(t *testing.T) {
 	for seed := uint32(1); seed <= 300; seed++ {
-		g := NewGame(seed, seed, nil, nil, true)
+		g := NewGame(seed, seed, nil, nil, true, "medium")
 		for g.Mission.State.Outcome.Status == "playing" {
 			answerAnyCard(t, g)
 			if g.Phase == PhaseEnded {
@@ -121,7 +121,7 @@ func TestCardThatCutsBlocksKeepsPlanValid(t *testing.T) {
 }
 
 func TestPlanNeverExceedsBlocks(t *testing.T) {
-	g := NewGame(11, 11, nil, nil, true)
+	g := NewGame(11, 11, nil, nil, true, "medium")
 	answerAnyCard(t, g)
 	b := g.Mission.State.Blocks
 	if err := g.SetBlocks("science", b+1); !errors.Is(err, ErrInvalidInput) {
@@ -361,7 +361,7 @@ func (c *client) waitState(t *testing.T, ctx context.Context, ok func(StateMsg) 
 // dayGame devolve uma partida já no primeiro sol que tem problemas, com a carta respondida.
 func dayGame(t *testing.T, seed uint32) *Game {
 	t.Helper()
-	g := NewGame(seed, seed, nil, nil, true)
+	g := NewGame(seed, seed, nil, nil, true, "medium")
 	for g.Mission.State.Outcome.Status == "playing" {
 		answerAnyCard(t, g)
 		if len(g.Mission.State.Problems) > 0 {
@@ -443,7 +443,7 @@ func TestOnlyMarsFixesAndOnlyCommanderControlsDay(t *testing.T) {
 
 func TestAntennaDownLosesEarthMessage(t *testing.T) {
 	for seed := uint32(1); seed < 400; seed++ {
-		g := NewGame(seed, seed, nil, nil, false)
+		g := NewGame(seed, seed, nil, nil, false, "medium")
 		for g.Mission.State.Outcome.Status == "playing" {
 			if g.Phase == PhaseEarth {
 				must(t, g.SendEarth("science"))
@@ -498,8 +498,8 @@ func TestPreviewHidesTomorrowStormWithEarthPlayer(t *testing.T) {
 	}
 	seen := 0
 	for seed := uint32(1); seed < 60 && seen < 3; seed++ {
-		auto := NewGame(seed, seed, nil, nil, true)
-		earth := NewGame(seed, seed, nil, nil, false)
+		auto := NewGame(seed, seed, nil, nil, true, "medium")
+		earth := NewGame(seed, seed, nil, nil, false, "medium")
 		for auto.Mission.State.Outcome.Status == "playing" && earth.Mission.State.Outcome.Status == "playing" {
 			_ = earth.SendEarth("none")
 			answerAnyCard(t, auto)
@@ -697,4 +697,36 @@ func TestEvaBannedOnStormDay(t *testing.T) {
 		}
 	}
 	t.Fatal("nenhuma partida com problema de fora no dia da tempestade")
+}
+
+// O dono da sala escolhe o nível no saguão; a partida nasce com ele e o dia dura o tempo do nível.
+func TestHostChoosesLevel(t *testing.T) {
+	r := newRoom("LEVL", nil, nil, func() (uint32, uint32) { return 21, 21 })
+	host, kid := NewPlayer(nil), NewPlayer(nil)
+	must(t, r.join(host))
+	must(t, r.join(kid))
+	if r.viewFor(kid.ID).Level != sim.DefaultLevel {
+		t.Fatal("sem escolha, a sala é do nível de sempre")
+	}
+	if err := r.Handle(kid.ID, Action{T: "level", Level: "hard"}); !errors.Is(err, ErrNotYourRole) {
+		t.Fatalf("só o dono da sala escolhe o nível: %v", err)
+	}
+	if err := r.Handle(host.ID, Action{T: "level", Level: "impossible"}); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("nível desconhecido é recusado: %v", err)
+	}
+	must(t, r.Handle(host.ID, Action{T: "level", Level: "hard"}))
+	if v := r.viewFor(kid.ID); v.Level != "hard" {
+		t.Fatalf("todos veem o nível escolhido: %q", v.Level)
+	}
+	must(t, r.Handle(host.ID, Action{T: "claim", Role: Commander}))
+	must(t, r.Handle(host.ID, Action{T: "start"}))
+	if r.game.Mission.State.Difficulty != "hard" || r.game.DaySeconds() != 60 {
+		t.Fatalf("partida: nível %q, dia %v s", r.game.Mission.State.Difficulty, r.game.DaySeconds())
+	}
+	if v := r.viewFor(host.ID); v.Mars == nil || v.Mars.Difficulty != "hard" {
+		t.Fatal("quem está em Marte recebe o nível da partida")
+	}
+	if err := r.Handle(host.ID, Action{T: "level", Level: "easy"}); !errors.Is(err, ErrWrongPhase) {
+		t.Fatalf("no meio da partida o nível não muda: %v", err)
+	}
 }

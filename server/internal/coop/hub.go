@@ -22,8 +22,9 @@ type Action struct {
 	Value    int       `json:"value,omitempty"`
 	UID      int       `json:"uid,omitempty"`
 	Progress float64   `json:"progress,omitempty"`
-	List     []CrewPos `json:"list,omitempty"` // crew_pos
-	Pair     []Role    `json:"pair,omitempty"` // eva: [líder, parceiro]
+	List     []CrewPos `json:"list,omitempty"`  // crew_pos
+	Pair     []Role    `json:"pair,omitempty"`  // eva: [líder, parceiro]
+	Level    string    `json:"level,omitempty"` // level: nível escolhido pelo dono da sala
 }
 
 var (
