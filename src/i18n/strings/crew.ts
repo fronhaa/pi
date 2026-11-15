@@ -35,7 +35,7 @@ export const pt = {
   'eva.start': '{a} e {b} saem em dupla.',
   'eva.back': 'A dupla volta para dentro. EVA é curta!',
   'eva.return': 'Voltar para dentro',
-  'eva.fact': 'A NASA planeja até 24 horas de EVA por semana para cada astronauta. A semana tem 168 horas: quase todo o tempo é dentro.',
+  'eva.fact': 'A NASA planeja até 24 horas de EVA por astronauta na semana. A semana tem 168 horas. Quase todo o tempo é dentro da base.',
   'eva.fact.source': 'Fonte: NASA, relatório sobre EVA (2021)',
   'crew.commander': 'Comandante',
   'crew.engineer': 'Engenheiro de voo',
@@ -51,7 +51,7 @@ export const pt = {
   'crew.short.scientist': 'Cientista',
   'crew.hint.keys': 'Setas ou WASD: andar · Espaço: pular · 1 a 4: trocar · ou clique no chão',
   'crew.hint.touch': 'Toque num astronauta e depois no chão para ele andar',
-  'crew.fact.gravity': 'Em Marte a gravidade é só 38% da que temos na Terra: o mesmo pulo sobe cerca de 2,6 vezes mais alto!',
+  'crew.fact.gravity': 'Em Marte, a gravidade é só 38% da Terra. O mesmo pulo sobe cerca de 2,6 vezes mais alto!',
   'crew.fact.source': 'Fonte: NASA/JPL',
 } as const;
 
@@ -87,7 +87,7 @@ export const en: Record<keyof typeof pt, string> = {
   'eva.start': '{a} and {b} go out as a pair.',
   'eva.back': 'The pair goes back inside. EVAs are short!',
   'eva.return': 'Go back inside',
-  'eva.fact': 'NASA plans up to 24 hours of EVA per week for each astronaut. A week has 168 hours: almost all the time is inside.',
+  'eva.fact': 'NASA plans up to 24 hours of EVA per astronaut each week. A week has 168 hours. Almost all of it is spent inside.',
   'eva.fact.source': 'Source: NASA, EVA report (2021)',
   'crew.commander': 'Commander',
   'crew.engineer': 'Flight engineer',
@@ -103,6 +103,6 @@ export const en: Record<keyof typeof pt, string> = {
   'crew.short.scientist': 'Scientist',
   'crew.hint.keys': 'Arrows or WASD: walk · Space: jump · 1 to 4: switch · or click the ground',
   'crew.hint.touch': 'Tap an astronaut, then the ground, to make them walk',
-  'crew.fact.gravity': 'On Mars gravity is only 38% of Earth’s: the same jump goes about 2.6 times higher!',
+  'crew.fact.gravity': 'On Mars, gravity is only 38% of Earth’s. The same jump goes about 2.6 times higher!',
   'crew.fact.source': 'Source: NASA/JPL',
 };
