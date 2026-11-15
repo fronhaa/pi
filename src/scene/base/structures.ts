@@ -230,7 +230,8 @@ export class BaseStructures {
     this.root.add(base);
     // Canteiros: mais plantas na cúpula maior, fora da passarela que cruza a estufa de leste a oeste.
     const rng = seededRandom(3);
-    for (let i = 0; i < 48; i++) {
+    // Mais tentativas numa cúpula maior (a densidade de plantas fica parecida).
+    for (let i = 0; i < Math.round(48 * (r / 5) ** 2); i++) {
       const a = rng() * Math.PI * 2;
       const d = rng() * (r - 1.2);
       const px = Math.cos(a) * d;

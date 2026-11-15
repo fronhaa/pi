@@ -30,6 +30,7 @@ import {
   HABITAT_POSITION,
   HABITAT_SCALE,
   MODULE_FLOOR_LENGTH,
+  MODULE_FLOOR_WIDTH,
   QUARTERS_OFFSET_X,
   TUBES,
   addObstacle,
@@ -311,14 +312,14 @@ export class Habitat {
     // Cada cabine tem luminária no teto: o casco faz sombra e o sol não entra, então a luz de dentro é dela.
     const lampMat = new THREE.MeshBasicMaterial({ color: 0xfff1d0 });
     for (const ox of [0, QUARTERS_OFFSET_X, GYM_OFFSET_X]) {
-      const floor = toonMesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH, 0.08, 1.9), PALETTE.tech, 0);
+      const floor = toonMesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH, 0.08, MODULE_FLOOR_WIDTH), PALETTE.tech, 0);
       floor.position.set(ox, y - 0.04, 0);
       inside.add(floor);
       const lamp = new THREE.Mesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH * 0.6, 0.05, 0.25), lampMat);
-      lamp.position.set(ox, y + 2.0, 0);
+      lamp.position.set(ox, y + 2.45, 0);
       inside.add(lamp);
       const light = new THREE.PointLight(0xffe6c0, CABIN_LIGHT_INTENSITY, 4.5, 1.6);
-      light.position.set(ox, y + 1.85, 0.2);
+      light.position.set(ox, y + 2.3, 0.2);
       inside.add(light);
     }
 
@@ -380,8 +381,9 @@ export class Habitat {
         inside.add(pillow);
       }
       for (const px of [-0.93, 0.93]) {
-        const post = toonMesh(new THREE.BoxGeometry(0.06, 1.4, 0.06), PALETTE.tech, 0);
-        post.position.set(bx + px, y + 0.7, BUNK_Z + BED_DEPTH / 2 - 0.02);
+        const postH = BUNK_LEVELS[1] + 0.3;
+        const post = toonMesh(new THREE.BoxGeometry(0.06, postH, 0.06), PALETTE.tech, 0);
+        post.position.set(bx + px, y + postH / 2, BUNK_Z + BED_DEPTH / 2 - 0.02);
         inside.add(post);
       }
     }

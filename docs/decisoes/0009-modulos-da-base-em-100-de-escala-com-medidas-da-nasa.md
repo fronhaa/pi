@@ -1,6 +1,6 @@
 # 0009. Módulos da base em 100% de escala, com medidas da NASA
 
-- **Status:** Proposto
+- **Status:** Aceito (15/11/2026: o time escolheu a opção 1)
 - **Data:** 2026-11-14
 - **Autores:** @wnmonzine
 
@@ -71,6 +71,18 @@ tamanho em que o modelo foi feito, ela passa a seguir as três recomendações.
 
 Proposta: **opção 1**. Módulos de volta a 100%, túnel com raio de 1,2 m, cúpula com raio de 6 m e beliche com 1 m livre
 acima de cada cama. A opção 3 fica registrada como próximo passo possível.
+
+## Implementado (15/11/2026)
+
+- `HABITAT_SCALE = 1`, `HABITAT_FLOOR_Y = 1.5625`, `DOME_RADIUS = 6`, `TUBE_RADIUS = 1.2` e `TUBE_Y` = piso + 0,94 m
+  (2,14 m livres no túnel), `BUNK_LEVELS = [0.31, 1.49]` (1 m acima de cada colchão), `LYING_SCALE = 1`,
+  escada da estufa com 7 degraus, mais plantas na cúpula maior e a sombra do Sol cobrindo a base maior.
+- Simulado quadro a quadro (tarefas, academia, 4 camas, noite e manhã): cabeça acima do teto 0 cm, **sem andar
+  abaixado em nenhum lugar**, nada entra em colchão, no casco no máximo ~0,6 cm (ao levantar da cama de cima),
+  nenhum salto de posição. Postos, problemas e entradas fora das caixas de colisão (as três tarefas de dentro ficam
+  dentro dos prédios de propósito).
+- `BED_MOVE` reajustado para as camas novas (`src/scene/crewRoutine.ts`).
+- Falta conferir no navegador: a base inteira na câmera inicial, no computador e no celular em pé.
 
 ## Consequências
 
