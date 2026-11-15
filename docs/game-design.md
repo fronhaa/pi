@@ -435,7 +435,7 @@ Decisão de 14/11/2026. A tripulação passa quase todo o tempo **dentro** da ba
 
 **Decisão (14/11/2026):** os astronautas não ficam encarando a câmera. Eles vivem a base e só se viram para quem controla quando são **tocados**.
 
-**Hoje (a corrigir):** `Game.showCrewInside` chama `Astronaut.faceCamera` em todo quadro para quem está dentro da base (`src/core/Game.ts`), então os quatro ficam sempre olhando para a tela.
+**Implementado:** `Astronaut.lookFree`/`lookAt`/`faceToward` em `src/scene/Crew.ts` (giro de no máximo 180°/s), pontos de olhar em `HABITAT_LOOK` (`src/scene/MarsBase.ts`) e o toque em `Game.select` (2 s olhando para a câmera, só para quem esta tela controla e sem ordem).
 
 | Situação | Para onde olha |
 | --- | --- |

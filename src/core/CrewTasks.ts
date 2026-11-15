@@ -118,6 +118,11 @@ export class CrewTasks {
   }
 
   /** Está cuidando de um problema de dentro (a estufa)? A cena usa para mostrar onde ele está. */
+  /** Tem uma ordem (problema ou tarefa) agora? */
+  hasTask(role: Role): boolean {
+    return this.assignments.has(role);
+  }
+
   onInsideTask(role: Role): boolean {
     const a = this.assignments.get(role);
     const p = a && this.mission().state.problems.find((x) => x.uid === a.uid);
