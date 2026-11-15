@@ -613,13 +613,16 @@ function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
   return when === 'alert' ? t('msg.stormAlert.cme', { strength, speed, sol: sol ?? 0 }) : t('msg.stormToday.cme', { strength });
 }
 
-/** "O Sol ultimamente": erupções fortes reais nos últimos 30 dias, a mais recente e a dica da proteção. */
+/**
+ * "O Sol ultimamente": erupções fortes reais nos últimos 30 dias e a dica da proteção (2 frases, padrão ~400L). A mais
+ * recente, com a classe (ex.: M6.4), é detalhe do "modo cientista": fica na dica do mouse e no link do DONKI.
+ */
 function recentSunEl(r: RecentSun): HTMLElement {
   const latest = r.latest;
-  return h('div', { class: 'msg sun-recent' },
+  const detail = latest?.time ? t('msg.sunRecent.latest', { cls: latest.label, date: formatDate(latest.time) }) : undefined;
+  return h('div', { class: 'msg sun-recent', title: detail },
     h('strong', {}, t('msg.sunRecent.title')), ' ',
     r.count > 0 ? t('msg.sunRecent.active', { n: r.count, days: r.days }) : t('msg.sunRecent.calm', { days: r.days }), ' ',
-    latest?.time ? t('msg.sunRecent.latest', { cls: latest.label, date: formatDate(latest.time) }) + ' ' : '',
     t('msg.sunRecent.tip'),
     h('span', { class: 'meta' },
       h('span', { class: 'badge real' }, t('data.badge.snapshot', { date: formatDate(r.fetchedAt) })), ' ',

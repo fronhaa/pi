@@ -41,7 +41,7 @@ export const pt = {
   'end.won.title': 'Missão cumprida!',
   'end.won.text': 'A tripulação chegou ao fim do sol {sol} em segurança.',
   'end.lost.life.title': 'A missão acabou',
-  'end.lost.life.text': 'No sol {sol}, o suporte de vida chegou a zero. Faltou ar, água ou comida. Sem energia suficiente, a base não mantém a tripulação.',
+  'end.lost.life.text': 'No sol {sol}, faltou ar, água ou comida. Sem energia, a base não mantém a tripulação.',
   'end.lost.dose.title': 'A tripulação voltou para a Terra',
   'end.lost.dose.text': 'No sol {sol}, a dose de radiação chegou a 100. Sem blindagem, as tempestades solares pesam muito.',
   'end.stars': '{n} de 3 estrelas',
@@ -57,7 +57,7 @@ export const pt = {
   'report.shadow': 'Dia de sombra: os painéis geraram só {blocks} blocos.',
   'report.sunlight': 'Luz do Sol hoje: {light}% → os painéis geraram {blocks} blocos.',
   'report.night.shadow': 'Noite fria na sombra, cerca de −170 °C. Os aquecedores gastaram {cost} de bateria.',
-  'report.dust.noWind': 'Na Lua não há vento. A poeira continua nos painéis ({dust}%). Só um astronauta consegue limpar.',
+  'report.dust.noWind': 'Na Lua não há vento: a poeira fica nos painéis ({dust}%). Só um astronauta consegue limpar.',
 } as const;
 
 export const en: Record<keyof typeof pt, string> = {
@@ -98,7 +98,7 @@ export const en: Record<keyof typeof pt, string> = {
   'end.won.title': 'Mission accomplished!',
   'end.won.text': 'The crew made it safely to the end of sol {sol}.',
   'end.lost.life.title': 'The mission is over',
-  'end.lost.life.text': 'On sol {sol}, life support reached zero. The crew ran out of air, water or food. Without enough energy, the base cannot keep the crew alive.',
+  'end.lost.life.text': 'On sol {sol}, the crew ran out of air, water or food. Without energy, the base cannot keep them alive.',
   'end.lost.dose.title': 'The crew went back to Earth',
   'end.lost.dose.text': 'On sol {sol}, the radiation dose reached 100. Without shielding, solar storms hit hard.',
   'end.stars': '{n} of 3 stars',
@@ -114,5 +114,5 @@ export const en: Record<keyof typeof pt, string> = {
   'report.shadow': 'Shadow day: the panels made only {blocks} blocks.',
   'report.sunlight': 'Sunlight today: {light}% → the panels made {blocks} blocks.',
   'report.night.shadow': 'Cold night in the shadow, about −170 °C. The heaters used {cost} battery.',
-  'report.dust.noWind': 'The Moon has no wind. The dust stays on the panels ({dust}%). Only an astronaut can clean it.',
+  'report.dust.noWind': 'The Moon has no wind: the dust stays on the panels ({dust}%). Only an astronaut can clean it.',
 };
