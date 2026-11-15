@@ -148,7 +148,7 @@ A missão 4 é a melhor para contar a história: a CME do sol 14 (20 de maio de 
 - O alerta continua chegando um sol antes do impacto, agora com a data real do evento.
 - A dose continua sendo a escala do jogo (INTERPRETADO). O que é real é a data, o tipo e a velocidade da CME, nunca a dose.
 - As janelas são dados baixados. O selo é "dados reais baixados em 2026-11-14", nunca "ao vivo".
-- Na tela inicial do sol 1, um aviso diz a missão e a data real em que ela começa.
+- Logo depois da abertura (escolha do lugar), antes do sol 1 e do treino, uma janela "📅 Sua missão" diz a missão e a data real em que ela começa, com a fonte (NASA DONKI e JPL Horizons). No modo em grupo continua como aviso no começo da partida.
 - Todas as mensagens da Terra usam o atraso real do sol em que chegam.
 - Na tela final, o jogo mostra as datas da missão, as 3 tempestades com data, força e link para o DONKI, e o atraso real mínimo e máximo das mensagens.
 - A tela "Dados da NASA" mostra o DONKI e o JPL Horizons com o selo "dados reais baixados".
@@ -707,7 +707,7 @@ Uma faixa com os 4 astronautas. Cada ícone tem **no máximo 3 informações**; 
 
 ### Cartões "Você sabia?" desta parte
 
-Uma vez por partida cada um ([regras dos fatos](ciencia-marte.md#regras-deste-documento)):
+Uma vez por partida cada um ([regras dos fatos](ciencia-marte.md#regras-deste-documento)). Os fatos ligados a um astronauta aparecem num **balão em cima dele** (`src/ui/CrewBubble.ts`), não no meio da tela: exercício (F9, em quem vai à academia), estufa inflável (F20, em quem trabalha na estufa), gravidade (F12, em quem pulou) e tempo de EVA (na dupla que sai). O balão segue o astronauta na tela, fica preso na borda se ele sair do enquadramento, some em 9 s ou ao tocar e espera enquanto houver uma janela aberta.
 
 | Momento | Fato | Chave sugerida |
 | --- | --- | --- |
@@ -966,7 +966,7 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 | Celular | Nomes curtos (Power, Life, Shield), contador "Inside · Outside" só com alguém lá fora, mensagem da Terra compacta (a linha do atraso continua) |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |
-| Janelas | Treino dos sóis 1 a 3 (balão no alto), "Como jogar" (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
+| Janelas | Abertura com o logotipo Artemis Quest (carregamento, modo e lugar), "📅 Sua missão" (missão histórica), treino dos sóis 1 a 3 (balão no alto), balão de fato em cima do astronauta, "Como jogar" (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
 
 ### Prévia do plano de energia
 

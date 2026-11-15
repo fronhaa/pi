@@ -12,6 +12,7 @@ import { h, openDialog, patchChildren } from './dom';
 export function showModeChoice(onSolo: () => void, onGroup: () => void): void {
   openDialog({
     title: t('coop.mode.title'),
+    logo: true,
     body: [h('p', {}, t('coop.mode.text'))],
     actions: [
       { label: `🧑‍🚀 ${t('coop.mode.solo')}`, primary: true, onClick: onSolo },

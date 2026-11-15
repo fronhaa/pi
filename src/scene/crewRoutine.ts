@@ -153,10 +153,10 @@ interface Walker {
  */
 export class CrewRoutine {
   /** Primeira vez que alguém vai à academia (o jogo mostra o fato da NASA sobre exercício). */
-  onFirstExercise: () => void = () => {};
+  onFirstExercise: (role: Role) => void = () => {};
   private exerciseShown = false;
   /** Primeira vez que alguém chega para trabalhar na estufa (o jogo mostra o fato da estufa inflável da NASA). */
-  onFirstGreenhouse: () => void = () => {};
+  onFirstGreenhouse: (role: Role) => void = () => {};
   private greenhouseShown = false;
   private readonly walkers = Object.fromEntries(
     ROLES.map((r) => [r, { at: 'post', idle: 0, left: 0, station: 0, rested: true, pos: HABITAT_SPOTS[r].clone(), path: [], going: null, placed: false, wasInside: false, stepTime: 0 } as Walker]),
@@ -338,7 +338,7 @@ export class CrewRoutine {
           w.station = free;
           w.left = ROUTINE_GYM_SECONDS;
           // Primeira vez na partida: o fato real da NASA sobre exercício (F9).
-          if (!this.exerciseShown) this.onFirstExercise();
+          if (!this.exerciseShown) this.onFirstExercise(r);
           this.exerciseShown = true;
         }
       } else if (!w.path.length) {
@@ -459,7 +459,7 @@ export class CrewRoutine {
       } else if (WORK.includes(activity)) {
         if ((activity === 'task' || activity === 'harvest') && !this.greenhouseShown) {
           this.greenhouseShown = true;
-          this.onFirstGreenhouse();
+          this.onFirstGreenhouse(r);
         }
         // Trabalhando: de frente para o trabalho (vazamento, plantas ou bancada), nunca para a câmera.
         a.setLying(false);

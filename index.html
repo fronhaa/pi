@@ -23,6 +23,8 @@
       }
       #loading.hidden { opacity: 0; pointer-events: none; }
       #loading h1 { margin: 0; font-size: 48px; letter-spacing: 2px; text-shadow: 3px 3px 0 #fff; }
+      /* Logotipo do jogo (Artemis Quest), no lugar do título em texto. */
+      #loading .logo { display: block; width: min(520px, 86vw); height: auto; filter: drop-shadow(0 6px 0 rgba(71, 60, 58, 0.35)); }
       #loading .bar {
         position: relative; overflow: hidden;
         width: min(320px, 80vw); height: 22px;
@@ -48,7 +50,7 @@
   </head>
   <body class="loading">
     <div id="loading" role="status" aria-live="polite">
-      <h1>Missão Jezero</h1>
+      <h1><img class="logo" src="./assets/ui/artemis-quest-logo.png" alt="Artemis Quest" width="720" height="367" /></h1>
       <div class="bar" aria-hidden="true"></div>
       <div id="loading-status">Carregando…</div>
       <button type="button" onclick="location.reload()">Tentar de novo</button>

@@ -38,12 +38,22 @@ function realMarsPhoto(withCaption: boolean): HTMLElement {
 export function showPlaceChoice(onChoose: (place: 'mars' | 'moon') => void): void {
   openDialog({
     title: t('place.title'),
+    logo: true,
     body: [h('p', {}, t('place.text')), realMarsPhoto(true), h('p', {}, t('place.mars.hint')), h('p', {}, t('place.moon.hint'))],
     actions: [
       { label: t('place.mars'), primary: true, onClick: () => onChoose('mars') },
       { label: t('place.moon'), onClick: () => onChoose('moon') },
     ],
     row: true,
+  });
+}
+
+/** Missão histórica: logo depois da abertura, antes do sol 1 (as datas e as tempestades são reais). */
+export function showMissionStart(text: string, source: string, onGo: () => void): void {
+  openDialog({
+    title: t('mission.title'),
+    body: [h('p', {}, text), h('p', { class: 'source' }, h('small', {}, source))],
+    actions: [{ label: t('mission.go'), primary: true, onClick: onGo }],
   });
 }
 
