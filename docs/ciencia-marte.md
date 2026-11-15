@@ -303,8 +303,8 @@ Cartões de foto que passam ao lado do foguete na intro (`src/scene/LaunchScene.
 
 - **Fato (Lua):** a Apollo 11 foi lançada **"into an initial Earth-orbit of 114 by 116 miles"**. **"Two hours, 44 minutes and one-and-a-half revolutions after launch, the S-IVB stage reignited for a second burn of five minutes, 48 seconds, placing Apollo 11 into a translunar orbit."** ([NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/))
 - **Fato (Marte):** **"The ULA Atlas V's Centaur upper stage initially placed the Mars 2020 spacecraft into a parking orbit around Earth. The engine fired for a second time and the spacecraft separated from the Centaur as expected."** ([NASA, 2020](https://www.nasa.gov/news-release/nasa-ula-launch-mars-2020-perseverance-rover-mission-to-red-planet/))
-- **Criança (PT):** "Estamos em órbita da Terra. Toque num planeta e escolha a missão!" e "🔥 Motor ligado! Saímos da órbita da Terra rumo a Marte/à Lua."
-- **Criança (EN):** "We are in orbit around Earth. Tap a planet and pick your mission!" e "🔥 Engine on! We leave Earth orbit for Mars/the Moon."
+- **Criança (PT):** "Estamos em órbita da Terra. Toque em Marte ou na Lua e escolha a missão!" e "🔥 Motor ligado! Saímos da órbita da Terra rumo a Marte/à Lua."
+- **Criança (EN):** "We are in orbit around Earth. Tap Mars or the Moon and pick your mission!" e "🔥 Engine on! We leave Earth orbit for Mars/the Moon."
 - **No jogo:** o foguete começa em órbita na tela de escolha e sai dela ao escolher (`src/scene/LaunchScene.ts`, `rocketPath`); textos em `src/ui/PlaceChoice.ts` e `src/ui/LaunchIntro.ts`.
 - **Atenção:** a cena é cartoon: a órbita é bem mais alta que a real e a decolagem não aparece (o jogo começa com a nave já em órbita). Não dizer que a órbita "pega carona na gravidade": as fontes só dizem que a nave fica numa órbita de espera e depois liga o motor de novo.
 - Conferido em 15/11/2026.
