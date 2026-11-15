@@ -10,6 +10,7 @@ import {
   DOME_CENTER,
   DOME_RADIUS,
   GREENHOUSE_STAIRS,
+  GREENHOUSE_WORK_SPOT,
   STAIR_WIDTH,
   WALKWAY_WIDTH,
   HABITAT_SCALE,
@@ -28,13 +29,18 @@ const PLANT_OK = new THREE.Color(PALETTE.plant);
 const PLANT_DEAD = new THREE.Color(PALETTE.plantDead);
 /** Estufa inflável: gomos da membrana, cor da fibra óptica (luz do Sol) e dos LEDs de cultivo, altura dos LEDs. */
 const DOME_GORES = 12;
+/** Plantas nos canteiros da estufa (sempre as mesmas, por semente). */
+const GREENHOUSE_PLANTS = 56;
 /** Caixas de colisão em volta do anel de regolito da estufa. */
 const DOME_BERM_BOXES = 24;
 const FIBER_COLOR = 0xffd27a;
 const LED_COLOR = 0xe08cff;
 const LED_HEIGHT = 2.7;
-/** Luminárias da fibra óptica lá dentro (relativas ao centro da estufa) e a força do foco com o Sol pleno. */
-const FIBER_LAMPS: readonly [number, number][] = [[0.8, -3.6], [-1.2, 3.4]];
+/**
+ * Luminárias da fibra óptica lá dentro (relativas ao centro da estufa) e a força do foco com o Sol pleno. Ficam sobre
+ * os canteiros: longe da passarela (leste-oeste e o braço da garagem) e das escadas, onde não há plantas.
+ */
+const FIBER_LAMPS: readonly [number, number][] = [[-0.6, -3.3], [-3.7, 2.1]];
 const FIBER_LAMP_HEIGHT = 3.5;
 const FIBER_SPOT_INTENSITY = 14;
 
@@ -311,16 +317,21 @@ export class BaseStructures {
     this.buildGrowLights(center);
     // Canteiros: mais plantas na cúpula maior, fora da passarela que cruza a estufa de leste a oeste.
     const rng = seededRandom(3);
-    // Mais tentativas numa cúpula maior (a densidade de plantas fica parecida).
-    for (let i = 0; i < Math.round(48 * (r / 5) ** 2); i++) {
+    // Sorteia até a estufa ter GREENHOUSE_PLANTS plantas (espalhadas por área, não juntas no meio). As áreas livres
+    // (passarela, escadas, lugar do conserto) descartam muitos pontos, então tenta várias vezes.
+    let placed = 0;
+    for (let tries = 0; placed < GREENHOUSE_PLANTS && tries < 1500; tries++) {
       const a = rng() * Math.PI * 2;
-      const d = rng() * (r - 1.2);
+      const d = Math.sqrt(rng()) * (r - 1.2);
       const px = Math.cos(a) * d;
       const pz = Math.sin(a) * d;
       // Livre: embaixo da passarela (leste-oeste e o braço da garagem, ao sul) e na frente das escadas.
       if (Math.abs(pz) < WALKWAY_WIDTH / 2 + 0.5) continue;
       if (pz > 0 && Math.abs(px) < WALKWAY_WIDTH / 2 + 0.5) continue;
       if (GREENHOUSE_STAIRS.some((st) => Math.abs(center.x + px - st.top.x) < STAIR_WIDTH / 2 + 0.5 && (pz - (st.top.z - center.z)) * st.side > -0.2 && (pz - (st.harvest.z - center.z)) * st.side < 0.6)) continue;
+      // Onde o engenheiro fica consertando o vazamento.
+      if (Math.hypot(center.x + px - GREENHOUSE_WORK_SPOT.x, center.z + pz - GREENHOUSE_WORK_SPOT.z) < 0.9) continue;
+      placed++;
       const plant = toonMesh(new THREE.SphereGeometry(0.35 + rng() * 0.25, 10, 8), PALETTE.plant, 0.05);
       plant.position.set(center.x + px, 0.7 + rng() * 0.3, center.z + pz);
       this.plants.push(plant);
