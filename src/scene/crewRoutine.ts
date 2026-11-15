@@ -3,6 +3,7 @@ import { ROLES, type Role } from '@/sim/crew';
 import type { ProblemKind } from '@/sim/types';
 import { Astronaut, FACING_BED_FEET, type Crew } from './Crew';
 import {
+  BED_FRONT_Z,
   BUNK_LEVELS,
   BUNK_SPOTS,
   DOME_CENTER,
@@ -38,13 +39,13 @@ const LIE_DOWN_SECONDS = 1.5;
 const GET_UP_SECONDS = 1.3;
 /**
  * Como deita em cada cama (fração do tempo): até quando inclina para trás, quando começa a entrar e o arco do quadril.
- * Medido com o corpo do chibi em tamanho normal nas 4 camas (módulos em 100%, 1 m livre acima de cada colchão),
- * deitando e levantando: nada entra no chão nem num colchão, e no casco no máximo ~0,5 cm. Entrar mais cedo faz o
+ * Medido com o corpo do chibi em tamanho normal nas 4 camas (módulos em 100%, 1 m livre acima de cada colchão, camas
+ * no fundo do módulo), deitando e levantando: nada entra no casco, no chão nem num colchão. Entrar mais cedo faz o
  * calcanhar tocar o colchão (até 9 cm).
  */
 export const BED_MOVE = {
   lower: { leanEnd: 0.7, intoStart: 0.45, arc: 0.15 },
-  upper: { leanEnd: 0.75, intoStart: 0.45, arc: 0.3 },
+  upper: { leanEnd: 0.6, intoStart: 0.5, arc: 0.2 },
 };
 /** Corredor central: todos os módulos, os túneis e a passarela da cúpula ficam nesta linha (z) e neste piso (y). */
 const CORRIDOR_Z = DOME_CENTER.z;
@@ -56,7 +57,9 @@ const DOOR_INSIDE = new THREE.Vector3(HABITAT_POSITION.x, FLOOR_Y, HABITAT_POSIT
  * aqui, vira para os pés da cama e deita para trás (Astronaut.lieBlend). O corpo só entra na cama quando já está
  * quase deitado, para não bater na cama de cima nem sair do casco.
  */
-const BESIDE_BED_Z = CORRIDOR_Z + QUARTERS_LANE_Z;
+/** De pé ao lado da cama: o corpo (de lado, ~0,38 m para cada lado) fica a esta distância da frente do colchão. */
+const BESIDE_BED_GAP = 0.45;
+const BESIDE_BED_Z = CORRIDOR_Z + Math.min(QUARTERS_LANE_Z, BED_FRONT_Z + BESIDE_BED_GAP);
 /**
  * Alojamento: anda pela faixa da frente (QUARTERS_LANE_Z), não pelo eixo do casco, para as pernas não passarem pela
  * borda das camas de baixo. Entra e sai da faixa nas portas de acoplamento do módulo.
