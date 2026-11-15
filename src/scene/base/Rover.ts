@@ -265,6 +265,16 @@ export class Rover {
     return this.phase;
   }
 
+  /** Para onde o nariz aponta (0 = +X): os rastros das rodas seguem esta direção. */
+  get headingAngle(): number {
+    return this.heading;
+  }
+
+  /** Atolado (parado, inclinado): não deixa rastro novo. */
+  get isStuck(): boolean {
+    return this.stuckAt !== null;
+  }
+
   /** O rover está parado esperando um astronauta sair da frente? (para testes e interface) */
   get isWaiting(): boolean {
     return this.blocked;

@@ -5,6 +5,7 @@ import type { Resources } from '@/sim/types';
 import { SCENARIOS, scenarioOf, type Scenario } from '@/scenarios';
 import { Habitat } from './base/Habitat';
 import { Rover } from './base/Rover';
+import { RoverTracks } from './base/RoverTracks';
 import { Sky } from './base/Sky';
 import { BaseStructures } from './base/structures';
 import { buildTerrain } from './base/terrain';
@@ -45,6 +46,9 @@ export class BaseScene {
   private readonly habitat: Habitat;
   private readonly structures: BaseStructures;
   private readonly rover: Rover;
+  /** Rastros das rodas no chão (desbotam com o vento, F26). */
+  private readonly tracks = new RoverTracks();
+  private fadeIn = 0;
   private readonly mesas: THREE.Object3D[];
   /** Objetos só de um lugar (src/scenarios/*, buildExtras), escondidos nos outros. */
   private readonly extras = new Map<Location, THREE.Object3D>();
@@ -73,6 +77,8 @@ export class BaseScene {
     });
     this.rover = new Rover(this.obstacles, rocks);
     this.root.add(this.rover.root);
+    this.root.add(this.tracks.mesh);
+    this.tracks.setGround(this.scenario.terrain.soil, !this.scenario.airless);
     this.collectTerrainMaterials();
     for (const s of Object.values(SCENARIOS)) {
       const extra = s.buildExtras?.();
@@ -102,6 +108,8 @@ export class BaseScene {
     for (const m of this.mesas) m.scale.y = s.mesaHeight;
     for (const [id, extra] of this.extras) extra.visible = id === place;
     this.sky.setScenario(s);
+    // Na Lua não há vento: os rastros não desbotam.
+    this.tracks.setGround(s.terrain.soil, !s.airless);
   }
 
   /**
@@ -190,5 +198,13 @@ export class BaseScene {
       sunDir: this.sky.sunVector,
     });
     this.rover.update(dt, time, crew, s.scienceBlocks, s.night, s.sol ?? 0);
+    // Rastros: uma marca a cada pedaço andado; desbotam aos poucos (o vento apaga em meses, F26).
+    const rp = this.rover.root.position;
+    if (!this.rover.isStuck) this.tracks.drive(rp.x, rp.z, this.rover.headingAngle, s.sol ?? 0);
+    this.fadeIn -= dt;
+    if (this.fadeIn <= 0) {
+      this.fadeIn = 0.5;
+      this.tracks.fade(s.sol ?? 0, THREE.MathUtils.clamp(this.dayTime, 0, 1));
+    }
   }
 }

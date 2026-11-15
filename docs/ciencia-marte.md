@@ -41,6 +41,7 @@
 | F23 | O rover de ciência passa a noite onde está | O Perseverance não volta a uma base: dorme no lugar; o calor que sobra do gerador (MMRTG) aquece os eletrônicos nas noites frias; dirige de dia e "dorme" entre as atividades | [JPL: Perseverance, Power](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/) e blogs do Curiosity ([2023](https://science.nasa.gov/blog/sols-3882-3884-weekend-routine-for-a-red-rover/), [2024](https://science.nasa.gov/blog/sols-4193-4194-stay-overnight-no-touch-and-go/)) | Rover da base (comportamento à noite) | 1. Energia e noite |
 | F24 | Garagem para rover: a NASA não usa | Num estudo da NASA, uma garagem pressurizada para o rover tripulado "seria muito cara": a manutenção é feita em EVA. No acampamento base estudado, o rover tripulado se acopla a uma porta do habitat | [NASA JSC: Lunar Surface Scenarios (Anderson et al., 2008)](https://ntrs.nasa.gov/api/citations/20080026000/downloads/20080026000.pdf), p. 6, e [NASA JSC: Common Habitat Base Camp (Howard)](https://ntrs.nasa.gov/api/citations/20210020956/downloads/A%20Common%20Habitat%20Basecamp%20for%20Moon%20and%20Mars%20Surface%20Operations.pdf), p. 4 e 14 | Garagem do rover (ver Atenção) | Contexto |
 | F25 | Como o Perseverance coleta e guarda as amostras | A broca do braço tira um cilindro de rocha (~13 mm × 60 mm) dentro do tubo; o tubo vai para dentro do rover, é medido, fotografado, lacrado e guardado. As amostras ficam no rover; 10 tubos foram deixados no chão em Three Forks como reserva | [JPL: Perseverance Rover](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/perseverance_rover/), [NASA: depósito Three Forks (2023)](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-perseverance-rover-completes-mars-sample-depot/), [NASA: 33 tubos (2025)](https://science.nasa.gov/photojournal/the-33-sample-tubes-collected-by-perseverance/) | Rover e tubos de amostra | 4. Jogar só no seguro também falha |
+| F26 | Os rastros do rover duram meses | Os rastros do Curiosity, vistos de órbita, devem durar meses antes de o vento apagá-los; na tempestade de poeira global de 2007, os do Opportunity ficaram intactos | [JPL (2025)](https://www.jpl.nasa.gov/news/nasa-orbiter-spots-curiosity-rover-making-tracks-to-next-science-stop/) e [HiRISE: Gone with the Wind](https://www.uahirise.org/epo/nuggets/gone-with-the-wind.pdf) | Rastros das rodas no chão (`src/scene/base/RoverTracks.ts`) | Contexto |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -224,6 +225,14 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Criança (EN):** "The rover keeps each sample in a sealed tube inside itself. Some tubes were left on the ground as a backup."
 - **No jogo:** o contador "Tubos de amostra" (F14). A entrega das amostras na garagem e a manutenção pelo cientista **não** têm base na NASA (F24).
 - **Atenção:** os números mudam com a missão; confira de novo antes de usar. O plano para trazer as amostras à Terra (Mars Sample Return) está em revisão; não diga como nem quando elas virão.
+
+### F26. Os rastros do rover duram meses
+
+- **Fato:** os rastros das rodas do Curiosity, vistos pela câmera HiRISE em órbita, **"devem durar meses antes de serem apagados pelo vento"**; numa imagem de 2025 eles cobriam cerca de 320 m. Na **tempestade de poeira global de julho de 2007**, os ventos fortes levaram a areia das marcas escuras de vento em volta da cratera Victoria, mas, **"surpreendentemente"**, **deixaram os rastros do Opportunity intactos**. ([JPL, 2025](https://www.jpl.nasa.gov/news/nasa-orbiter-spots-curiosity-rover-making-tracks-to-next-science-stop/); [HiRISE, Gone with the Wind](https://www.uahirise.org/epo/nuggets/gone-with-the-wind.pdf))
+- **Criança (PT):** "Os rastros do rover ficam no chão por meses. Aos poucos, o vento de Marte apaga."
+- **Criança (EN):** "The rover's tracks stay on the ground for months. Little by little, the Martian wind erases them."
+- **No jogo:** o rover deixa marcas das rodas no chão, que desbotam aos poucos com os sóis (60 sóis para sumir; numa missão de 15 sóis o rastro do sol 1 ainda aparece). A tempestade de poeira **não** acelera (é o que mostra o caso de 2007). Na Lua, sem vento, as marcas não desbotam.
+- **Atenção:** "meses" é o que a NASA diz, sem número exato; os 60 sóis são escolha do jogo (INTERPRETADO). Não diga que a tempestade apaga os rastros. A HiRISE é a câmera da NASA na sonda Mars Reconnaissance Orbiter, operada pela Universidade do Arizona (o PDF é do site oficial da câmera).
 
 ## Ligação com os objetivos de aprendizagem
 
@@ -515,6 +524,16 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
   - Depósito: "the sample depot was completed Jan. 28, 2023, the 690th day, or sol, of the mission."
   - 33 tubos: "Perseverance has collected 27 rock cores, two samples of regolith" e "one atmospheric sample"; "The other 23 samples collected thus far remain aboard the rover."; "as of July 24, 2025, the 1,574th Martian day (or sol) of the mission."
 
+### 26. JPL: NASA Orbiter Spots Curiosity Rover Making Tracks (24/04/2025) e HiRISE: Gone with the Wind
+
+- **Links:** <https://www.jpl.nasa.gov/news/nasa-orbiter-spots-curiosity-rover-making-tracks-to-next-science-stop/> (release 2025-059); <https://www.uahirise.org/epo/nuggets/gone-with-the-wind.pdf> (lido com `pdftotext`). Lidos em 15/11/2026.
+- **Usado em:** F26
+- **Trechos:**
+  - JPL: "Likely to last for months before being erased by wind, the tracks span about 1,050 feet (320 meters)."
+  - JPL (legenda): "which can linger on the Martian surface for months before being erased by the wind"
+  - HiRISE: "Strong surface winds during the global dust storm of July, 2007 blew away the basaltic sand making up the wind streaks but, surprisingly, left the rover's tracks intact."
+  - HiRISE: "The streaks gradually reappeared, starting at the alcoves in the crater's rim, and were completely restored to their former appearance by July, 2008, one Earth year after the dust storm."
+
 ### 9. Buscas feitas (para achar as fontes acima)
 
 | Busca | Domínios | Levou a |
@@ -544,6 +563,7 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
 | "NASA Mars surface field station garage for rovers maintenance pressurized garage" | nasa.gov, ntrs.nasa.gov | Fonte 24 |
 | "Perseverance how samples are collected coring drill sample tube sealed stored inside rover Adaptive Caching Assembly" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 25 |
 | "Perseverance Three Forks sample depot tubes left on surface Mars Sample Return retrieve" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 25 |
+| "Mars rover tracks erased by wind dust fading HiRISE orbit tracks disappear Opportunity Spirit" | nasa.gov, jpl.nasa.gov, science.nasa.gov, uahirise.org | Fonte 26 |
 
 Os números entraram a partir do **documento aberto**, não dos resumos das buscas. Um exemplo: o resumo da busca dizia "0,4 a 0,5%" de perclorato, mas o PDF diz "0,3 a 0,5%" (p. 16), e é esse que está aqui.
 
