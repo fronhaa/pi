@@ -42,9 +42,9 @@ export function showPlaceChoice3D(
         type: 'button',
         class: `btn place3d-level${level === preferred ? ' primary' : ''}`,
         title: t(`level.${level}.hint` as StringKey),
-        'aria-label': `${name}: ${levelAria(level)}`,
+        'aria-label': `${name}: ${levelAria(level, place)}`,
         onclick: () => finish(place, level),
-      }, ...levelContent(level)) as HTMLButtonElement,
+      }, ...levelContent(level, place)) as HTMLButtonElement,
     );
     const levels = h('div', { id: levelsId, class: 'place3d-levels', role: 'group', 'aria-label': t('coop.level') }, ...levelButtons);
     const planetBtn = h('button', { type: 'button', class: 'place3d-pick', 'aria-expanded': 'false', 'aria-controls': levelsId },

@@ -133,7 +133,7 @@ export function showEnd(state: GameState, onAgain: () => void): void {
       h('div', { class: 'stars', 'aria-label': t('end.stars', { n: stars }) },
         ...[1, 2, 3].map((i) => h('span', { class: i <= stars ? '' : 'off', 'aria-hidden': 'true' }, '★'))),
       // 3 estrelas no Fácil não são 3 estrelas no Difícil: o nível aparece junto.
-      h('p', { class: 'level-badge' }, t('end.level', { name: levelAria(state.difficulty ?? 'medium') })),
+      h('p', { class: 'level-badge' }, t('end.level', { name: levelAria(state.difficulty ?? 'medium', state.location) })),
       h('ul', { class: 'criteria' }, ...criteria.map(([ok, key]) => h('li', {}, `${ok ? '✅' : '⬜'} ${t(key, { limit: doseFor3(state.location), goal })}`))),
       hist ? missionRecap(hist) : null,
       h('h3', {}, t('end.learned')),
