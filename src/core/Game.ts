@@ -19,6 +19,8 @@ import type { CrewMotion } from '@/scene/crewMotion';
 import { Hud } from '@/ui/Hud';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { showCard, showEnd, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
+import { IntroGuide } from '@/ui/IntroGuide';
+import { IntroDirector } from './intro';
 import { showModeChoice } from '@/ui/coop';
 import { formatDate, getLang, setLang, setPlace, t, type StringKey } from '@/i18n';
 import { CoopClient, coopServerUrl } from '@/net/CoopClient';
@@ -33,6 +35,8 @@ import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 const LOOK_AT_CAMERA_SECONDS = 2;
 /** Duração mínima da noite antes do relatório (ms). */
 const NIGHT_MS = 2200;
+/** Dia do treino (sóis 1 a 3, sem problemas): só para ver o Sol cruzar o céu (s). Visual, não é regra. */
+const INTRO_DAY_SECONDS = 12;
 /** A noite espera a tripulação entrar, mas no máximo isto (ms); quem não chegou entra direto. */
 const NIGHT_MAX_MS = 6000;
 
@@ -56,6 +60,8 @@ export class Game {
   private readonly crew = new Crew();
   private readonly routine: CrewRoutine;
   private readonly hud: Hud;
+  /** Treino dos sóis 1 a 3 (só solo). */
+  private readonly intro: IntroDirector;
 
   private mission!: Mission;
   /** Onde fica a base (solo). O modo em grupo é sempre em Marte, por enquanto. */
@@ -81,6 +87,8 @@ export class Game {
   // Dia em tempo real: problemas pela base e tempo da tripulação (GDD).
   private phase: DayPhase = 'morning';
   private dayElapsed = 0;
+  /** Duração do dia de hoje (s): com problemas, a do jogo; no treino, um dia curto só para ver o Sol cruzar o céu. */
+  private dayLength: number = CONFIG.problems.daySeconds;
   private paused = false;
   private selected: Role = 'commander';
   private readonly tasks: CrewTasks;
@@ -149,7 +157,17 @@ export class Game {
         this.hud.render();
       },
       onHowTo: () => showTutorial(() => {}),
+      onToggleHull: () => this.base.setHullsOpen(!this.base.hullsOpen),
+      hullsOpen: () => this.base.hullsOpen,
       nightCost: () => (this.coop || !this.mission ? CONFIG.battery.nightCost : this.mission.nightCost()),
+    });
+
+    // Treino dos sóis 1 a 3 (só solo): o guia na tela e o que a cena mostra junto.
+    this.intro = new IntroDirector({
+      base: this.base,
+      guide: new IntroGuide(),
+      location: () => this.location,
+      onHullChange: () => this.hud.render(),
     });
 
     this.targetMarker = new THREE.Mesh(
@@ -223,12 +241,12 @@ export class Game {
 
   // ---------- modo e lugar ----------
 
-  /** Solo: escolhe Marte ou Lua, cria a missão do lugar e mostra o tutorial. */
+  /** Solo: escolhe Marte ou Lua, cria a missão do lugar e começa o treino dos sóis 1 a 3 (o guia ensina na hora). */
   private startSolo(): void {
     showPlaceChoice((place) => {
       this.setLocation(place);
       this.newMission();
-      showTutorial(() => this.beginSol());
+      this.beginSol();
     });
   }
 
@@ -257,6 +275,8 @@ export class Game {
   }
 
   private startCoop(url: string, saved?: { code: string; token: string }): void {
+    // Em grupo o servidor conduz o sol: sem o guia do treino (as regras dos sóis 1 a 3 são as mesmas).
+    this.intro.reset(false);
     this.coop = new CoopMode(this.coopHost(), url, saved);
   }
 
@@ -440,10 +460,13 @@ export class Game {
     const m = this.mission;
     if (!m.isPlanValid(plan) || m.state.pendingCard) return;
     this.plan = plan;
-    if (m.state.problems.length === 0) {
+    const training = this.intro.active(m.state.sol);
+    if (m.state.problems.length === 0 && !training) {
       this.endSol(plan);
       return;
     }
+    // Treino (sóis 1 a 3, sem problemas): um dia curto para ver o Sol cruzar o céu e os painéis trabalharem.
+    this.dayLength = m.state.problems.length === 0 ? INTRO_DAY_SECONDS : CONFIG.problems.daySeconds;
     this.phase = 'day';
     this.dayElapsed = 0;
     this.paused = false;
@@ -488,8 +511,8 @@ export class Game {
     for (const p of port.state.problems) {
       if (p.status === 'open') this.markers.setProgress(p.uid, p.progress, this.tasks.isWorking(p.uid));
     }
-    const allDone = port.state.problems.every((p) => p.status === 'done');
-    if (this.dayElapsed >= CONFIG.problems.daySeconds || allDone) this.endDay();
+    const allDone = port.state.problems.length > 0 && port.state.problems.every((p) => p.status === 'done');
+    if (this.dayElapsed >= this.dayLength || allDone) this.endDay();
   }
 
   private endDay(): void {
@@ -539,11 +562,12 @@ export class Game {
     const port = this.port;
     const coopRemaining = this.coop?.dayRemaining;
     this.hud.setDay({
-      remaining: coopRemaining ?? Math.max(0, Math.ceil(CONFIG.problems.daySeconds - this.dayElapsed)),
+      remaining: coopRemaining ?? Math.max(0, Math.ceil(this.dayLength - this.dayElapsed)),
       paused: this.paused,
       selected: this.selected,
       evaBanned: port.evaBanned,
       evaActive: this.tasks.evaActive,
+      training: !this.coop && port.state.problems.length === 0 && this.intro.active(port.state.sol),
       crew: ROLES.map((role) => ({ role, place: this.tasks.placeOf(role) })),
       problems: port.state.problems
         .filter((p) => p.status !== 'pending')
@@ -560,6 +584,8 @@ export class Game {
     // Lua: erupções reais sorteadas (o atraso das missões históricas é Terra-Marte; não serve para a Lua).
     const historical = this.location === 'mars' ? pickHistorical(this.missions.missions, seed, isFirstGame()) : null;
     this.mission = new Mission(seed, this.flares.flares, historical, this.location);
+    // Solo começa pelo treino (a base fechada); em grupo, sem treino.
+    this.intro.reset(!this.coop);
     this.hud.setState(this.mission.state);
     this.updateScene();
   }
@@ -574,6 +600,7 @@ export class Game {
     if (s.sol === 1 && s.historical) {
       this.hud.toast(t('mission.start', { id: s.historical.id, date: formatDate(s.historical.startUtc) }), t('mission.source'));
     }
+    this.intro.morning(s, this.mission.nightCost());
     if (s.pendingCard) {
       showCard(s.pendingCard, (option) => {
         this.port.dispatch({ type: 'answerCard', option });
@@ -588,6 +615,7 @@ export class Game {
     const m = this.mission;
     if (!m.isPlanValid(plan) || m.state.pendingCard) return;
     const stormTonight = m.stormToday !== undefined;
+    this.intro.night(m.state.sol);
     this.shadowNight = m.shadowLeft() > 0;
     this.nightSun = m.sunlightToday() / 100;
     const { report } = this.port.dispatch({ type: 'endSol', plan });
@@ -676,7 +704,7 @@ export class Game {
   private dayTime(): number {
     if (this.night) return 1.15;
     if (this.phase === 'day') {
-      const total = CONFIG.problems.daySeconds;
+      const total = this.coop ? CONFIG.problems.daySeconds : this.dayLength;
       const elapsed = this.coop ? total - (this.coop.dayRemaining ?? total) : this.dayElapsed;
       return 0.25 + 0.6 * THREE.MathUtils.clamp(elapsed / total, 0, 1);
     }

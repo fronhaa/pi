@@ -60,7 +60,7 @@ Exemplo de como encurtar sem perder o conteúdo:
 - **Alvos de toque grandes:** no mínimo **44 × 44 px** (os botões + e − já seguem isso).
 - **Sem pressa obrigatória.** Tudo que corre em tempo real pode ser pausado e desacelerado (já está no GDD).
 - **A cor nunca é o único sinal:** número, ícone e texto junto (já está no GDD).
-- **Aprende jogando:** tutorial de no máximo 3 passos; cada regra nova é explicada na hora em que aparece, não antes.
+- **Aprende jogando:** tutorial de no máximo 3 passos; cada regra nova é explicada na hora em que aparece, não antes. Os sóis 1 a 3 são um treino guiado com até 3 passos por vez ([GDD](game-design.md#introdução-sóis-1-a-3)).
 
 ### Carga de informação
 
@@ -119,7 +119,7 @@ Para quem implementa (inicialmente o Marcelo). **Corrigir** = problema encontrad
 | 4 | Corrigir | Incluir o pulo na dica de toque (`crew.hint.touch`) quando o item 1 existir | A dica precisa mostrar tudo o que dá para fazer | A dica cita andar e pular |
 | 5 | Decidir | **Revelar as barras aos poucos:** sol 1 mostra bateria, vida e blindagem; dose aparece no primeiro alerta de tempestade; ciência quando a criança põe o primeiro bloco nela | 5 barras + poeira de uma vez é muito para 7 anos; o desafio pede 2 a 3 recursos | Sol 1 com no máximo 3 barras; cada barra nova chega com o "?" aberto uma vez |
 | 6 | Decidir | **Pergunta antes e depois** ([seção 5](#pergunta-antes-e-depois-dentro-do-jogo)) | Dá um número de impacto para o pitch, sem coletar dados | As duas telas existem, nos dois idiomas, sem nada salvo fora do aparelho |
-| 7 | Decidir | **Tempo da tripulação mais tarde:** problemas pela base só a partir do sol 5 (hoje o GDD diz sol 3), ou como opção "desafio" | Tempo real + energia + cartas no mesmo sol sobrecarrega 7 anos | Sóis 1 a 4 têm uma decisão principal só |
+| 7 | Decidir | **Tempo da tripulação mais tarde:** problemas pela base só a partir do sol 5 (desde 15/11/2026 começam no sol 4, depois do [treino dos sóis 1 a 3](game-design.md#introdução-sóis-1-a-3)), ou como opção "desafio" | Tempo real + energia + cartas no mesmo sol sobrecarrega 7 anos | Sóis 1 a 4 têm uma decisão principal só |
 | 8 | Decidir | **Cooperativo:** modo de 2 jogadores (Terra e Marte) é o padrão em sala; 4 papéis viram opção avançada | 4 papéis negociando é ótimo para 10 a 12, pesado para 7 | Menu de cooperativo abre em 2 jogadores |
 | 9 | Decidir | **Diversidade da tripulação** ([seção 4](#4-representatividade)) na Art Bible e nos modelos | Toda criança se ver no jogo | CHR-001 a 004 definidos com diversidade de gênero e tom de pele |
 | 10 | Decidir | **Guia para professor** ([seção 5](#guia-para-professor-1-página)) | Alcance em escola | Página publicada junto com o jogo |
