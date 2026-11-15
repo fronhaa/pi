@@ -254,7 +254,8 @@
   .plan-row { grid-template-columns: 1fr auto 32px auto; gap: 6px; }
   .plan-row button { width: 40px; height: 40px; }
   .plan-row .name small { display: none; }
-  .crew-chip { position: fixed; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px); top: 34vh; font-size: 12px; white-space: normal; text-align: center; }
+  /* Logo abaixo dos recursos, na faixa livre da grade (mesmo espaçamento dos painéis). */
+  .crew-chip { grid-row: 3; grid-column: 1; font-size: 12px; white-space: normal; text-align: center; }
   .toast { top: 40vh; font-size: 14px; }
 }
 
