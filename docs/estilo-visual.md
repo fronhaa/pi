@@ -177,8 +177,9 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 
 - **O foguete já está no espaço**, em órbita da Terra (órbita de espera, F37): não há decolagem nem base de lançamento.
 - **Tela de escolha (Marte ou Lua):** câmera de longe: a Terra embaixo, a órbita tracejada e o foguete dando a volta
-  com o motor desligado (maior que o real, para não virar um pontinho). Marte e Lua em 3D presos à câmera, no alto
-  (lado a lado no celular; dos lados no computador). A criança toca no planeta: botões de verdade
+  com o motor desligado (maior que o real, para não virar um pontinho). Marte e Lua em 3D presos à câmera, com noção de
+  profundidade: a Lua grande, perto da Terra; Marte pequeno, no alto do outro lado e lá no fundo (`PICK_PORTRAIT`,
+  `PICK_LANDSCAPE`). A criança toca no planeta: botões de verdade
   (`src/ui/PlaceChoice.ts`) do tamanho do planeta, com nome e dica curta; o planeta cresce sob o dedo ou o mouse.
 - **Viagem (~7 s, só visual):** ao escolher, os planetas da escolha somem, o motor liga ("Motor ligado!") e o foguete
   sai da órbita pela tangente, de onde estiver. A câmera vai para trás dele (o "para cima" da tela vira a direção da

@@ -38,6 +38,18 @@ const DEST_X = -11;
 const PICK_DIST = 40;
 /** Raio dos planetas como são montados (a escala ajusta para a tela de escolha e para o destino). */
 const PLANET_R = 14;
+/**
+ * Onde ficam Marte e Lua na tela de escolha (ver `layoutPicker`). A Terra fica embaixo, no meio; a Lua ao lado dela,
+ * grande; Marte pequeno, no alto do outro lado, bem mais fundo.
+ */
+const PICK_PORTRAIT = {
+  moon: { x: 0.55, y: 0.22, r: 0.11, depth: 1 },
+  mars: { x: -0.45, y: 0.6, r: 0.07, depth: 9 },
+};
+const PICK_LANDSCAPE = {
+  moon: { x: 0.5, y: 0.08, r: 0.17, depth: 1 },
+  mars: { x: -0.55, y: 0.45, r: 0.1, depth: 9 },
+};
 /** De longe o foguete fica maior que o real (cartoon), senão vira um pontinho. */
 const ORBIT_BOOST = 3.5;
 
@@ -100,9 +112,9 @@ export class LaunchScene {
   /** Marte e Lua da tela de escolha (presos à câmera). */
   private readonly picker = new THREE.Group();
   private readonly planets: Record<Place, THREE.Group>;
-  private readonly planetRadius = { mars: 1, moon: 1 };
+  /** Raio de cada planeta da escolha na tela, em fração da meia-altura. */
+  private readonly planetScreenR = { mars: 0.1, moon: 0.1 };
   private hover: Place | null = null;
-  private hh = 1;
   private readonly path = new THREE.Vector3();
   private readonly tmpA = new THREE.Vector3();
   private readonly tmpB = new THREE.Vector3();
@@ -140,7 +152,7 @@ export class LaunchScene {
   planetScreen(place: Place): { x: number; y: number; r: number } {
     const p = this.planets[place].getWorldPosition(this.tmpB).project(this.camera);
     const w = this.height * this.aspect;
-    return { x: ((p.x + 1) / 2) * w, y: ((1 - p.y) / 2) * this.height, r: (this.planetRadius[place] / this.hh) * (this.height / 2) };
+    return { x: ((p.x + 1) / 2) * w, y: ((1 - p.y) / 2) * this.height, r: this.planetScreenR[place] * (this.height / 2) };
   }
 
   /** Escolheu: o motor liga e o foguete sai da órbita, de onde estiver, rumo ao destino. */
@@ -271,25 +283,27 @@ export class LaunchScene {
     });
   }
 
-  /** Marte e Lua da tela de escolha: no alto, lado a lado; somem (encolhem) quando a criança escolhe. */
+  /**
+   * Marte e Lua da tela de escolha, com noção de profundidade: a Lua perto da Terra (grande, na frente) e Marte bem
+   * longe (pequeno, no alto e lá no fundo). `x`, `y` e `r` em fração da meia-tela (r pela altura); `depth` multiplica
+   * a distância da câmera (mais longe = a perspectiva faz o resto). Somem (encolhem) quando a criança escolhe.
+   */
   private layoutPicker(show: number): void {
     this.picker.visible = show > 0.01;
     if (!this.picker.visible) return;
     const time = (performance.now() - this.created) / 1000;
-    const hh = PICK_DIST * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
-    const hw = hh * this.aspect;
-    this.hh = hh;
+    const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
     const portrait = this.aspect < 0.8;
-    const r = portrait ? Math.min(0.34 * hw, 0.2 * hh) : Math.min(0.2 * hw, 0.27 * hh);
-    const py = portrait ? 0.38 * hh : 0.3 * hh;
-    // Perto do meio no computador: nas bordas da tela a perspectiva achata as esferas.
-    const px = portrait ? 0.5 * hw : 0.62 * hw;
-    for (const [place, sx] of [['mars', -1], ['moon', 1]] as const) {
+    const spots = portrait ? PICK_PORTRAIT : PICK_LANDSCAPE;
+    for (const place of ['mars', 'moon'] as const) {
+      const { x, y, r, depth } = spots[place];
+      const d = PICK_DIST * depth;
+      const hh = d * tan;
       const g = this.planets[place];
-      this.planetRadius[place] = r * (this.hover === place ? 1.12 : 1);
-      const target = (this.planetRadius[place] / PLANET_R) * show;
+      this.planetScreenR[place] = r * (this.hover === place ? 1.12 : 1);
+      const target = ((this.planetScreenR[place] * hh) / PLANET_R) * show;
       g.scale.setScalar(g.scale.x + (target - g.scale.x) * 0.2);
-      g.position.set(sx * px, py + Math.sin(time * 1.3 + sx) * 0.02 * hh, -PICK_DIST);
+      g.position.set(x * hh * this.aspect, (y + Math.sin(time * 1.3 + depth) * 0.01) * hh, -d);
       g.rotation.y = time * 0.25;
     }
   }
