@@ -46,16 +46,17 @@ Ao criar alertas, missões ou textos de interface, siga o modelo da coluna da di
 | **Tempestade de poeira** | *"A severe Martian dust storm is approaching, which will reduce solar array efficiency by 80%."* | *"⚡ **Dust storm coming!** Solar panels will lose power. Charge the batteries now!"* |
 | **Limite de EVA / radiação** | *"Extravehicular activity duration has exceeded safe ionizing radiation limits."* | *"☢️ **Too much radiation outside!** Bring your astronaut back inside the base."* |
 | **Tempo dentro do habitat** | *"Crew members must remain inside the pressurized habitat for 85% of the week to recover."* | *"🏠 **Astronaut is tired!** People must stay inside the base most of the week to stay safe. Send a **Rover** instead!"* |
-| **Rover de mineração cheio** | *"The autonomous mining rover has reached its maximum regolith capacity of 80 kg."* | *"🤖 **Mining Rover is full!** It dug up **80 kg of icy dirt**. Send it back to base!"* |
+| **Rover atolado** | *"The rover’s wheels have lost traction in unconsolidated regolith; today’s science blocks were forfeited."* | *"🤖 **Rover is stuck!** Its wheels sank in soft sand. Today’s science is lost."* |
 | **Rover científico (tubos)** | *"Perseverance-class rover has filled 10 of 38 titanium sample tubes."* | *"🧪 **New rock sample!** Your Science Rover has **10 of 38 tubes** full."* |
-| **Luz do Sol por fibra óptica** | *"Optical fiber solar concentrators are closed due to high atmospheric optical depth."* | *"☀️ **Sun shield closed!** It is too dusty outside. Turning on **purple LED lights** for the plants."* |
+| **Luz do Sol por fibra óptica** | *"Optical fiber solar concentrators are closed due to high atmospheric optical depth."* | *"☀️ **Sun shield closed!** It is too dusty outside. Turning on the **LED lights** for the plants."* |
 | **Falta de água / ISRU** | *"Hydroponic crops require additional water extracted from subsurface ice deposits."* | *"🌱 **Plants are thirsty!** Melt more Mars ice in the oven to make clean water."* |
-| **Alerta solar (API DONKI)** | *"Coronal Mass Ejection detected. Immediate shelter protocol required for all EVA personnel."* | *"🚨 **Solar Storm Alert!** Dangerous sun waves are coming! Move everyone to the **Ice Shelter** now!"* |
+| **Alerta solar (API DONKI)** | *"Coronal Mass Ejection detected. Immediate shelter protocol required for all EVA personnel."* | *"🚨 **Solar Storm Alert!** Dangerous sun waves are coming! Move everyone to the **shelter** now!"* |
 
-> A tabela mostra o **tom e a forma**. Alguns sistemas dela (rover de mineração, fibra óptica, abrigo de gelo, ISRU)
+> A tabela mostra o **tom e a forma**. Alguns sistemas dela (fibra óptica que fecha com poeira, ISRU com forno)
 > ainda não existem no jogo; o número de um fato só entra num texto depois de estar em
 > [ciencia-marte.md](ciencia-marte.md), com fonte (ex.: no jogo o abrigo é de **regolito**, e a conta do tempo dentro
-> do habitat dá **pelo menos 86%**, no GDD).
+> do habitat dá **pelo menos 86%**, no GDD). Nenhum exemplo pode contradizer um fato registrado: o rover de ciência
+> **não volta à base** (F23) e guarda as amostras dentro dele (F25).
 
 ## 3. Acessibilidade e áudio (requisito técnico recomendado)
 
