@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MOON_PALETTE, PALETTE, addOutline, toonMaterial, toonMesh } from '@/render/toon';
+import { MOON_PALETTE, PALETTE, toonMaterial, toonMesh } from '@/render/toon';
 import { t as tr, type StringKey } from '@/i18n';
 import { heliocentric, moonAngle, orbitPath, type Vec2 } from './solarSystem';
 
@@ -169,6 +169,14 @@ export class LaunchScene {
   private vLeave = 0;
   /** Planeta escolhido (o outro some logo, para ficar claro para onde o foguete vai). */
   private chosen: Place | null = null;
+  /**
+   * O planeta escolhido VIRA o destino da viagem, sem corte: o destino começa onde o planeta estava na escolha (no
+   * plano da Terra), do mesmo tamanho na tela, e desliza até a posição de chegada enquanto a câmera desce.
+   */
+  private readonly destStart = new THREE.Vector3();
+  private destStartScale = 1;
+  /** Materiais do mapa (Sol e órbitas) que somem aos poucos na saída, com a opacidade original em userData. */
+  private readonly mapFade: THREE.Material[] = [];
   private hover: Place | null = null;
   private readonly path = new THREE.Vector3();
   private readonly tmpA = new THREE.Vector3();
@@ -263,6 +271,11 @@ export class LaunchScene {
     // até o ponto de saída e dali vai em linha reta. O ponto de saída é onde a reta TANGENTE à órbita passa pelo
     // alvo: assim o foguete sai apontando para o planeta (sair na direção Terra → planeta erraria por um raio de
     // órbita, e a Lua fica perto). Ponto de saída muito perto: dá mais uma volta (senão teria que frear).
+    // O destino começa onde o planeta está agora, do mesmo tamanho na tela (ver destStart).
+    this.destStart.copy(target);
+    this.destStartScale = this.isMap
+      ? this.bodies[place].r / PLANET_R
+      : (this.planetScreenR[place] * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.position.z) / PLANET_R;
     const depart = this.tangentDeparture(target);
     this.dir.copy(target).sub(this.orbitPoint(depart, this.tmpA)).setZ(0).normalize();
     let sweep = (((depart - this.thetaStart) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
@@ -411,11 +424,16 @@ export class LaunchScene {
     this.orbitLine.visible = chase < 0.98;
 
     // Destino: sempre à frente e atrás do foguete, crescendo enquanto ele "se aproxima".
-    const appear = smooth((t - T_DEST) / 1);
-    this.dest.visible = appear > 0.01;
-    this.dest.position.copy(path).addScaledVector(this.dir, destH).addScaledVector(this.right, DEST_X).setZ(DEST_Z);
-    this.dest.scale.setScalar(0.35 + 0.95 * smooth((t - T_DEST) / 4.4) * appear);
+    // Destino: começa no lugar do planeta escolhido (sem corte) e vai, junto com a câmera, para a posição "de cinema",
+    // sempre à frente e atrás do foguete, crescendo enquanto ele se aproxima.
+    this.dest.visible = !idle;
+    this.tmpB.copy(path).addScaledVector(this.dir, destH).addScaledVector(this.right, DEST_X).setZ(DEST_Z);
+    this.dest.position.copy(this.destStart).lerp(this.tmpB, chase);
+    const cinemaScale = 0.35 + 0.95 * smooth((t - T_DEST) / 4.4);
+    this.dest.scale.setScalar(this.destStartScale + (cinemaScale - this.destStartScale) * chase);
     this.dest.rotation.y = t * 0.15;
+    // Na escolha o planeta fica "em pé"; inclina aos poucos para o ângulo da chegada (sem tranco).
+    this.dest.rotation.z = 0.35 * chase;
 
     // Linhas de velocidade depois de sair da órbita (no referencial da viagem).
     const speed = smooth((t - T_LEAVE) / 0.6) * (1 - smooth((t - T_ARRIVE) / 0.8));
@@ -491,6 +509,8 @@ export class LaunchScene {
       const g = this.planets[place];
       this.planetScreenR[place] = r * (this.hover === place ? 1.12 : 1);
       // O planeta que não foi escolhido some logo; o escolhido fica até a câmera descer até o foguete.
+      // O escolhido vira o destino da viagem (some daqui na hora); o outro some aos poucos.
+      g.visible = this.chosen !== place;
       const keep = this.chosen && this.chosen !== place ? 1 - this.sinceChoice(0.3) : show;
       const target = ((this.planetScreenR[place] * hh) / PLANET_R) * keep;
       g.scale.setScalar(g.scale.x + (target - g.scale.x) * 0.2);
@@ -500,16 +520,20 @@ export class LaunchScene {
   }
 
   /**
-   * Mapa da escolha: os planetas giram devagar e crescem um pouco sob o dedo ou o mouse. Some quando o foguete sai
-   * da órbita (dali em diante as distâncias do mapa não valem mais).
+   * Mapa da escolha: os planetas giram devagar e crescem um pouco sob o dedo ou o mouse. Na saída, o Sol e as órbitas
+   * somem aos poucos enquanto a câmera desce (dali em diante as distâncias do mapa não valem mais); o planeta
+   * escolhido já virou o destino da viagem.
    */
   private layoutMap(idle: boolean, t: number): void {
-    // Some na hora em que o foguete sai: ele anda rápido e "passaria" pela Lua desenhada (que fica perto da Terra).
-    this.map.visible = idle || t < T_LEAVE;
+    const fade = idle ? 0 : smooth((t - T_LEAVE + 0.4) / 1);
+    this.map.visible = fade < 0.99;
     if (!this.map.visible) return;
+    // Contorno do Sol some bem antes (senão aparece como um disco escuro através da bola transparente).
+    for (const m of this.mapFade) m.opacity = (m.userData.baseOpacity as number) * (1 - fade) ** (m.userData.fastFade ? 6 : 1);
     const time = (performance.now() - this.created) / 1000;
     for (const place of ['mars', 'moon'] as const) {
       const g = this.planets[place];
+      g.visible = this.chosen !== place;
       const other = this.chosen && this.chosen !== place ? 1 - this.sinceChoice(0.3) : 1;
       const target = (this.bodies[place].r / PLANET_R) * (this.hover === place ? 1.12 : 1) * other;
       g.scale.setScalar(g.scale.x + (target - g.scale.x) * 0.2);
@@ -587,16 +611,28 @@ export class LaunchScene {
 
   // ---------- montagem ----------
 
+  /** Guarda um material do mapa para sumir aos poucos na saída (ver layoutMap). */
+  private fading<M extends THREE.Material>(m: M): M {
+    m.userData.baseOpacity = m.opacity;
+    this.mapFade.push(m);
+    return m;
+  }
+
   /** Sol do mapa: bola amarela que brilha sozinha (não recebe luz), com contorno e um halo. */
   private buildSun(at: THREE.Vector3): THREE.Object3D {
     const g = new THREE.Group();
-    const ball = new THREE.Mesh(new THREE.SphereGeometry(SUN_R, 48, 32), new THREE.MeshBasicMaterial({ color: PALETTE.window }));
-    addOutline(ball, 0.03);
+    const geo = new THREE.SphereGeometry(SUN_R, 48, 32);
+    const ball = new THREE.Mesh(geo, this.fading(new THREE.MeshBasicMaterial({ color: PALETTE.window, transparent: true })));
+    // Contorno próprio (mesma técnica de addOutline): o material de contorno do jogo é compartilhado e não pode apagar.
+    const outlineMat = this.fading(new THREE.MeshBasicMaterial({ color: PALETTE.outline, side: THREE.BackSide, transparent: true }));
+    outlineMat.userData.fastFade = true;
+    const outline = new THREE.Mesh(geo, outlineMat);
+    outline.scale.setScalar(1.03);
     const halo = new THREE.Mesh(
       new THREE.RingGeometry(SUN_R * 1.08, SUN_R * 1.5, 64),
-      new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }),
+      this.fading(new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })),
     );
-    g.add(ball, halo);
+    g.add(ball, outline, halo);
     g.position.copy(at);
     return g;
   }
@@ -606,7 +642,7 @@ export class LaunchScene {
     const pts = points.map((p) => new THREE.Vector3(sun.x + p.x * AU, sun.y + p.y * AU, -1));
     const line = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(pts),
-      new THREE.LineDashedMaterial({ color, dashSize: 10, gapSize: 7, transparent: true, opacity: 0.75 }),
+      this.fading(new THREE.LineDashedMaterial({ color, dashSize: 10, gapSize: 7, transparent: true, opacity: 0.75 })),
     );
     line.computeLineDistances();
     return line;
@@ -621,7 +657,7 @@ export class LaunchScene {
     }
     const line = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(pts),
-      new THREE.LineDashedMaterial({ color: 0xc4c3c9, dashSize: 4, gapSize: 4, transparent: true, opacity: 0.6 }),
+      this.fading(new THREE.LineDashedMaterial({ color: 0xc4c3c9, dashSize: 4, gapSize: 4, transparent: true, opacity: 0.6 })),
     );
     line.computeLineDistances();
     return line;
@@ -773,7 +809,6 @@ export class LaunchScene {
     const planet = makePlanet(place);
     planet.scale.setScalar(14 / PLANET_R);
     this.dest.add(planet);
-    this.dest.rotation.z = 0.35;
     this.dest.visible = false;
     this.scene.add(this.dest);
   }

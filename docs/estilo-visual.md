@@ -198,7 +198,7 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   hoje; na clássica, o ponto da tela onde o planeta aparece, levado para o plano da Terra, porque lá os planetas
   ficam em profundidades diferentes), ele sai em linha reta com a velocidade que ganhou (`T_LEAVE`), que cai até a de cruzeiro (`CRUISE`), e na chegada para na superfície do planeta (`ARRIVE_K`), sem entrar nele. O planeta que não foi escolhido some
   logo que a criança escolhe, para ficar claro para onde o foguete vai;
-  sempre se afastando da Terra. A câmera desce até ele (o mapa some na hora da saída, senão o foguete "passaria" pela Lua desenhada, que fica perto da Terra; para a Lua a volta de aceleração é mais curta) e vai para trás dele (o "para cima" da tela vira a direção da
+  sempre se afastando da Terra. A câmera desce até ele, sem corte: o planeta escolhido VIRA o destino (começa onde estava na escolha, do mesmo tamanho na tela, e desliza até a frente do foguete, `destStart`) e o Sol e as órbitas do mapa somem aos poucos (`mapFade`) e vai para trás dele (o "para cima" da tela vira a direção da
   viagem), aparecem linhas de velocidade e o destino crescendo, e ele entra no planeta.
 - **Sem HUD até a nave chegar:** a classe `pre-mission` no `body` esconde o HUD (`#ui`), balões, setas, guia e avisos
   na tela de escolha e na viagem. Sai quando o foguete chega (`Game.playLaunch`).
