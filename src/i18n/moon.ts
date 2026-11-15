@@ -81,7 +81,7 @@ const pt = {
   'data.marstrek.link': 'https://trek.nasa.gov/moon/',
 
   'scene.loadingPhysics': 'Carregando a física da Lua…',
-  'crew.fact.gravity': 'Na Lua, a gravidade é só 1/6 da Terra. O mesmo pulo sobe cerca de 6 vezes mais alto!',
+  'crew.fact.gravity': 'Na Lua, você pesa bem menos do que na Terra. O mesmo pulo vai umas 6 vezes mais alto!',
   'crew.fact.source': 'Fonte: NASA',
 
   // Treino dos dias 1 a 3 (src/i18n/strings/intro.ts): na Lua não há tempestade de poeira; o treino é a sombra.
@@ -175,7 +175,7 @@ const en: Record<keyof typeof pt, string> = {
   'data.marstrek.link': 'https://trek.nasa.gov/moon/',
 
   'scene.loadingPhysics': 'Loading Moon physics…',
-  'crew.fact.gravity': 'On the Moon, gravity is only 1/6 of Earth’s. The same jump goes about 6 times higher!',
+  'crew.fact.gravity': 'On the Moon, you weigh much less than on Earth. The same jump goes about 6 times higher!',
   'crew.fact.source': 'Source: NASA',
 
   'intro.badge': '🎓 Training · day {sol} of 3',
