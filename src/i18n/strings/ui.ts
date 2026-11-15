@@ -25,7 +25,7 @@ export const pt = {
 
   'help.battery': 'A bateria guarda a energia que sobra de dia. De noite os aquecedores gastam 20. Se faltar, o suporte de vida sofre.',
   'help.life': 'Ar, água e comida da tripulação. Precisa de 3 blocos por sol para ficar estável. Se chegar a 0, a missão acaba.',
-  'help.shield': 'A blindagem protege a base da radiação do Sol. Ela é feita de sacos de regolito (a terra de Marte). Ela se desgasta um pouco todo sol.',
+  'help.shield': 'A blindagem são sacos de regolito (terra de Marte) no abrigo. Cada bloco de energia move as máquinas que enchem mais sacos. Ela se desgasta um pouco todo sol.',
   'help.dose': 'Dose é quanta radiação a tripulação já recebeu. Ela sobe um pouco todo sol. Nas tempestades solares, sobe muito. Em 100, a tripulação precisa voltar para a Terra. Este número é uma escala do jogo, não uma medição real.',
   'help.science': 'Descobertas da missão. A missão existe para fazer ciência: a meta é 100.',
   'help.tubes': 'Cada sol com ciência, o rover enche 3 tubos com pedras. São só 38 para a missão inteira. Sem tubos, a ciência vale a metade.',
@@ -155,7 +155,7 @@ export const en: Record<keyof typeof pt, string> = {
 
   'help.battery': 'The battery stores the energy left over during the day. At night the heaters use 20. If it runs out, life support suffers.',
   'help.life': 'Air, water and food for the crew. It needs 3 blocks per sol to stay steady. If it reaches 0, the mission ends.',
-  'help.shield': 'Shielding protects the base from the Sun’s radiation. It is made of bags of regolith (Martian soil). It wears down a little every sol.',
+  'help.shield': 'Shielding is bags of regolith (Martian soil) around the shelter. Each energy block runs the machines that fill more bags. It wears down a little every sol.',
   'help.dose': 'Dose is how much radiation the crew has received. It goes up a little every sol. It goes up a lot in solar storms. At 100, the crew must go back to Earth. This number is a game scale, not a real measurement.',
   'help.science': 'The mission’s discoveries. The mission exists to do science: the goal is 100.',
   'help.tubes': 'Each sol with science energy, the rover fills 3 tubes with rocks. There are only 38 for the whole mission. Without tubes, science is worth half.',
