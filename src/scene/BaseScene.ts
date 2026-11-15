@@ -99,15 +99,22 @@ export class BaseScene {
   }
 
   /**
-   * Troca a base e o rover simples pelos modelos .glb do Grégor (docs/rover-e-base-de-pesquisa.md).
+   * Troca a base e o rover simples pelos modelos .glb do Grégor (docs/rover-e-base-de-pesquisa.md) e a torre,
+   * as placas e a bateria pelos do Marcelo (docs/base-comunicacao-e-bateria.md).
    * Cada um que falhar continua com o modelo simples: o jogo segue funcionando.
    */
   async loadModels(): Promise<void> {
     const { loadSceneryModel, SCENERY_MODELS } = await import('@/render/sceneryModel');
-    const [base, rover] = await Promise.allSettled([
+    const [base, rover, comm, solar] = await Promise.allSettled([
       loadSceneryModel(SCENERY_MODELS.researchBase),
       loadSceneryModel(SCENERY_MODELS.rover),
+      loadSceneryModel(SCENERY_MODELS.commBase),
+      loadSceneryModel(SCENERY_MODELS.solarPanels),
     ]);
+    if (comm.status === 'fulfilled') this.structures.useCommBase(comm.value);
+    else console.warn('Base de comunicação (.glb) não carregou; usando a torre simples.', comm.reason);
+    if (solar.status === 'fulfilled') this.structures.useSolarField(solar.value);
+    else console.warn('Placas e bateria (.glb) não carregaram; usando as simples.', solar.reason);
     if (base.status === 'fulfilled') this.habitat.useModel(base.value);
     else console.warn('Base de pesquisa (.glb) não carregou; usando o módulo simples.', base.reason);
     if (rover.status === 'fulfilled') this.rover.useModel(rover.value);
@@ -166,7 +173,15 @@ export class BaseScene {
     const n = s.shadow ? this.nightAmount : this.nightAmount * this.scenario.restDarkness;
     this.sky.update({ night: n, dust: s.res.dust / CONFIG.dust.max, alert: s.alert, sunlight: s.sunlight ?? 1, time, dt, dayTime: this.dayTime });
     this.habitat.update(n);
-    this.structures.update(time, s.alert || s.stormNight, s.earthMessage);
+    this.structures.update({
+      time,
+      dt,
+      darkness: n,
+      night: s.night,
+      alarmOn: s.alert || s.stormNight,
+      earthMessage: s.earthMessage,
+      battery: s.res.battery / CONFIG.battery.max,
+    });
     this.rover.update(dt, time, crew, s.scienceBlocks, s.night, s.sol ?? 0);
   }
 }

@@ -11,25 +11,12 @@ import type { ProblemKind } from '@/sim/types';
  * caixas de colisão (`obstacles`, montadas pelos prédios em src/scene/base/).
  */
 
-/**
- * Posto de cada papel na base (GDD, "Tempo da tripulação"): engenheiro no abrigo, médico perto da estufa,
- * cientista perto do rover, comandante perto da antena. Precisam ficar FORA das caixas de `obstacles`.
- */
-export const POSTS: Record<Role, THREE.Vector3> = {
-  commander: new THREE.Vector3(7.6, 0, -4.4),
-  engineer: new THREE.Vector3(-9.0, 0, 8.4),
-  medic: new THREE.Vector3(-3.6, 0, -6.2),
-  scientist: new THREE.Vector3(10.5, 0, 9.5),
-};
-
 /*
  * Arranjo da base (concept art ARC-001/ARC-002, "Conceitos de Bases Lunar e Marciana", vista superior):
  * a CÚPULA da estufa é o núcleo, no centro; os módulos saem dela como raios, ligados por túneis:
  *
- *              torre da antena
- *                    |
- *   academia─alojamento ═ CÚPULA ═ laboratório (porta do airlock)   painéis solares
- *                    ║
+ *   academia─alojamento ═ CÚPULA ═ laboratório ─ comunicação (antena)   painéis solares
+ *                    ║          (porta do airlock)     bateria
  *                 GARAGEM do rover (com rampa, virada para a câmera)
  *                    |
  *                  rampa
@@ -60,15 +47,6 @@ export const HABITAT_POSITION = new THREE.Vector3(DOME_CENTER.x + TUBE_START + T
 export const HABITAT_DOOR_LOCAL_Z = 4.1;
 /** Abrigo de regolito (tempestade solar): à frente e à esquerda da base, longe do caminho do rover. */
 export const SHELTER_CENTER = new THREE.Vector3(-13.5, 0, 8.5);
-/** Torre da antena (com a luz de alarme): atrás da cúpula, à direita. */
-export const TOWER_POSITION = new THREE.Vector3(DOME_CENTER.x + 6.5, 0, DOME_CENTER.z - 7);
-/** Contêiner da bateria (o medidor fica na frente), atrás do laboratório, perto da torre. */
-export const BATTERY_POSITION = new THREE.Vector3(HABITAT_POSITION.x + 1.7, 0, DOME_CENTER.z - 5.4);
-/**
- * Campo de painéis solares, à direita da base (como no concept art): 2 fileiras de 5, começando aqui.
- * Fica a ~3 m do laboratório: a tripulação passa entre os dois para ir da porta para trás da base.
- */
-export const PANELS_ORIGIN = new THREE.Vector3(HABITAT_POSITION.x + 6.6, 0, 2);
 
 /**
  * Escala dos módulos do habitat (cascos, pernas, teto). Em 100% o casco tem 3,3 m de diâmetro e o astronauta
@@ -85,6 +63,44 @@ export const MODULE_FLOOR_LENGTH = 6.5 * HABITAT_SCALE;
 export const QUARTERS_OFFSET_X = 2 * (DOME_CENTER.x - HABITAT_POSITION.x);
 /** A academia encaixa na ponta do alojamento, como antes (port_b na port_a). */
 export const GYM_OFFSET_X = QUARTERS_OFFSET_X - 7 * HABITAT_SCALE;
+
+/**
+ * Base de comunicação (comm-base.glb, docs/base-comunicacao-e-bateria.md): bloco com a torre de antena e a luz
+ * de alarme, acoplado na port_b do laboratório (portas em ±3,5 m no laboratório e ±1,95 m na base de
+ * comunicação), na mesma escala dos módulos. Substitui a torre de antena simples (que fica de reserva).
+ */
+export const COMM_POSITION = new THREE.Vector3(HABITAT_POSITION.x + (3.5 + 1.95) * HABITAT_SCALE, 0, HABITAT_POSITION.z);
+/** Meia caixa de colisão da base de comunicação (corpo e pernas, em HABITAT_SCALE). */
+export const COMM_HALF = { x: 2.05 * HABITAT_SCALE, z: 2.5 * HABITAT_SCALE } as const;
+
+/**
+ * Campo de painéis solares, à direita da base (como no concept art): 2 fileiras de 5, começando aqui (centro do
+ * primeiro painel). O solar-panels-battery.glb foi feito com o primeiro painel em (12; 2): ele é deslocado em
+ * SOLAR_MODEL_OFFSET para cair aqui. A distância garante que a tomada do modelo (x = 5,0 dele) fique depois da
+ * torre do airlock, e a bateria na frente da base de comunicação.
+ */
+export const PANELS_ORIGIN = new THREE.Vector3(COMM_POSITION.x + 4.35, 0, 2);
+/** Deslocamento do solar-panels-battery.glb (feito com o primeiro painel em x = 12, z = 2). */
+export const SOLAR_MODEL_OFFSET = new THREE.Vector3(PANELS_ORIGIN.x - 12, 0, PANELS_ORIGIN.z - 2);
+/** Contêiner da bateria (no .glb: x = 8,6; z = 3,15), na frente da base de comunicação. */
+export const BATTERY_POSITION = new THREE.Vector3(8.6 + SOLAR_MODEL_OFFSET.x, 0, 3.15 + SOLAR_MODEL_OFFSET.z);
+/**
+ * Tomada do campo solar, no referencial do .glb: saiu de x = 4,2 para 5,0 (o cabo de saída é encurtado junto).
+ * No mundo: OUTLET_LOCAL_X + SOLAR_MODEL_OFFSET.x.
+ */
+export const OUTLET_LOCAL_X = 5.0;
+
+/**
+ * Posto de cada papel na base (GDD, "Tempo da tripulação"): engenheiro no abrigo, médico perto da estufa,
+ * cientista perto do rover, comandante perto da antena. Precisam ficar FORA das caixas de `obstacles`.
+ */
+export const POSTS: Record<Role, THREE.Vector3> = {
+  // Ao lado da base de comunicação, fora da caixa dela.
+  commander: new THREE.Vector3(COMM_POSITION.x + 2.74, 0, COMM_POSITION.z - 1.4),
+  engineer: new THREE.Vector3(-9.0, 0, 8.4),
+  medic: new THREE.Vector3(-3.6, 0, -6.2),
+  scientist: new THREE.Vector3(10.5, 0, 9.5),
+};
 
 /**
  * Garagem do rover: o mesmo módulo, no raio sul (virado para a câmera), com o casco correndo em Z.
@@ -171,11 +187,25 @@ function bunkSpot(dx: number, level: 0 | 1): THREE.Vector3 {
  * `heading` segue a convenção do andar: 0 olha para −Z; aqui todos olham para a frente (+Z), para a câmera.
  */
 export const GYM_DX = 1.8;
+/** Onde fica o quadril de quem pedala, em Z, em relação ao centro do módulo (a bicicleta é montada em volta). */
+export const BIKE_Z = -0.3;
 export const GYM_STATIONS = [
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X - GYM_DX, HABITAT_FLOOR_Y + 0.14, HABITAT_POSITION.z), heading: Math.PI, speed: 1.8 },
-  // Na bicicleta, pedalando em pé atrás do guidão (o boneco não tem pose sentada).
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X, HABITAT_FLOOR_Y + 0.05, HABITAT_POSITION.z - 0.35), heading: Math.PI, speed: 0.9 },
+  // Esteira: clipe `walk`; `speed` em m/s.
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X - GYM_DX, HABITAT_FLOOR_Y + 0.14, HABITAT_POSITION.z), heading: Math.PI, clip: 'walk', speed: 1.8 },
+  // Bicicleta: sentado, clipe `pedal` (src/render/chibiPedal.ts); `speed` é a velocidade do clipe (1 = uma volta por segundo).
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X, HABITAT_FLOOR_Y, HABITAT_POSITION.z + BIKE_Z), heading: Math.PI, clip: 'pedal', speed: 0.9 },
 ] as const;
+
+/**
+ * Para onde cada papel olha quando está parado no seu posto (GDD, "Para onde o astronauta olha"):
+ * no laboratório, a sua tela da bancada; no alojamento, o armário (engenheiro) e a mesinha (médico).
+ */
+export const HABITAT_LOOK: Record<Role, THREE.Vector3> = {
+  commander: new THREE.Vector3(HABITAT_POSITION.x - 0.9, HABITAT_FLOOR_Y + 1.3, HABITAT_POSITION.z + BACK_Z - 0.2),
+  scientist: new THREE.Vector3(HABITAT_POSITION.x + 0.9, HABITAT_FLOOR_Y + 1.3, HABITAT_POSITION.z + BACK_Z - 0.2),
+  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 2.38, HABITAT_FLOOR_Y + 1, HABITAT_POSITION.z + BACK_Z),
+  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X, HABITAT_FLOOR_Y + 0.7, HABITAT_POSITION.z + 0.3),
+};
 
 /** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
 export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(DOME_CENTER.x + DOME_RADIUS * 0.45, 0.4, DOME_CENTER.z - DOME_RADIUS * 0.45);
@@ -197,7 +227,8 @@ export const ENTRANCES = {
 export const PROBLEM_SPOTS: Record<ProblemKind, THREE.Vector3> = {
   dustyPanels: new THREE.Vector3(PANELS_ORIGIN.x + 5, 0, 6.6),
   greenhouseLeak: new THREE.Vector3(DOME_CENTER.x + DOME_RADIUS * 0.85, 0, DOME_CENTER.z - DOME_RADIUS * 0.85),
-  antenna: new THREE.Vector3(TOWER_POSITION.x + 2.3, 0, TOWER_POSITION.z),
+  // Ao lado da base de comunicação, atrás do posto do comandante.
+  antenna: new THREE.Vector3(COMM_POSITION.x + 2.54, 0, COMM_POSITION.z - 2.4),
   roverStuck: new THREE.Vector3(22, 0, 13),
   tornBag: new THREE.Vector3(SHELTER_CENTER.x, 0, SHELTER_CENTER.z + 3.9),
 };

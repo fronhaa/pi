@@ -96,19 +96,33 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   design: **laboratório** a leste (com o airlock virado para a câmera, a bancada e o observatório), **alojamento** a oeste
   (`QUARTERS_OFFSET_X`, dois beliches, uma cama por astronauta) com a **academia** acoplada na ponta, e a **garagem do
   rover** ao sul (`GARAGE_POSITION`, casco correndo em Z, em 100% de escala para o rover caber, com piso e uma **rampa**
-  com faixas e corrimãos laranja até o chão: `GARAGE_RAMP`). Painéis à direita (`PANELS_ORIGIN`), torre e bateria atrás.
+  com faixas e corrimãos laranja até o chão: `GARAGE_RAMP`). Base de comunicação acoplada na ponta do laboratório, painéis à direita (`PANELS_ORIGIN`) e bateria na frente da base de comunicação.
   As janelas acendem à noite.
 - Dentro do habitat: cabines **transparentes**. Todas as peças do casco (casco, faixas, janelas e portas de acoplamento)
-  ficam translúcidas (`glassMaterial`), sem contorno e sem sombra, para nada opaco cortar a tripulação. Testamos uma vista
+  ficam translúcidas para a câmera (`glassMaterial`, sem contorno), para nada opaco cortar a tripulação. Para o sol o casco
+  continua metal: faz sombra pelos dois lados (`shadowSide = DoubleSide`), o sol não entra, e cada cabine (e a garagem)
+  tem uma luminária no teto (`PointLight` sem sombra). Cada peça tem ordem de desenho fixa
+  (`GLASS_ORDER`): sem ela, as faixas e portas que se cruzam piscavam ao girar a câmera. Testamos uma vista
   em corte, mas o time preferiu ver através do casco. Cada módulo tem seu piso. Comandante e cientista
   ficam no laboratório e engenheiro e médico no alojamento (`HABITAT_SPOTS`); quem conserta o vazamento vai para a estufa
   (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de descompressão, somem.
 - O abrigo de regolito fica em `SHELTER_CENTER`, à frente e à esquerda do alojamento.
+- Base de comunicação (`comm-base.glb`, ver [base-comunicacao-e-bateria.md](base-comunicacao-e-bateria.md)): acoplada na
+  port_b do laboratório, na ponta leste da estrela (`COMM_POSITION`), em `HABITAT_SCALE`, sem a torre de acesso.
+  Substitui a torre de antena antiga (que fica de reserva se o `.glb` falhar): a luz de alerta (`alarm`) pisca na
+  tempestade e a ponta da antena (`antenna_tip`) com mensagem da Terra. O conserto da antena (`PROBLEM_SPOTS.antenna`) e
+  o posto do comandante ficam ao lado dela. Código: `BaseStructures.useCommBase` (`src/scene/base/structures.ts`).
+- Placas e bateria (`solar-panels-battery.glb`): o modelo foi feito com o primeiro painel em (12; 2); no arranjo em
+  estrela ele é deslocado em `SOLAR_MODEL_OFFSET` para `PANELS_ORIGIN`, à direita da base de comunicação, com a bateria
+  (`BATTERY_POSITION`) na frente dela. A poeira escurece as células (`panel_cells`). A bateria toca `battery_charge` de
+  dia, `battery_discharge` à noite e, cheia, mostra o nível (`battery_level` com `timeScale = 0`). A tomada fica em
+  `OUTLET_LOCAL_X` (5,0 no referencial do modelo), depois da torre do airlock; o cabo de saída é encurtado junto.
+  Código: `BaseStructures.useSolarField`.
 - Os módulos do habitat ficam em 80% (`HABITAT_SCALE`), para o astronauta caber justo na cabine; a torre do airlock e o
   armário continuam em 100% (a porta segue mais alta que o astronauta). As janelas acendem à noite. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
 - Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
   (GDD, "Atividades dentro da base", B): quem está dentro sem ordem há 8 s vai à esteira ou à bicicleta (`GYM_STATIONS`,
-  animação de andar no lugar), descansa deitado no beliche e volta ao posto. Na primeira vez aparece o fato F9.
+  `walk` no lugar na esteira; sentado pedalando na bicicleta, com o clipe `pedal`), descansa deitado no beliche e volta ao posto. Na primeira vez aparece o fato F9.
 - À noite (sem tempestade) cada astronauta dorme deitado na sua cama (`BUNK_SPOTS`); na noite de tempestade, está no abrigo.
 - O resto é feito com primitivas (leve). Modelos `.glb` novos: exportar do Blender em glTF Binary,
   eixo Y para cima, em metros, com cores sólidas; ao carregar, trocar os materiais por `toonMaterial(cor)`.

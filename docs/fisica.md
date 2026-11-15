@@ -66,7 +66,7 @@ Se o mesh estiver rotacionado, aplique a mesma rotação ao collider
 
 - Cada astronauta é uma cápsula `dynamic` com **rotação travada**. Velocidade horizontal pelo input ou
   pelo alvo do clique; a vertical fica com a gravidade. O visual gira para a direção do movimento.
-- Os obstáculos são as caixas de `BaseScene.obstacles` (módulos, cúpula, torre, painéis, bateria, abrigo).
+- Os obstáculos são as caixas de `BaseScene.obstacles` (módulos, cúpula, base de comunicação, painéis, bateria e tomada, abrigo).
   **Os postos (`POSTS`) precisam ficar fora dessas caixas**, senão o astronauta nasce preso.
 - Clique no chão: anda em linha reta até o ponto. Não há busca de caminho; se ficar preso 1,5 s, desiste.
 - **Piloto automático** (`goInside` à noite; `exit` e `enter` na EVA): cada astronauta segue um caminho calculado por

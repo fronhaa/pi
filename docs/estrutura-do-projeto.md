@@ -33,7 +33,7 @@ src/
 │   │   ├── layout.ts    MAPA: onde fica cada prédio, posto, porta e problema
 │   │   ├── terrain.ts   chão, mesas, pedras
 │   │   ├── Habitat.ts   módulos, interior, janelas, modelo .glb
-│   │   ├── structures.ts cúpula, torre, painéis, bateria, abrigo (mostram os recursos)
+│   │   ├── structures.ts cúpula, base de comunicação, painéis, bateria, abrigo (mostram os recursos; .glb do Marcelo)
 │   │   ├── Rover.ts     rover andando, estudando, desviando, atolado
 │   │   └── Sky.ts       céu, Sol, estrelas, Terra, poeira no ar
 │   ├── Crew.ts          visual dos astronautas (cor por papel, chibi .glb, poses)

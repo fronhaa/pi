@@ -127,6 +127,11 @@ export class CrewTasks {
     return this.assignments.get(role)?.phase === 'working' && this.places[role] !== 'airlockOut';
   }
 
+  /** Tem uma ordem (problema ou tarefa) agora? */
+  hasTask(role: Role): boolean {
+    return this.assignments.has(role);
+  }
+
   /** Está cuidando de um problema de dentro (a estufa)? A cena usa para mostrar onde ele está. */
   onInsideTask(role: Role): boolean {
     const a = this.assignments.get(role);

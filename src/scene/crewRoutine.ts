@@ -1,7 +1,17 @@
 import * as THREE from 'three';
 import { ROLES, type Role } from '@/sim/crew';
 import type { Crew } from './Crew';
-import { BUNK_SPOTS, DOME_CENTER, GREENHOUSE_WORK_SPOT, GYM_STATIONS, HABITAT_FLOOR_Y, HABITAT_POSITION, HABITAT_SPOTS } from './base/layout';
+import {
+  BUNK_SPOTS,
+  DOME_CENTER,
+  GREENHOUSE_WORK_SPOT,
+  GYM_STATIONS,
+  HABITAT_FLOOR_Y,
+  HABITAT_LOOK,
+  HABITAT_POSITION,
+  HABITAT_SPOTS,
+  PROBLEM_SPOTS,
+} from './base/layout';
 
 /** Rotina visual dentro da base (GDD, "Atividades dentro da base", B): segundos sem ordem até ir à academia, de exercício e de descanso. */
 const ROUTINE_IDLE_SECONDS = 8;
@@ -19,6 +29,8 @@ const FLOOR_Y = HABITAT_FLOOR_Y;
 const DOOR_INSIDE = new THREE.Vector3(HABITAT_POSITION.x, FLOOR_Y, HABITAT_POSITION.z + 0.6);
 /** Ao lado da cama: anda até aqui e então deita (a cama fica no fundo do módulo). */
 const BESIDE_BED_Z = CORRIDOR_Z + 0.25;
+/** Parado no posto, olha às vezes para um colega a até esta distância (m). */
+const COLLEAGUE_LOOK_DISTANCE = 3.5;
 
 /** O que a rotina precisa saber do jogo a cada frame. */
 export interface RoutineFrame {
@@ -28,7 +40,6 @@ export interface RoutineFrame {
   sleeping: boolean;
   /** Alerta de tempestade: ficam no posto. */
   alert: boolean;
-  camera: THREE.Vector3;
   /** A física cuida dele (está lá fora)? Então a rotina não mexe. */
   isOutside(role: Role): boolean;
   /** Está dentro do habitat (não na câmara de descompressão)? */
@@ -61,6 +72,10 @@ interface Walker {
  * - Noite normal: anda até a sua cama do beliche e dorme. Noite de tempestade (abrigo) e câmara de descompressão: some.
  * Entre um lugar e outro, ele ANDA pelo corredor central (módulos, túneis e a passarela da cúpula), nunca
  * some de um módulo e aparece em outro. Quem volta de fora entra pela porta do laboratório.
+ *
+ * Para onde olha (GDD, "Para onde o astronauta olha"): ninguém encara a câmera. Andando, para onde anda;
+ * consertando ou na academia, para a tarefa; parado no posto, para a estação do módulo e às vezes um colega.
+ * Tocado e sem ordem, vira para quem controla por um tempo (Game.select → Astronaut.lookAt).
  */
 export class CrewRoutine {
   /** Primeira vez que alguém vai à academia (o jogo mostra o fato da NASA sobre exercício). */
@@ -201,12 +216,22 @@ export class CrewRoutine {
         const st = GYM_STATIONS[w.station];
         a.setLying(false);
         a.root.position.copy(st.pos);
-        a.face(st.heading);
-        a.exercise(st.speed, dt);
-      } else {
+        a.faceHeading(st.heading, dt);
+        a.exercise(st.clip, st.speed, dt);
+      } else if (activity === 'task') {
+        // Consertando a estufa: de frente para o vazamento, nunca para a câmera.
         a.setLying(false);
         a.root.position.copy(w.pos);
-        a.faceCamera(f.camera);
+        a.faceToward(PROBLEM_SPOTS.greenhouseLeak, dt);
+        a.idle(dt);
+      } else {
+        // Posto: olha a estação do módulo e, às vezes, um colega perto (ninguém encara a câmera).
+        a.setLying(false);
+        a.root.position.copy(w.pos);
+        const others = ROLES.filter((o) => o !== r && this.crew.members[o].root.visible)
+          .map((o) => this.crew.members[o].root.position)
+          .filter((p) => p.distanceTo(a.root.position) < COLLEAGUE_LOOK_DISTANCE);
+        a.lookFree(dt, HABITAT_LOOK[r], others);
         a.idle(dt);
       }
     }

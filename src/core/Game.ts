@@ -29,6 +29,8 @@ import { localPort, type MissionPort } from './session';
 import { CoopMode, type CoopHost, type DayPhase } from './coop/CoopMode';
 import { NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 
+/** Tocado: quanto tempo o astronauta fica olhando para quem controla (GDD, "Para onde o astronauta olha"). */
+const LOOK_AT_CAMERA_SECONDS = 2;
 /** Duração mínima da noite antes do relatório (ms). */
 const NIGHT_MS = 2200;
 /** A noite espera a tripulação entrar, mas no máximo isto (ms); quem não chegou entra direto. */
@@ -382,6 +384,8 @@ export class Game {
       return;
     }
     this.selected = role;
+    // Tocado e sem ordem: vira devagar para quem controla (só nesta tela; nada vai para a rede).
+    if (!this.tasks.hasTask(role)) this.crew.members[role].lookAt(this.camera.position, LOOK_AT_CAMERA_SECONDS);
     if (this.motion) this.motion.select(role); // avisa o HUD via onSelect
     else {
       for (const [r, a] of Object.entries(this.crew.members)) a.setSelected(r === role);
@@ -396,6 +400,7 @@ export class Game {
       return;
     }
     const r = this.tasks.assign(this.selected, uid);
+    if (r === 'ok') this.crew.members[this.selected].cancelLook(); // ordem cancela o olhar para a câmera
     if (r === 'storm') this.hud.toast(t('eva.banned'));
     else if (r === 'full') this.hud.toast(t('eva.full'));
     else if (r === 'nobody') this.hud.toast(t('eva.nobody'));
@@ -729,7 +734,6 @@ export class Game {
         awake: this.phase === 'morning' || this.phase === 'day',
         sleeping: this.phase === 'night' && !this.stormNight,
         alert: state.messages.some((m) => m.kind === 'stormAlert' || m.kind === 'stormToday'),
-        camera: this.camera.position,
         isOutside: (r) => !motion.isInside(r),
         inHabitat: (r) => this.tasks.placeOf(r) === 'inside',
         onInsideTask: (r) => this.tasks.onInsideTask(r),
