@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { addOutline, toonMaterial } from '@/render/toon';
 import { buildPedalClip } from '@/render/chibiPedal';
+import { buildSitClip } from '@/render/chibiSit';
 
 /**
  * Astronauta chibi (CHR-001): modelo .glb com cores sólidas e três animações (walk, jump, interact).
@@ -14,7 +15,7 @@ import { buildPedalClip } from '@/render/chibiPedal';
 export const CHIBI_ASTRONAUT_URL = `${import.meta.env.BASE_URL}assets/models/astronaut-chibi.glb`;
 
 /** `pedal` não vem no .glb: é montado por código (chibiPedal.ts) para a bicicleta da academia. */
-export type ChibiAction = 'walk' | 'jump' | 'interact' | 'pedal';
+export type ChibiAction = 'walk' | 'jump' | 'interact' | 'pedal' | 'sit';
 
 export interface ChibiAstronautInstance {
   root: THREE.Group;
@@ -85,6 +86,7 @@ export async function loadChibiAstronaut(
   const mixer = new THREE.AnimationMixer(root);
   const clips = new Map(gltf.animations.map((c) => [c.name, c]));
   clips.set('pedal', buildPedalClip(root));
+  clips.set('sit', buildSitClip(root));
   let current: THREE.AnimationAction | null = null;
 
   return {

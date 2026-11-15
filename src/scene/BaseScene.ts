@@ -65,7 +65,13 @@ export class BaseScene {
     this.habitat = new Habitat(this.obstacles);
     this.root.add(this.habitat.root);
     this.structures = new BaseStructures(this.root, this.obstacles);
-    this.rover = new Rover(this.obstacles, terrain.rocks);
+    // Pedras que caíram dentro de um prédio (as pedras são sorteadas antes dos prédios) saem da cena e do rover.
+    const rocks = terrain.rocks.filter((r) => {
+      const inside = this.obstacles.some((o) => Math.abs(r.x - o.center.x) < o.half.x + r.r && Math.abs(r.z - o.center.z) < o.half.z + r.r);
+      if (inside) r.mesh?.removeFromParent();
+      return !inside;
+    });
+    this.rover = new Rover(this.obstacles, rocks);
     this.root.add(this.rover.root);
     this.collectTerrainMaterials();
     for (const s of Object.values(SCENARIOS)) {
