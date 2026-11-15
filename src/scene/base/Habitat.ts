@@ -460,6 +460,38 @@ export class Habitat {
     m.root.position.copy(GYM_GLASS_POSITION);
     const tower = m.root.getObjectByName('access_tower');
     if (tower) tower.visible = false;
+    // Casco de METAL, não de vidro: de verdade a tripulação não pode ficar no sol direto (radiação). Como os outros
+    // módulos, fica opaco por padrão, transparente só para a câmera no "See inside", e sempre faz sombra (o sol não
+    // entra). O vidro do modelo ganha a cor de metal dos módulos.
+    const cut = new Map<THREE.Material, THREE.Material>();
+    m.root.getObjectByName('hull')?.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || mesh.userData.isOutline) return;
+      const src = mesh.material as THREE.MeshToonMaterial;
+      let mat = cut.get(src);
+      if (!mat) {
+        const glass = src.name === 'dome_glass';
+        const base = src.clone();
+        if (glass) {
+          base.color.setHex(HULL_COLORS.shell);
+          base.emissive?.setHex(0x000000);
+        }
+        mat = seeThroughHull(base, glass ? 0.28 : 0.5);
+        cut.set(src, mat);
+      }
+      mesh.material = mat;
+      mesh.renderOrder = glassRenderOrder(mesh.name);
+      mesh.castShadow = true;
+      mesh.receiveShadow = false;
+      for (const c of [...mesh.children]) if (c.userData.isOutline) mesh.remove(c);
+    });
+    // Luminárias de dentro (o sol não entra): acendem com o casco aberto, como nas outras cabines.
+    for (const dx of [-2.6, 2.6]) {
+      const light = new THREE.PointLight(0xffe6c0, CABIN_LIGHT_INTENSITY, 6, 1.6);
+      light.position.set(dx, 4.0, 0);
+      m.root.add(light);
+      this.cabinLights.push(light);
+    }
     this.root.add(m.root);
     m.root.updateMatrixWorld(true);
     const pos = new THREE.Vector3();
