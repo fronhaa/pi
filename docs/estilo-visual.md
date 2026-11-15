@@ -134,7 +134,11 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   o casco usa o mesmo `seeThroughHull` e as cores do `research-base.glb` (`HULL_COLORS`): translúcido só para a
   câmera, faz sombra para o sol (lá dentro não caem sombras das nervuras e do concentrador) e recebe sombra por fora
   (a do concentrador e das nervuras aparece em cima da estufa; `sun.shadow.normalBias = 0.05`). Faixas escura e laranja perto da base e 12 nervuras (meio gomo de defasagem, para
-  nenhuma cruzar a boca de um túnel), com ordem de desenho fixa como no `GLASS_ORDER`. Anel de regolito na base (com
+  nenhuma cruzar a boca de um túnel), com ordem de desenho fixa como no `GLASS_ORDER`.
+  O casco translúcido **escreve profundidade** (`seeThroughHull`, `depthWrite: true`): com a ordem de desenho fixa,
+  sem isso as peças do lado de trás (janelas, anéis) eram desenhadas por cima da casca da frente e o "See inside"
+  dava um pulo logo no começo. Os fachos de luz de dentro (LED e fibra) são desenhados antes do casco
+  (`renderOrder` 0,5) para continuarem aparecendo através dele. Anel de regolito na base (com
   uma volta de caixas de colisão). A luz das plantas vem de dentro: o **concentrador solar** no topo segue o Sol
   (`Sky.sunVector`) e três cabos de **fibra óptica** descem pelo casco; por dentro, um difusor no alto leva a luz por
   fibras até **duas luminárias sobre os canteiros**, cada uma com um foco de luz de verdade (SpotLight, sem sombra) e um
