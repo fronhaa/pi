@@ -40,6 +40,7 @@
 | F22 | Aerogel: translúcido e isolante | Deixa a luz visível passar e bloqueia o ultravioleta; 2 a 3 cm aqueceram o chão em até 65 °C num teste de laboratório | [JPL: Want to Colonize Mars? Aerogel Could Help (2019)](https://jpl.nasa.gov/news/news.php?feature=7456) | Referência (não usado no jogo) | Contexto |
 | F23 | O rover de ciência passa a noite onde está | O Perseverance não volta a uma base: dorme no lugar; o calor que sobra do gerador (MMRTG) aquece os eletrônicos nas noites frias; dirige de dia e "dorme" entre as atividades | [JPL: Perseverance, Power](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/power/) e blogs do Curiosity ([2023](https://science.nasa.gov/blog/sols-3882-3884-weekend-routine-for-a-red-rover/), [2024](https://science.nasa.gov/blog/sols-4193-4194-stay-overnight-no-touch-and-go/)) | Rover da base (comportamento à noite) | 1. Energia e noite |
 | F24 | Garagem para rover: a NASA não usa | Num estudo da NASA, uma garagem pressurizada para o rover tripulado "seria muito cara": a manutenção é feita em EVA. No acampamento base estudado, o rover tripulado se acopla a uma porta do habitat | [NASA JSC: Lunar Surface Scenarios (Anderson et al., 2008)](https://ntrs.nasa.gov/api/citations/20080026000/downloads/20080026000.pdf), p. 6, e [NASA JSC: Common Habitat Base Camp (Howard)](https://ntrs.nasa.gov/api/citations/20210020956/downloads/A%20Common%20Habitat%20Basecamp%20for%20Moon%20and%20Mars%20Surface%20Operations.pdf), p. 4 e 14 | Garagem do rover (ver Atenção) | Contexto |
+| F25 | Como o Perseverance coleta e guarda as amostras | A broca do braço tira um cilindro de rocha (~13 mm × 60 mm) dentro do tubo; o tubo vai para dentro do rover, é medido, fotografado, lacrado e guardado. As amostras ficam no rover; 10 tubos foram deixados no chão em Three Forks como reserva | [JPL: Perseverance Rover](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/perseverance_rover/), [NASA: depósito Three Forks (2023)](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-perseverance-rover-completes-mars-sample-depot/), [NASA: 33 tubos (2025)](https://science.nasa.gov/photojournal/the-33-sample-tubes-collected-by-perseverance/) | Rover e tubos de amostra | 4. Jogar só no seguro também falha |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -215,6 +216,14 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Fato:** num estudo da NASA para um rover **tripulado e pressurizado** na Lua, "uma garagem pressurizada seria muito cara", então **a manutenção do rover é feita em EVA** (lá fora, de traje). No acampamento base estudado pela NASA para a Lua e Marte (*Common Habitat*), o rover pressurizado **se acopla a uma porta do habitat** (não entra numa garagem); se ele quebrar longe, outros veículos o trazem de volta ao acampamento para reparo. ([Anderson et al., 2008](https://ntrs.nasa.gov/api/citations/20080026000/downloads/20080026000.pdf), p. 6; [Howard, Common Habitat Base Camp](https://ntrs.nasa.gov/api/citations/20210020956/downloads/A%20Common%20Habitat%20Basecamp%20for%20Moon%20and%20Mars%20Surface%20Operations.pdf), p. 4 e 14)
 - **No jogo:** a garagem do rover com rampa (que veio do concept art do time) e a manutenção feita pelo cientista **dentro** dela não têm base na NASA. Decisão pendente do time.
 - **Atenção:** são **estudos de conceito**, não uma base aprovada. E falam de rover **tripulado**; o rover do jogo é um rover de ciência sem tripulação, como o Perseverance (F23).
+
+### F25. Como o Perseverance coleta e guarda as amostras
+
+- **Fato:** no fim do braço do Perseverance há uma **broca** que tira um **cilindro de rocha** (ou de solo) de cerca de **13 mm de diâmetro e 60 mm de comprimento**, que fica **dentro do tubo**. Um carrossel leva o tubo cheio **para dentro do rover**, onde ele é **medido, fotografado, lacrado e guardado**. **As amostras ficam no próprio rover:** ninguém as descarrega numa base. Em janeiro de 2023 ele deixou **10 tubos no chão**, no depósito de **Three Forks**, como **reserva**; a outra metade continua dentro dele. Em 24/07/2025, ele tinha 33 tubos usados (27 de rocha, 2 de solo, 1 de ar e 3 tubos-testemunha), e **23 continuavam a bordo**. ([JPL](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/perseverance_rover/); [NASA, 2023](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-perseverance-rover-completes-mars-sample-depot/); [NASA, 2025](https://science.nasa.gov/photojournal/the-33-sample-tubes-collected-by-perseverance/))
+- **Criança (PT):** "O rover guarda cada amostra num tubo lacrado, dentro dele mesmo. Alguns tubos ficaram no chão, como reserva."
+- **Criança (EN):** "The rover keeps each sample in a sealed tube inside itself. Some tubes were left on the ground as a backup."
+- **No jogo:** o contador "Tubos de amostra" (F14). A entrega das amostras na garagem e a manutenção pelo cientista **não** têm base na NASA (F24).
+- **Atenção:** os números mudam com a missão; confira de novo antes de usar. O plano para trazer as amostras à Terra (Mars Sample Return) está em revisão; não diga como nem quando elas virão.
 
 ## Ligação com os objetivos de aprendizagem
 
@@ -492,6 +501,20 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
   - Howard, p. 4: "One Pressurized Rover (PR) is docked to the 4x6 MGAAMA. A second PR is docked to the first"
   - Howard, p. 14: "In the event of a PR failure, the ATHLETEs also have the ability to recover a failed PR and bring it back to the base camp for repair."
 
+### 25. JPL: Perseverance Rover (press kit); NASA: depósito Three Forks e os 33 tubos
+
+- **Links:** <https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/perseverance_rover/> (sem data); <https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-perseverance-rover-completes-mars-sample-depot/> (30/01/2023); <https://science.nasa.gov/photojournal/the-33-sample-tubes-collected-by-perseverance/> (imagem de 24/07/2025). Lidos em 15/11/2026.
+- **Usado em:** F25
+- **Trechos:**
+  - Press kit: "The turret contains the coring tool: a rotary-percussive device designed to acquire rock core and regolith samples."
+  - Press kit: "obtains a cylindrical sample about 0.5 inches (13 millimeters) in diameter and 2.4 inches (60 millimeters) long"
+  - Press kit: "the bit carousel transfers bits containing filled sample tubes from the coring tool into the belly of the rover."
+  - Press kit: "The stations measure the volume and take an image of the sample, install, and activate a tube seal," e "place the tube in storage."
+  - Depósito: "Ten sample tubes, capturing an amazing variety of Martian geology, have been deposited on Mars' surface"
+  - Depósito: "The depot samples will serve as a backup set while the other half remain inside Perseverance,"
+  - Depósito: "the sample depot was completed Jan. 28, 2023, the 690th day, or sol, of the mission."
+  - 33 tubos: "Perseverance has collected 27 rock cores, two samples of regolith" e "one atmospheric sample"; "The other 23 samples collected thus far remain aboard the rover."; "as of July 24, 2025, the 1,574th Martian day (or sol) of the mission."
+
 ### 9. Buscas feitas (para achar as fontes acima)
 
 | Busca | Domínios | Levou a |
@@ -519,6 +542,8 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
 | "Mars rover drives during daytime only night recharge batteries sleep Curiosity daily plan sol" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 23 |
 | "NASA rover garage habitat surface base concept pressurized rover docking hatch suitport maintenance shelter" | nasa.gov, ntrs.nasa.gov | Fonte 24 |
 | "NASA Mars surface field station garage for rovers maintenance pressurized garage" | nasa.gov, ntrs.nasa.gov | Fonte 24 |
+| "Perseverance how samples are collected coring drill sample tube sealed stored inside rover Adaptive Caching Assembly" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 25 |
+| "Perseverance Three Forks sample depot tubes left on surface Mars Sample Return retrieve" | nasa.gov, jpl.nasa.gov, science.nasa.gov | Fonte 25 |
 
 Os números entraram a partir do **documento aberto**, não dos resumos das buscas. Um exemplo: o resumo da busca dizia "0,4 a 0,5%" de perclorato, mas o PDF diz "0,3 a 0,5%" (p. 16), e é esse que está aqui.
 
