@@ -97,6 +97,14 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
   ficam no laboratório e engenheiro e médico no alojamento (`HABITAT_SPOTS`); quem conserta o vazamento vai para a estufa
   (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de descompressão, somem.
 - O abrigo de regolito fica em `SHELTER_CENTER`, à esquerda do alojamento.
+- Base de comunicação (`comm-base.glb`, ver [base-comunicacao-e-bateria.md](base-comunicacao-e-bateria.md)): acoplada na
+  port_b do laboratório (`COMM_POSITION`), em `HABITAT_SCALE`, sem a torre de acesso. Substitui a torre de antena antiga:
+  a luz de alerta (`alarm`) pisca na tempestade e a ponta da antena (`antenna_tip`) com mensagem da Terra. O conserto da
+  antena (`PROBLEM_SPOTS.antenna`) e o posto do comandante ficam ao lado dela.
+- Placas e bateria (`solar-panels-battery.glb`): no mesmo lugar das placas simples (o modelo usa as coordenadas do jogo).
+  A poeira escurece as células (`panel_cells`). A bateria toca `battery_charge` de dia, `battery_discharge` à noite e,
+  cheia, mostra o nível (`battery_level` com `timeScale = 0`). A tomada foi para `OUTLET_X` (5,0) para não ficar embaixo
+  do bloco de comunicação; o cabo de saída é encurtado junto.
 - Os módulos do habitat ficam em 80% (`HABITAT_SCALE`), para o astronauta caber justo na cabine; a torre do airlock e o
   armário continuam em 100% (a porta segue mais alta que o astronauta). As janelas acendem à noite. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
 - Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
