@@ -957,7 +957,9 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 | --- | --- |
 | Barra superior | Pílulas soltas sobre o cenário: nome da missão; "Sol N de 15" com barrinha de progresso (tocar explica o que é um sol); botões "Como jogar" e "Dados da NASA" (só ícone no celular) e seletor de idioma PT \| EN |
 | Recursos (esquerda) | **Só os 3 recursos centrais** que o desafio cita ("life support, power, shielding"): ⚡ bateria, 💧 suporte de vida e 🛡️ blindagem, cada um com barra e botão "?". A **dose** fica dentro da blindagem como **risco** (linha pequena com marcas; amarela e vermelha perto do limite): pouca proteção, mais dose |
-| Meta da missão (topo) | ⭐ ciência "18 de 100" (com barra) e 🧪 tubos de amostra ("32 tubos · −3 hoje"). Ciência é o objetivo, não algo que mantém a base viva; os tubos mostram o que a ciência gasta. Cada um abre o "?" ao tocar |
+| Meta da missão (topo) | ⭐ ciência "18 de 100" (com barra; no celular, selo curto "18/100" na linha do sol). Ciência é o objetivo, não algo que mantém a base viva. 🧪 Tubos de amostra **só aparecem quando estão acabando** (3 expedições ou menos); o custo de hoje já aparece no plano ("−3 tubos"). Cada um abre o "?" ao tocar |
+| Idioma e fontes | **Só inglês** (decisão de 15/11/2026: desafio e juízes em inglês; o seletor poluía o HUD). Os textos em português ficam no código (`?lang=pt`). As **fontes da NASA** saíram do topo e ficam no fim do "How to play" (o desafio pede as fontes dentro do jogo) |
+| Celular | Nomes curtos (Power, Life, Shield), contador "Inside · Outside" só com alguém lá fora, mensagem da Terra compacta (a linha do atraso continua) |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |
 | Janelas | Treino dos sóis 1 a 3 (balão no alto), "Como jogar" (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |

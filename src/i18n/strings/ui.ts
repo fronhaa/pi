@@ -12,6 +12,9 @@ export const pt = {
   'top.help': 'Como jogar',
 
   'res.battery': 'Bateria',
+  'res.battery.short': 'Bateria',
+  'res.life.short': 'Vida',
+  'res.shield.short': 'Proteção',
   'res.life': 'Suporte de vida',
   'res.shield': 'Blindagem',
   'res.dose': 'Dose de radiação',
@@ -110,6 +113,7 @@ export const pt = {
   'tutorial.3.text': 'A Terra avisa quando vem uma tempestade solar, com atraso. Reforce a blindagem antes! A tripulação fica dentro da base. Para consertar lá fora, sai uma dupla.',
   'tutorial.next': 'Próximo',
   'tutorial.start': 'Começar a missão',
+  'tutorial.sources': 'Fontes: dados da NASA',
 
   'scene.loadingPhysics': 'Carregando a física de Marte…',
   'hover.select': 'clique para escolher',
@@ -146,6 +150,9 @@ export const en: Record<keyof typeof pt, string> = {
   'top.help': 'How to play',
 
   'res.battery': 'Battery',
+  'res.battery.short': 'Power',
+  'res.life.short': 'Life',
+  'res.shield.short': 'Shield',
   'res.life': 'Life support',
   'res.shield': 'Shielding',
   'res.dose': 'Radiation dose',
@@ -244,6 +251,7 @@ export const en: Record<keyof typeof pt, string> = {
   'tutorial.3.text': 'Earth warns you when a solar storm is coming, with a delay. Reinforce the shielding first! The crew stays inside the base. To fix things outside, a pair goes out.',
   'tutorial.next': 'Next',
   'tutorial.start': 'Start the mission',
+  'tutorial.sources': 'Data sources (NASA)',
 
   'scene.loadingPhysics': 'Loading Mars physics…',
   'hover.select': 'click to select',

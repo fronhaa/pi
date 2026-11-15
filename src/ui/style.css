@@ -65,6 +65,8 @@
 .risk.risk-bad { border-left-color: var(--bad); }
 .risk.risk-bad .res-head { color: var(--bad); }
 .bar.thin { height: 7px; }
+/* Nome longo no computador; o curto aparece só no celular. */
+.lbl-short { display: none; }
 .top-actions { justify-self: end; display: flex; align-items: center; gap: 8px; }
 .top-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; font-size: 15px; cursor: pointer; }
 .top-btn:focus-visible, .top .sol:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
@@ -275,6 +277,18 @@ body.guiding .toast { top: 250px; }
   /* Meta da missão numa linha só dela, embaixo do sol e dos botões (não aperta a barra). */
   .goal-slot { order: 10; flex-basis: 100%; min-width: 0; }
   .top .goal { flex: 1 1 0; min-width: 0; justify-content: center; font-size: 13px; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Celular: ciência vira um selo curto na mesma linha do sol; tubos só quando estão acabando. */
+  .goal-slot { order: 0; flex-basis: auto; flex: 0 1 auto; }
+  .top .goal { flex: 0 1 auto; }
+  .top .goal .goal-track { display: none; }
+  .lbl-long { display: none; }
+  .lbl-short { display: inline; }
+  /* Ninguém lá fora: o contador "Dentro · Fora" some (o painel do dia já mostra). */
+  .crew-chip.idle { display: none; }
+  /* Mensagem da Terra mais compacta (a linha do atraso continua: é o atraso de comunicação do desafio). */
+  .messages { padding: 4px 6px; max-height: 16vh; }
+  .msg { font-size: 12.5px; padding: 5px 8px; line-height: 1.25; }
+  .msg .meta { font-size: 11px; margin-top: 2px; }
   .top .sol { margin-right: auto; font-size: 15px; }
   .top-btn { padding: 0 11px; font-size: 18px; }
   .top-btn .label { display: none; }
