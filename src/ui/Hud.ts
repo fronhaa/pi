@@ -1,4 +1,5 @@
 import { CONFIG } from '@/sim/config';
+import type { RecentSun } from '@/data/flares';
 import type { EnergyPlan, Flare, GameState, ProblemKind, Resources } from '@/sim/types';
 import { PROBLEMS, taskBattery } from '@/sim/problems';
 import type { Mission } from '@/sim/mission';
@@ -55,6 +56,8 @@ export interface HudCallbacks {
   hullsOpen(): boolean;
   /** Bateria que a base gasta até amanhã (Marte: a noite; Lua: descanso ou noite fria da sombra). */
   nightCost?(): number;
+  /** Erupções reais recentes (DONKI, do download), para a mensagem "O Sol ultimamente" do sol 1. */
+  recentSun?(): RecentSun | null;
 }
 
 type PlanKey = keyof EnergyPlan;
@@ -311,7 +314,9 @@ export class Hud {
 
   private renderMessages(): void {
     const msgs = (this.state?.messages ?? []) as MarsMessage[];
-    patchChildren(this.messages, [h('h2', { id: 'msg-title' }, t('msg.title')), ...msgs.map(messageEl)]);
+    // Sol 1: o clima espacial de agora (erupções reais recentes), ligado à decisão da blindagem.
+    const sun = this.state?.sol === 1 && !this.nightView ? this.cb.recentSun?.() : null;
+    patchChildren(this.messages, [h('h2', { id: 'msg-title' }, t('msg.title')), sun ? recentSunEl(sun) : null, ...msgs.map(messageEl)]);
   }
 
   private renderDay(v: DayView): void {
@@ -601,6 +606,20 @@ function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
   const strength = t(`storm.strength.${f.cls}` as StringKey);
   const speed = f.speedKmS ? f.speedKmS.toLocaleString(getLang() === 'pt' ? 'pt-BR' : 'en') : '?';
   return when === 'alert' ? t('msg.stormAlert.cme', { strength, speed, sol: sol ?? 0 }) : t('msg.stormToday.cme', { strength });
+}
+
+/** "O Sol ultimamente": erupções fortes reais nos últimos 30 dias, a mais recente e a dica da proteção. */
+function recentSunEl(r: RecentSun): HTMLElement {
+  const latest = r.latest;
+  return h('div', { class: 'msg sun-recent' },
+    h('strong', {}, t('msg.sunRecent.title')), ' ',
+    r.count > 0 ? t('msg.sunRecent.active', { n: r.count, days: r.days }) : t('msg.sunRecent.calm', { days: r.days }), ' ',
+    latest?.time ? t('msg.sunRecent.latest', { cls: latest.label, date: formatDate(latest.time) }) + ' ' : '',
+    t('msg.sunRecent.tip'),
+    h('span', { class: 'meta' },
+      h('span', { class: 'badge real' }, t('data.badge.snapshot', { date: formatDate(r.fetchedAt) })), ' ',
+      latest?.link ? h('a', { href: latest.link, target: '_blank', rel: 'noopener noreferrer' }, t('flare.link')) : null),
+  );
 }
 
 function messageEl(m: MarsMessage): HTMLElement {

@@ -32,3 +32,21 @@ export async function loadFlares(): Promise<FlareSource> {
     return { kind: 'simulated', flares: [] };
   }
 }
+
+/** "O Sol ultimamente": resumo das erupções reais recentes, contado a partir do dia do download (não é ao vivo). */
+export interface RecentSun {
+  fetchedAt: string;
+  /** Erupções fortes (M e X) nos últimos `days` dias antes do download. */
+  count: number;
+  days: number;
+  latest: Flare | null;
+}
+
+export function recentSun(source: FlareSource, days = 30): RecentSun | null {
+  if (source.kind !== 'snapshot') return null;
+  const end = Date.parse(source.fetchedAt);
+  const since = end - days * 24 * 3600 * 1000;
+  const dated = source.flares.filter((f) => f.time).sort((a, b) => Date.parse(b.time!) - Date.parse(a.time!));
+  const count = dated.filter((f) => Date.parse(f.time!) >= since && Date.parse(f.time!) <= end).length;
+  return { fetchedAt: source.fetchedAt, count, days, latest: dated[0] ?? null };
+}
