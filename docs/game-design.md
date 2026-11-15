@@ -104,7 +104,7 @@ Os 3 primeiros sóis (dias, na Lua) são um **treino guiado**, dentro dos 15 só
 
 - **Dia de treino:** nos sóis 1 a 3 não há problemas, mas o dia não pula direto para a noite: ele dura **12 s** (só visual), para a criança ver o Sol cruzar o céu enquanto o painel diz "os painéis fazem energia com a luz do Sol".
 - **Lua:** o treino do sol 3 é a **sombra das montanhas** (a luz do Sol some por alguns segundos; "às vezes por dias"), porque na Lua não há vento nem tempestade de poeira. A mensagem chega em ~1 segundo.
-- **Botão 👁️ "Ver por dentro / Ver por fora"** no topo, em toda a missão (solo e grupo): fecha ou abre o casco das cápsulas, da estufa e dos túneis.
+- **Botão 👁️ "Ver por dentro / Ver por fora"** no topo, em toda a missão (solo e grupo): fecha ou abre o casco das cápsulas, da estufa e dos túneis. Com o casco fechado, as luzes de dentro (luminárias das cabines, LEDs e fibra óptica da estufa) apagam junto: no three.js a luz atravessa paredes, e iluminaria o chão de fora.
 - **Em grupo**, as regras dos sóis 1 a 3 são as mesmas (o servidor roda o mesmo `src/sim`), mas sem o guia e sem o dia curto: "Começar o dia" vai direto para a noite, como antes. A base começa aberta.
 - O "📖 Como jogar" (3 passos) continua no topo; a missão solo não abre mais com ele, porque o treino ensina na hora.
 
