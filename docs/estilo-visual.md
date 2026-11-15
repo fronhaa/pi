@@ -118,12 +118,16 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   dia, `battery_discharge` à noite e, cheia, mostra o nível (`battery_level` com `timeScale = 0`). A tomada fica em
   `OUTLET_LOCAL_X` (5,0 no referencial do modelo), depois da torre do airlock; o cabo de saída é encurtado junto.
   Código: `BaseStructures.useSolarField`.
-- **Estufa inflável, não de vidro** (ARC-002, [F20](ciencia-marte.md#f20-a-estufa-da-nasa-para-a-lua-e-marte-é-inflável-não-de-vidro),
-  `BaseStructures.buildDome`): membrana leitosa e translúcida em 12 gomos com nervuras infláveis (meio gomo de
-  defasagem, para nenhuma nervura cruzar a boca de um túnel), anel de regolito na base (com uma volta de caixas de
-  colisão), **concentrador solar** no topo que segue o Sol (`Sky.sunVector`) e três cabos de **fibra óptica** que
-  brilham de dia, e duas barras de **LED de cultivo** (magenta) sobre os canteiros, mais fortes à noite. A estufa real
-  ficaria enterrada; aqui ela fica à vista e translúcida pela mesma convenção dos módulos.
+- **Estufa fechada, do mesmo material das cápsulas, não de vidro** (ARC-002,
+  [F20](ciencia-marte.md#f20-a-estufa-da-nasa-para-a-lua-e-marte-é-inflável-não-de-vidro), `BaseStructures.buildDome`):
+  o casco usa o mesmo `seeThroughHull` e as cores do `research-base.glb` (`HULL_COLORS`): translúcido só para a
+  câmera, faz sombra para o sol (lá dentro não caem sombras das nervuras e do concentrador) e recebe sombra por fora
+  (a do concentrador e das nervuras aparece em cima da estufa; `sun.shadow.normalBias = 0.05`). Faixas escura e laranja perto da base e 12 nervuras (meio gomo de defasagem, para
+  nenhuma cruzar a boca de um túnel), com ordem de desenho fixa como no `GLASS_ORDER`. Anel de regolito na base (com
+  uma volta de caixas de colisão). A luz das plantas vem de dentro: o **concentrador solar** no topo segue o Sol
+  (`Sky.sunVector`) e três cabos de **fibra óptica** brilham de dia e acendem a luz de dentro (`fiberLight`); à noite,
+  duas barras de **LED de cultivo** (magenta) ficam mais fortes. A estufa real ficaria enterrada; aqui ela fica à vista
+  e translúcida pela mesma convenção dos módulos.
 - Passarela da cúpula (`WALKWAY`, na altura do piso dos módulos) em **T**: leste-oeste (laboratório ↔ alojamento) e um
   braço para o sul até o túnel da garagem, com corrimão laranja aberto nas entradas. Uma **escada** de cada lado
   (`GREENHOUSE_STAIRS`: norte a leste, sul a oeste, degraus de ~17 cm) desce até o chão da estufa

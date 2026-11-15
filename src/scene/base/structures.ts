@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PALETTE, toonMaterial, toonMesh } from '@/render/toon';
+import { HULL_COLORS, PALETTE, seeThroughHull, toonMaterial, toonMesh } from '@/render/toon';
 import { CONFIG } from '@/sim/config';
 import type { Resources } from '@/sim/types';
 import type { SceneryModel } from '@/render/sceneryModel';
@@ -95,6 +95,7 @@ export class BaseStructures {
   private readonly fiberMat = new THREE.MeshBasicMaterial({ color: FIBER_COLOR });
   private readonly ledMat = new THREE.MeshBasicMaterial({ color: LED_COLOR });
   private readonly ledLight = new THREE.PointLight(LED_COLOR, 2.5, 9, 1.4);
+  private readonly fiberLight = new THREE.PointLight(0xfff0d0, 0, 14, 1.2);
   /** Animações dos .glb (antena girando, bateria). */
   private readonly mixers: THREE.AnimationMixer[] = [];
 
@@ -159,6 +160,8 @@ export class BaseStructures {
     this.fiberMat.color.setHex(FIBER_COLOR).multiplyScalar(0.35 + 0.65 * day * (sun === UP ? 0.3 : 1));
     this.ledMat.color.setHex(LED_COLOR).multiplyScalar(0.7 + 0.5 * f.darkness);
     this.ledLight.intensity = 1.2 + 2.3 * f.darkness;
+    // De dia, a luz do Sol entra pela fibra óptica (com o Sol abaixo do horizonte, quase nada).
+    this.fiberLight.intensity = 9 * day * (sun === UP ? 0.15 : 1);
   }
 
   /**
@@ -233,23 +236,36 @@ export class BaseStructures {
   }
 
   /**
-   * ARC-002: estufa **inflável**, não de vidro (docs/ciencia-marte.md, F20). Como no protótipo da NASA com a
-   * Universidade do Arizona: membrana inflável, regolito em volta para proteger da radiação, luz do Sol trazida por
-   * um concentrador que segue o Sol e cabos de fibra óptica, e luzes de LED para as plantas. A membrana aparece
-   * translúcida pela mesma convenção dos módulos (dá para ver a tripulação e as plantas lá dentro).
+   * ARC-002: estufa fechada, do **mesmo material das cápsulas**, não de vidro (docs/ciencia-marte.md, F20). Como os
+   * módulos, ela aparece translúcida só para a câmera (para ver as plantas e a tripulação lá dentro); para o sol é
+   * casco e faz sombra. A luz das plantas vem de dentro, como no protótipo da NASA: de dia, o concentrador que segue o
+   * Sol manda a luz por fibra óptica; à noite, os LEDs de cultivo. Regolito em volta da base protege da radiação.
    */
   private buildDome(): void {
     const r = DOME_RADIUS;
     const center = DOME_CENTER;
-    // Membrana: leitosa e translúcida, em gomos separados por nervuras infláveis.
+    // Casco: o mesmo das cápsulas (cor, translucidez e sombra), com faixas e nervuras nas cores das faixas delas.
     const shell = new THREE.Mesh(
       new THREE.SphereGeometry(r, 36, 14, 0, Math.PI * 2, 0, Math.PI / 2),
-      new THREE.MeshToonMaterial({ color: 0xf4efe4, transparent: true, opacity: 0.4, depthWrite: false }),
+      seeThroughHull(toonMaterial(HULL_COLORS.shell), 0.28),
     );
     shell.position.copy(center);
     shell.renderOrder = 1;
+    // Faz sombra (o sol não entra: a sombra das nervuras e do concentrador não cai lá dentro) e recebe sombra
+    // por fora (a sombra do concentrador e das nervuras aparece em cima da estufa).
+    shell.castShadow = true;
+    shell.receiveShadow = true;
     this.root.add(shell);
-    const ribMat = toonMaterial(PALETTE.light);
+    const ribMat = seeThroughHull(toonMaterial(HULL_COLORS.bandDark), 0.5);
+    const orangeMat = seeThroughHull(toonMaterial(HULL_COLORS.bandOrange), 0.5);
+    // Faixas horizontais, como as das cápsulas: escura e laranja perto da base.
+    for (const [h, mat, order] of [[0.42, ribMat, 1.1], [0.62, orangeMat, 1.2]] as const) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(Math.sqrt(r * r - h * h * 4) + 0.02, 0.07, 6, 64).rotateX(Math.PI / 2), mat);
+      ring.position.set(center.x, center.y + h * 2, center.z);
+      ring.renderOrder = order;
+      ring.castShadow = true;
+      this.root.add(ring);
+    }
     for (let i = 0; i < DOME_GORES; i++) {
       // Meio gomo de defasagem: nenhuma nervura cruza a boca de um túnel (leste, oeste e sul).
       const a = ((i + 0.5) / DOME_GORES) * Math.PI * 2;
@@ -258,11 +274,13 @@ export class BaseStructures {
         const phi = (k / 16) * (Math.PI / 2) * 0.97;
         pts.push(new THREE.Vector3(Math.cos(phi) * Math.cos(a), Math.sin(phi), Math.cos(phi) * Math.sin(a)).multiplyScalar(r + 0.03).add(center));
       }
-      const rib = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.09, 6), ribMat);
+      const rib = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.06, 6), ribMat);
+      rib.renderOrder = 1.1;
+      rib.castShadow = true;
       this.root.add(rib);
     }
     // Anel no topo, onde as nervuras se encontram, e a base com o anel de regolito (proteção contra radiação).
-    const crown = toonMesh(new THREE.TorusGeometry(r * 0.2, 0.12, 8, 24).rotateX(Math.PI / 2), PALETTE.light, 0.02);
+    const crown = toonMesh(new THREE.TorusGeometry(r * 0.2, 0.12, 8, 24).rotateX(Math.PI / 2), HULL_COLORS.bandDark, 0.02);
     crown.position.set(center.x, center.y + r * 0.98, center.z);
     this.root.add(crown);
     const base = toonMesh(new THREE.CylinderGeometry(r + 0.1, r + 0.2, 0.4, 32), PALETTE.tech);
@@ -341,6 +359,9 @@ export class BaseStructures {
     }
     this.ledLight.position.set(center.x, LED_HEIGHT + 0.5, center.z);
     this.root.add(this.ledLight);
+    // Saída da fibra óptica lá dentro, no alto: a luz do Sol entra por ela (o casco faz sombra).
+    this.fiberLight.position.set(center.x, DOME_RADIUS * 0.8, center.z);
+    this.root.add(this.fiberLight);
   }
 
   private buildTower() {

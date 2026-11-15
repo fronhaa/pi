@@ -60,6 +60,9 @@ export class Sky {
     this.sun.shadow.mapSize.set(2048, 2048);
     Object.assign(this.sun.shadow.camera, { left: -36, right: 36, top: 36, bottom: -36, near: 1, far: 130 });
     this.sun.shadow.bias = -0.0005;
+    // Recomendado no doc dos modelos (docs/rover-e-base-de-pesquisa.md): evita manchas onde uma peça recebe a
+    // própria sombra (como o casco da estufa).
+    this.sun.shadow.normalBias = 0.05;
     root.add(this.sun);
 
     this.stars = buildStars();
