@@ -45,6 +45,12 @@
 | F27 | Tempestades de poeira duram semanas ou meses | Todo ano há tempestades grandes que duram semanas; as maiores, "semanas a meses"; a global de 2007 durou dois meses. Menos luz do Sol, menos energia nos painéis | [NASA: The Fact and Fiction of Martian Dust Storms (2015)](https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/) e [NASA: fim da missão Opportunity (2019)](https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/) | Treino da poeira no sol 3 (introdução) | 1. Energia e noite |
 | F28 | Abrigo contra tempestade solar: mais massa, e máquinas cavam o regolito | No aviso, a tripulação monta um abrigo pondo massa entre ela e o Sol (no Orion, sacos de estiva, em até 1 hora); na superfície, regolito sobre o abrigo. Uma escavadeira da NASA (RASSOR 2.0) cava o regolito com energia elétrica (4 W por kg/h) e pode usá-lo como blindagem | [NASA (2016)](https://www.nasa.gov/missions/artemis/orion/scientists-and-engineers-evaluate-orion-radiation-protection-plan/), [NASA Science (2019)](https://science.nasa.gov/science-research/heliophysics/how-nasa-will-protect-astronauts-from-space-radiation-at-the-moon/), [NASA KSC: RASSOR 2.0 (Mueller et al., 2016)](https://ntrs.nasa.gov/api/citations/20210011366/downloads/ASCE%202016%20RASSOR%202%20Final%20%206_8_2016.pdf), p. 1 | Blindagem (blocos de energia viram sacos de regolito), ajuda "?" e treino do sol 3 | 2. Proteção custa caro |
 | F29 | Camundongos no espaço perderam músculo e osso | Camundongos que passaram 33 dias na Estação Espacial perderam massa muscular e óssea | [OSDR: OSD-342 (missão RR-19)](https://osdr.nasa.gov/bio/repo/data/studies/OSD-342) | Tela de fontes (Data sources), item do OSDR | Contexto (saúde) |
+| F30 | A viagem até Marte leva meses | O Perseverance pousou depois de uma viagem de 203 dias e 472 milhões de km | [NASA (2021)](https://www.nasa.gov/news-release/touchdown-nasas-mars-perseverance-rover-safely-lands-on-red-planet/) | Intro da viagem (Marte) | Contexto (distância) |
+| F31 | A viagem até a Lua leva dias | A Apollo 11 saiu da Terra em 16/07/1969 e pisou na Lua em 20/07/1969 | [NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/) | Intro da viagem (Lua) | Contexto (distância) |
+| F34 | Foto real: a Terra vista do espaço | A Terra fotografada pela Apollo 17 a caminho da Lua, em 07/12/1972 | [NASA Image Library: AS17-148-22727](https://images.nasa.gov/details/as17-148-22727) | Cartão de foto na viagem (Marte e Lua) | Foto (crédito NASA) |
+| F35 | Foto real: Marte inteiro | Mosaico de cerca de 1000 imagens das sondas Viking | [NASA Photojournal: PIA00407](https://photojournal.jpl.nasa.gov/catalog/PIA00407) | Cartão de foto na viagem (Marte) | Foto (crédito NASA/JPL/USGS) |
+| F36 | Foto real: a Lua cheia | A Lua fotografada pela Apollo 11 na volta para a Terra, em 21/07/1969 | [NASA Image Library: AS11-44-6667](https://images.nasa.gov/details/as11-44-6667) | Cartão de foto na viagem (Lua) | Foto (crédito NASA) |
+| F37 | O foguete entra em órbita antes de ir | Apollo 11 e Perseverance: primeiro uma órbita da Terra (de espera), depois o motor liga de novo e a nave sai rumo ao destino | [NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/); [NASA (2020)](https://www.nasa.gov/news-release/nasa-ula-launch-mars-2020-perseverance-rover-mission-to-red-planet/) | Tela de escolha (em órbita) e saída da órbita | Contexto (como se viaja) |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -260,6 +266,46 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Criança (EN):** "Mice on the Space Station lost muscle and bone in 33 days."
 - **No jogo:** na tela de fontes ("Data sources"), no item do OSDR. Saiu do balão do exercício (F9) em 15/11/2026: o balão tem no máximo 2 frases curtas (padrão ~400L, [linguagem-e-ui-criancas.md](linguagem-e-ui-criancas.md)), e o estudo é detalhe do "modo cientista".
 - **Atenção:** o estudo é com **camundongos**, não com pessoas; não diga que astronautas perdem o mesmo tanto. Não fale do tratamento com crianças (é remédio experimental). Conferido na descrição oficial do estudo pela API de busca do OSDR (`osdr.nasa.gov/osdr/data/search`) em 15/11/2026.
+
+### F30. A viagem até Marte leva meses
+
+- **Fato:** o Perseverance **"touched down on Mars Thursday, after a 203-day journey traversing 293 million miles (472 million kilometers)"** (pousou em Marte depois de uma viagem de 203 dias e 472 milhões de km). A missão foi lançada em 30/07/2020 e pousou em 18/02/2021. ([NASA, 2021](https://www.nasa.gov/news-release/touchdown-nasas-mars-perseverance-rover-safely-lands-on-red-planet/))
+- **Criança (PT):** "O Perseverance levou 203 dias para chegar a Marte. Quase 7 meses!"
+- **Criança (EN):** "Perseverance took 203 days to reach Mars. Almost 7 months!"
+- **No jogo:** intro da viagem, depois de escolher Marte (`src/ui/LaunchIntro.ts`, cena em `src/scene/LaunchScene.ts`).
+- **Atenção:** 203 dias é a viagem DESSE rover; o tempo muda com a posição dos planetas no lançamento. Não diga que toda viagem leva 203 dias.
+
+### F31. A viagem até a Lua leva dias
+
+- **Fato:** **"Apollo 11 launched from Cape Kennedy on July 16, 1969"**; Armstrong deu o primeiro passo na Lua **"on July 20, 1969"**: cerca de 4 dias. ([NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/))
+- **Criança (PT):** "A Apollo 11 levou só 4 dias para chegar à Lua."
+- **Criança (EN):** "Apollo 11 took only 4 days to reach the Moon."
+- **No jogo:** intro da viagem, depois de escolher a Lua (`src/ui/LaunchIntro.ts`, cena em `src/scene/LaunchScene.ts`).
+- **Atenção:** "4 dias" é do lançamento até o passo na Lua (16 a 20 de julho), não só o voo até a órbita. Conferido em 15/11/2026.
+
+### F34 a F36. Fotos reais na trajetória da viagem
+
+Cartões de foto que passam ao lado do foguete na intro (`src/scene/LaunchScene.ts`, `PHOTOS`). Arquivos em
+`public/assets/images/` (versão "small" da biblioteca da NASA). Legenda no jogo: `launch.photo.*` em `src/i18n/strings/ui.ts`.
+
+- **F34:** **"This view of Earth was seen by the Apollo 17 crew as they traveled toward the moon"** (7 Dec. 1972). ([AS17-148-22727](https://images.nasa.gov/details/as17-148-22727))
+  - Criança: "A Terra vista pela Apollo 17 (1972)" / "Earth seen by Apollo 17 (1972)". Aparece nas duas viagens: é a mesma Terra que fica para trás.
+- **F35:** **"About 1000 Viking Orbiter red- and violet-filter images have been processed to provide global color coverage of Mars"**. Crédito: NASA/JPL/USGS. ([PIA00407](https://photojournal.jpl.nasa.gov/catalog/PIA00407))
+  - Criança: "Marte visto pelas sondas Viking" / "Mars seen by the Viking orbiters".
+  - **Atenção:** é um mosaico (muitas fotos juntas), não uma foto única. Por isso a legenda não tem ano.
+- **F36:** **"This outstanding view of the whole full moon was photographed from the Apollo 11 spacecraft during its trans-Earth journey homeward."** ([AS11-44-6667](https://images.nasa.gov/details/as11-44-6667))
+  - Criança: "A Lua vista pela Apollo 11 (1969)" / "The Moon seen by Apollo 11 (1969)".
+- Conferido na API da biblioteca de imagens da NASA (`images-api.nasa.gov`) em 15/11/2026.
+
+### F37. O foguete entra em órbita da Terra antes de partir
+
+- **Fato (Lua):** a Apollo 11 foi lançada **"into an initial Earth-orbit of 114 by 116 miles"**. **"Two hours, 44 minutes and one-and-a-half revolutions after launch, the S-IVB stage reignited for a second burn of five minutes, 48 seconds, placing Apollo 11 into a translunar orbit."** ([NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/))
+- **Fato (Marte):** **"The ULA Atlas V's Centaur upper stage initially placed the Mars 2020 spacecraft into a parking orbit around Earth. The engine fired for a second time and the spacecraft separated from the Centaur as expected."** ([NASA, 2020](https://www.nasa.gov/news-release/nasa-ula-launch-mars-2020-perseverance-rover-mission-to-red-planet/))
+- **Criança (PT):** "Estamos em órbita da Terra. Toque num planeta!" e "🔥 Motor ligado! Saímos da órbita da Terra rumo a Marte/à Lua."
+- **Criança (EN):** "We are in orbit around Earth. Tap a planet!" e "🔥 Engine on! We leave Earth orbit for Mars/the Moon."
+- **No jogo:** o foguete começa em órbita na tela de escolha e sai dela ao escolher (`src/scene/LaunchScene.ts`, `rocketPath`); textos em `src/ui/PlaceChoice.ts` e `src/ui/LaunchIntro.ts`.
+- **Atenção:** a cena é cartoon: a órbita é bem mais alta que a real e a decolagem não aparece (o jogo começa com a nave já em órbita). Não dizer que a órbita "pega carona na gravidade": as fontes só dizem que a nave fica numa órbita de espera e depois liga o motor de novo.
+- Conferido em 15/11/2026.
 
 ## Ligação com os objetivos de aprendizagem
 
