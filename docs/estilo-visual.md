@@ -149,7 +149,8 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 - **Quartos individuais** ([ADR 0010](decisoes/0010-quartos-individuais-em-vez-de-beliche.md)): dois módulos de quartos
   (`QUARTERS_MODULES`), cada um com dois quartos separados por uma divisória translúcida, do fundo até perto da faixa do
   corredor. Em cada quarto, uma **cama baixa** (`BED_LEVEL`, estrado de quatro pés, aberto embaixo) encostada no fundo
-  (`BED_Z`, colchão de `BED_DEPTH` = 0,85 m) e um armário ao lado da divisória. Engenheiro e médico no primeiro módulo,
+  (`BED_Z`, colchão de `BED_DEPTH` = 0,85 m) e um armário ao lado da divisória. Tudo fica atrás de
+  `ROOM_FURNITURE_FRONT_Z` (43 cm do eixo): o corredor do meio fica livre e quem passa anda reto, sem desviar. Engenheiro e médico no primeiro módulo,
   comandante e cientista no segundo (`BED_SPOTS`). O boneco deitado fica em tamanho normal (`LYING_SCALE = 1`).
   Deitar: de pé de costas para a cama, **senta na beirada** (pose `sit`, montada por código em `src/render/chibiSit.ts`)
   e deita girando em volta do quadril, pondo as pernas na cama (`Astronaut.bedBlend`); levantar é o mesmo ao contrário.

@@ -65,11 +65,10 @@ const DOOR_INSIDE = new THREE.Vector3(HABITAT_POSITION.x, FLOOR_Y, HABITAT_POSIT
  * ficar deitado: anda até aqui, vira para o corredor, senta na beirada e deita (Astronaut.bedBlend).
  */
 const BESIDE_BED_GAP = 0.5;
-const BESIDE_BED_Z = CORRIDOR_Z + Math.min(QUARTERS_LANE_Z, BED_FRONT_Z + BESIDE_BED_GAP);
+const BESIDE_BED_Z = CORRIDOR_Z + BED_FRONT_Z + BESIDE_BED_GAP;
 /**
- * Alojamento: anda pela faixa da frente (QUARTERS_LANE_Z), não pelo eixo do casco, para as pernas não passarem pela
- * borda das camas nem pelas divisórias dos quartos. Entra e sai da faixa nas portas de acoplamento de cada módulo de
- * quartos.
+ * Alojamento: anda pela faixa QUARTERS_LANE_Z (hoje o próprio eixo do casco: camas, armários e divisórias ficam atrás
+ * de ROOM_FURNITURE_FRONT_Z, então o corredor é reto). Se a faixa mudar, ele entra e sai dela nas portas de cada módulo.
  */
 const QUARTERS_XS = QUARTERS_MODULES.map((ox) => HABITAT_POSITION.x + ox);
 const QUARTERS_PORT = MODULE_FLOOR_LENGTH / 2;

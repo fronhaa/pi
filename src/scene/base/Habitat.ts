@@ -5,7 +5,6 @@ import { BIKE_FIT } from '@/render/chibiPedal';
 import {
   BACK_Z,
   BIKE_Z,
-  BED_FRONT_Z,
   BED_LEVEL,
   BED_Z,
   BED_DEPTH,
@@ -34,6 +33,8 @@ import {
   QUARTERS_MODULES,
   QUARTERS_OFFSET_X,
   ROOM_BED_DX,
+  ROOM_FURNITURE_FRONT_Z,
+  ROOM_LOCKER_Z,
   ROOM_LOCKER_DX,
   TUBES,
   addObstacle,
@@ -357,7 +358,7 @@ export class Habitat {
     // divisória que vai do fundo até perto da faixa do corredor; em cada quarto, uma cama baixa (de um andar) e um
     // armário ao lado da divisória.
     const wallMat = seeThroughHull(toonMaterial(HULL_COLORS.shell), 0.45);
-    const wallFront = BED_FRONT_Z + 0.1; // um pouco à frente das camas, sem entrar na faixa do corredor
+    const wallFront = ROOM_FURNITURE_FRONT_Z; // até a frente das camas: o corredor do meio fica livre
     for (const mx of QUARTERS_MODULES) {
       const wall = new THREE.Mesh(new THREE.BoxGeometry(0.05, ROOM_WALL_HEIGHT, wallFront - ROOM_WALL_BACK_Z), wallMat);
       wall.position.set(mx, y + ROOM_WALL_HEIGHT / 2, (wallFront + ROOM_WALL_BACK_Z) / 2);
@@ -380,8 +381,8 @@ export class Habitat {
         const pillow = toonMesh(new THREE.BoxGeometry(0.4, 0.12, BED_DEPTH - 0.15), 0xffffff, 0);
         pillow.position.set(bx - 0.7, y + BED_LEVEL + 0.14, BED_Z);
         inside.add(pillow);
-        const locker = toonMesh(new THREE.BoxGeometry(0.36, 1.6, 0.6), PALETTE.tech, 0.03);
-        locker.position.set(mx + side * ROOM_LOCKER_DX, y + 0.8, BACK_Z + 0.05);
+        const locker = toonMesh(new THREE.BoxGeometry(0.36, 1.6, 0.5), PALETTE.tech, 0.03);
+        locker.position.set(mx + side * ROOM_LOCKER_DX, y + 0.8, ROOM_LOCKER_Z);
         inside.add(locker);
       }
     }

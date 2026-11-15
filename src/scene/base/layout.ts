@@ -194,15 +194,22 @@ export const BED_THICKNESS = 0.18;
 const BED_BODY_Y = BED_THICKNESS / 2 + 0.43 * LYING_SCALE;
 /** Fundo dos módulos, onde ficam a bancada e os aparelhos (z relativo ao centro do casco). */
 export const BACK_Z = -0.55;
-/** Camas encostadas no fundo do quarto (z relativo ao eixo do casco). */
-export const BED_Z = -0.65;
-/** Frente do colchão (z relativo ao eixo do casco): onde o astronauta senta para deitar. */
-export const BED_FRONT_Z = BED_Z + BED_DEPTH / 2;
 /**
- * Faixa por onde se anda dentro do alojamento: mais à frente que o eixo do casco, para as pernas não passarem
- * pela borda das camas de baixo (relativa ao centro do casco).
+ * Corredor livre no meio dos módulos de quartos: quem anda pelo eixo do casco (o boneco tem ~0,38 m de cada lado)
+ * não encosta em nada. Camas, armários e divisórias ficam atrás desta linha (z relativo ao eixo do casco).
  */
-export const QUARTERS_LANE_Z = 0.45;
+export const ROOM_FURNITURE_FRONT_Z = -0.43;
+/** Armário: um pouco mais para o fundo (é alto; quem passa virando não raspa o ombro nele). */
+export const ROOM_LOCKER_Z = ROOM_FURNITURE_FRONT_Z - 0.07 - 0.25;
+/** Frente do colchão: onde o astronauta senta para deitar. A cama é baixa, então cabe no fundo do casco curvo. */
+export const BED_FRONT_Z = ROOM_FURNITURE_FRONT_Z;
+/** Centro da cama, encostada no fundo do quarto. */
+export const BED_Z = BED_FRONT_Z - BED_DEPTH / 2;
+/**
+ * Faixa por onde se anda dentro do alojamento (relativa ao eixo do casco): no meio, como nos outros módulos (o corredor
+ * fica livre, sem desviar das camas).
+ */
+export const QUARTERS_LANE_Z = 0;
 
 /** Chão da estufa, dentro da cúpula (em cima da base da cúpula), onde ficam os canteiros. */
 export const GREENHOUSE_FLOOR_Y = 0.4;
@@ -276,7 +283,7 @@ export function insideHull(zFromAxis: number, y: number): boolean {
 export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
   commander: new THREE.Vector3(HABITAT_POSITION.x - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
   scientist: new THREE.Vector3(HABITAT_POSITION.x + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
-  // No alojamento, na faixa da frente (QUARTERS_LANE_Z): virando para olhar em volta, não encosta nas camas.
+  // No alojamento, no corredor do meio: virando para olhar em volta, não encosta nas camas.
   engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + QUARTERS_LANE_Z + 0.05),
   medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + QUARTERS_LANE_Z + 0.05),
 };
