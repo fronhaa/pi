@@ -7,6 +7,15 @@ import type { ChibiAction, ChibiAstronautInstance } from '@/render/chibiAstronau
 const CHIBI_WALK_SPEED = 1.15;
 /** Deitado de costas: cabeça para −X e rosto para cima (o `model` olha para −Z em pé). */
 const LIE_BASIS = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, -1, 0));
+/**
+ * Olhar da tripulação (GDD, "Para onde o astronauta olha"): ninguém encara a câmera; todo giro é suave.
+ * TURN_RATE: no máximo ~180°/s. Olhar livre troca de ponto a cada LOOK_MIN a LOOK_MIN + LOOK_SPREAD s.
+ * Fora, parado, olha em volta até ±LOOK_AROUND rad da direção em que chegou.
+ */
+const TURN_RATE = Math.PI;
+const LOOK_MIN = 4;
+const LOOK_SPREAD = 4;
+const LOOK_AROUND = 0.6;
 /** Tamanho do boneco deitado no beliche (ver BUNK_SPOTS em MarsBase). */
 const LYING_SCALE = 0.8;
 /** Duração do clipe `jump`. */
@@ -150,14 +159,90 @@ export class Astronaut {
     else this.idle(dt);
   }
 
-  /** Vira para uma direção (mesma convenção do andar: 0 olha para −Z). */
-  face(heading: number): void {
-    this.model.rotation.y = heading;
+  // ---------- olhar (GDD, "Para onde o astronauta olha") ----------
+
+  /** Câmera de quem tocou e quanto tempo ainda fica olhando para ela. */
+  private lookPoint: THREE.Vector3 | null = null;
+  private lookLeft = 0;
+  /** Olhar livre: ponto atual (dentro) ou direção atual (fora) e tempo até trocar. */
+  private freePoint: THREE.Vector3 | null = null;
+  private freeHeading: number | null = null;
+  private freeTimer = 0;
+  /** Fora, parado: direção em que chegou (o olhar em volta gira em torno dela). */
+  private restHeading: number | null = null;
+
+  /** Direção (convenção do andar: 0 olha para −Z) de onde está até um ponto. */
+  private headingTo(p: THREE.Vector3): number {
+    return Math.atan2(-(p.x - this.root.position.x), -(p.z - this.root.position.z));
   }
 
-  /** Vira o boneco para a câmera (usado quando está parado dentro da base). */
-  faceCamera(camera: THREE.Vector3): void {
-    this.model.rotation.y = Math.atan2(-(camera.x - this.root.position.x), -(camera.z - this.root.position.z));
+  /** Gira devagar até a direção, no máximo TURN_RATE por segundo: nunca pula. */
+  private turnTo(heading: number, dt: number): void {
+    const r = this.model.rotation;
+    const diff = Math.atan2(Math.sin(heading - r.y), Math.cos(heading - r.y));
+    const step = TURN_RATE * dt;
+    r.y += Math.max(-step, Math.min(step, diff));
+  }
+
+  private nextFreeTime(): number {
+    return LOOK_MIN + Math.random() * LOOK_SPREAD;
+  }
+
+  /** Tocado e sem tarefa: vira devagar para a câmera de quem controla, olha por `seconds` e volta a ficar livre. */
+  lookAt(point: THREE.Vector3, seconds: number): void {
+    this.lookPoint = point;
+    this.lookLeft = seconds;
+  }
+
+  /** Recebeu uma ordem: para de olhar para a câmera e vai cumprir. */
+  cancelLook(): void {
+    this.lookLeft = 0;
+  }
+
+  /** Olhando para quem tocou? Gasta o tempo e gira. */
+  private lookingAtCamera(dt: number): boolean {
+    if (this.lookLeft <= 0 || !this.lookPoint || this.working) return false;
+    this.lookLeft -= dt;
+    this.turnTo(this.headingTo(this.lookPoint), dt);
+    return true;
+  }
+
+  /**
+   * Parado sem tarefa dentro da base: olha para a estação do módulo e, de vez em quando, para um colega
+   * ou de volta para a estação. Tocado, olha para a câmera por um tempo.
+   */
+  lookFree(dt: number, station: THREE.Vector3, others: THREE.Vector3[]): void {
+    if (this.lookingAtCamera(dt)) return;
+    this.freeTimer -= dt;
+    if (!this.freePoint || this.freeTimer <= 0) {
+      this.freeTimer = this.nextFreeTime();
+      const toColleague = this.freePoint !== null && others.length > 0 && Math.random() < 0.5;
+      this.freePoint = (toColleague ? others[Math.floor(Math.random() * others.length)] : station).clone();
+    }
+    this.turnTo(this.headingTo(this.freePoint), dt);
+  }
+
+  /** Tarefa ou estação (conserto, esteira): olha para ela e nunca para a câmera. */
+  faceToward(point: THREE.Vector3, dt: number): void {
+    this.lookLeft = 0;
+    this.turnTo(this.headingTo(point), dt);
+  }
+
+  faceHeading(heading: number, dt: number): void {
+    this.lookLeft = 0;
+    this.turnTo(heading, dt);
+  }
+
+  /** Fora, parado: mantém a direção em que chegou e de vez em quando olha em volta (nunca durante o conserto). */
+  private lookAroundOutside(dt: number): void {
+    if (this.working || this.lookingAtCamera(dt)) return;
+    this.restHeading ??= this.model.rotation.y;
+    this.freeTimer -= dt;
+    if (this.freeTimer <= 0) {
+      this.freeTimer = this.nextFreeTime();
+      this.freeHeading = this.restHeading + (Math.random() * 2 - 1) * LOOK_AROUND;
+    }
+    if (this.freeHeading !== null) this.turnTo(this.freeHeading, dt);
   }
 
   /** Pulo (Espaço): toca o clipe `jump` uma vez. */
@@ -209,9 +294,14 @@ export class Astronaut {
   setMotion(speed: number, heading: number, dt: number): void {
     this.setLying(false);
     if (speed < 0.2) {
+      this.lookAroundOutside(dt);
       this.idle(dt);
       return;
     }
+    // Andando: olha para onde anda (o olhar livre recomeça quando parar).
+    this.restHeading = null;
+    this.freeHeading = null;
+    this.lookLeft = 0;
     if (this.chibi) this.animateChibi(speed, dt);
     else {
       this.bobPhase += dt * speed * 4;

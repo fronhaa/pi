@@ -19,7 +19,7 @@ import { Input } from './Input';
 import { CrewTasks } from './CrewTasks';
 import { MARS_G, MOON_G, NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
-import { BUNK_SPOTS, ENTRANCES, GREENHOUSE_WORK_SPOT, GYM_STATIONS, HABITAT_SPOTS, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
+import { BUNK_SPOTS, ENTRANCES, GREENHOUSE_WORK_SPOT, GYM_STATIONS, HABITAT_LOOK, HABITAT_SPOTS, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
 import { ProblemMarkers } from '@/scene/ProblemMarkers';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CONFIG, type Location } from '@/sim/config';
@@ -28,6 +28,8 @@ import type { StringKey } from '@/i18n';
 /** Duração mínima da noite antes do relatório (ms). */
 /** Rotina visual dentro da base (GDD, "Atividades dentro da base", B): segundos sem ordem até ir à academia, de exercício e de descanso. */
 const ROUTINE_IDLE_SECONDS = 8;
+/** Tocado: quanto tempo o astronauta fica olhando para quem controla (GDD, "Para onde o astronauta olha"). */
+const LOOK_AT_CAMERA_SECONDS = 2;
 const ROUTINE_GYM_SECONDS = 20;
 const ROUTINE_REST_SECONDS = 12;
 const NIGHT_MS = 2200;
@@ -431,6 +433,8 @@ export class Game {
       return;
     }
     this.selected = role;
+    // Tocado e sem ordem: vira devagar para quem controla (só nesta tela; nada vai para a rede).
+    if (!this.tasks.hasTask(role)) this.crew.members[role].lookAt(this.camera.position, LOOK_AT_CAMERA_SECONDS);
     if (this.motion) this.motion.select(role); // avisa o HUD via onSelect
     else {
       for (const [r, a] of Object.entries(this.crew.members)) a.setSelected(r === role);
@@ -445,6 +449,7 @@ export class Game {
       return;
     }
     const r = this.tasks.assign(this.selected, uid);
+    if (r === 'ok') this.crew.members[this.selected].cancelLook(); // ordem cancela o olhar para a câmera
     if (r === 'storm') this.hud.toast(t('eva.banned'));
     else if (r === 'full') this.hud.toast(t('eva.full'));
     else if (r === 'nobody') this.hud.toast(t('eva.nobody'));
@@ -1162,12 +1167,22 @@ export class Game {
         const st = GYM_STATIONS[rt.station];
         a.setLying(false);
         a.root.position.copy(st.pos);
-        a.face(st.heading);
+        a.faceHeading(st.heading, dt);
         a.exercise(st.speed, dt);
       } else {
         a.setLying(false);
-        a.root.position.copy(this.tasks.onInsideTask(r) ? GREENHOUSE_WORK_SPOT : HABITAT_SPOTS[r]);
-        a.faceCamera(this.camera.position);
+        if (this.tasks.onInsideTask(r)) {
+          // Consertando a estufa: de frente para o vazamento, nunca para a câmera.
+          a.root.position.copy(GREENHOUSE_WORK_SPOT);
+          a.faceToward(PROBLEM_SPOTS.greenhouseLeak, dt);
+        } else {
+          // Posto: olha a estação do módulo e, às vezes, um colega perto (ninguém encara a câmera).
+          a.root.position.copy(HABITAT_SPOTS[r]);
+          const others = ROLES.filter((o) => o !== r && this.crew.members[o].root.visible)
+            .map((o) => this.crew.members[o].root.position)
+            .filter((p) => p.distanceTo(a.root.position) < 3.5);
+          a.lookFree(dt, HABITAT_LOOK[r], others);
+        }
         a.idle(dt);
       }
     }
