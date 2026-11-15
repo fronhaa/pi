@@ -268,7 +268,7 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Fato:** o Perseverance **"touched down on Mars Thursday, after a 203-day journey traversing 293 million miles (472 million kilometers)"** (pousou em Marte depois de uma viagem de 203 dias e 472 milhões de km). A missão foi lançada em 30/07/2020 e pousou em 18/02/2021. ([NASA, 2021](https://www.nasa.gov/news-release/touchdown-nasas-mars-perseverance-rover-safely-lands-on-red-planet/))
 - **Criança (PT):** "O Perseverance levou 203 dias para chegar a Marte. Quase 7 meses!"
 - **Criança (EN):** "Perseverance took 203 days to reach Mars. Almost 7 months!"
-- **No jogo:** intro da viagem, depois de escolher Marte (`src/ui/LaunchIntro.ts`).
+- **No jogo:** intro da viagem, depois de escolher Marte (`src/ui/LaunchIntro.ts`, cena em `src/scene/LaunchScene.ts`).
 - **Atenção:** 203 dias é a viagem DESSE rover; o tempo muda com a posição dos planetas no lançamento. Não diga que toda viagem leva 203 dias.
 
 ### F31. A viagem até a Lua leva dias
@@ -276,7 +276,7 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Fato:** **"Apollo 11 launched from Cape Kennedy on July 16, 1969"**; Armstrong deu o primeiro passo na Lua **"on July 20, 1969"**: cerca de 4 dias. ([NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/))
 - **Criança (PT):** "A Apollo 11 levou só 4 dias para chegar à Lua."
 - **Criança (EN):** "Apollo 11 took only 4 days to reach the Moon."
-- **No jogo:** intro da viagem, depois de escolher a Lua (`src/ui/LaunchIntro.ts`).
+- **No jogo:** intro da viagem, depois de escolher a Lua (`src/ui/LaunchIntro.ts`, cena em `src/scene/LaunchScene.ts`).
 - **Atenção:** "4 dias" é do lançamento até o passo na Lua (16 a 20 de julho), não só o voo até a órbita. Conferido em 15/11/2026.
 
 ## Ligação com os objetivos de aprendizagem

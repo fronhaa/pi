@@ -173,6 +173,16 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   eixo Y para cima, em metros, com cores sólidas; ao carregar, trocar os materiais por `toonMaterial(cor)`.
   Coloque em `public/assets/models/` com nome em `kebab-case`.
 
+## Intro da viagem (`src/scene/LaunchScene.ts`)
+
+- Depois de escolher Marte ou Lua: foguete cartoon (primitivas com `toonMesh` e contorno) decola da base na Terra,
+  passa pelas nuvens, a Terra fica para trás e ele chega ao destino. ~9 s, só visual.
+- Usa o renderizador do jogo: enquanto passa, o quadro desenha só a intro (a base não é desenhada, não pesa no celular).
+- O texto por cima (contagem, "Liftoff!", fato real F30/F31, "Pular") é HTML em `src/ui/LaunchIntro.ts`.
+- O destino é "trapaça de cinema": fica sempre acima e atrás do foguete e cresce. Exceção à regra "planeta gigante
+  no céu" abaixo, que vale para a cena da base.
+- "Reduzir movimento" no sistema: a cena fica parada na chegada.
+
 ## O que não usar
 
 - Logotipo, insígnia ou nome da NASA como marca. O emblema da missão é próprio: "JZ-1".

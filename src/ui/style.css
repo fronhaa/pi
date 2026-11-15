@@ -393,20 +393,9 @@ body.guiding .toast { top: 250px; }
  * Linha do tempo: 0–1,5 s contagem 3-2-1 (foguete na base) · 1,5 s Liftoff! · 1,8–4 s decolagem (o chão desce, o céu
  * escurece) · 3,6–7,6 s viagem (linhas de velocidade, a Terra fica para trás, o destino cresce, o fato) · 7,6–9 s o
  * foguete voa até o destino. Movimento devagar; nada pisca mais de 3 vezes por segundo. */
-.launch-intro { position: fixed; inset: 0; z-index: 60; background: #1B1630; overflow: hidden; font-family: var(--font); color: var(--ink); transition: opacity 0.4s; }
+.launch-intro { position: fixed; inset: 0; z-index: 60; background: transparent; overflow: hidden; font-family: var(--font); color: var(--ink); transition: opacity 0.4s, background-color 0.25s; }
+.launch-intro.launch-closing { background: #1B1630; }
 .launch-intro.launch-out { opacity: 0; pointer-events: none; }
-.launch-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.launch-svg g { transform-box: fill-box; transform-origin: center; }
-.launch-space { opacity: 0; animation: launch-fade-in 1.6s ease 2.4s both; }
-.launch-stars { opacity: 0; animation: launch-fade-in 1s ease 3.2s both; }
-.launch-ground { animation: launch-ground-away 2.2s ease-in 1.8s both; }
-.launch-smoke { opacity: 0; transform-origin: 50% 100%; animation: launch-smoke 2.4s ease-out 1.4s both; }
-.launch-globe { opacity: 0; transform-origin: 50% 100%; animation: launch-globe 4.4s ease-in-out 3.4s both; }
-.launch-streaks { opacity: 0; animation: launch-streaks-show 4.4s linear 3.4s both; }
-.launch-streaks line { animation: launch-streak 0.7s linear infinite; }
-.launch-rocket { animation: launch-rocket 9s ease-in-out both; }
-.launch-flame { transform-origin: 50% 0%; animation: launch-flame-on 0.4s ease-out 1.2s both, launch-flame 0.35s ease-in-out 1.6s infinite alternate; }
-.launch-dest { opacity: 0; animation: launch-dest 4.6s ease-out 3.6s both; }
 
 .launch-count { position: absolute; left: 0; right: 0; top: 16%; height: 1px; text-align: center; }
 .launch-count span { position: absolute; left: 0; right: 0; font-size: clamp(72px, 16vw, 140px); font-weight: 700; color: #FBF4EC; text-shadow: 0 6px 0 rgba(27, 22, 48, 0.55); opacity: 0; animation: launch-count 0.5s ease-out both; }
@@ -424,24 +413,7 @@ body.guiding .toast { top: 250px; }
 @keyframes launch-rise-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes launch-count { 0% { opacity: 0; transform: scale(1.4); } 25% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(0.9); } }
 @keyframes launch-pop { 0% { opacity: 0; transform: scale(0.8); } 15% { opacity: 1; transform: scale(1.05); } 25% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes launch-ground-away { from { transform: translateY(0); } to { transform: translateY(800px); } }
-@keyframes launch-smoke { 0% { opacity: 0; transform: scale(0.5); } 20% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: translateY(260px) scale(1.8); } }
-@keyframes launch-globe { 0% { opacity: 0; transform: translateY(320px); } 25% { opacity: 1; transform: translateY(0); } 100% { opacity: 1; transform: translateY(260px) scale(0.55); } }
-@keyframes launch-streaks-show { 0% { opacity: 0; } 15% { opacity: 0.55; } 85% { opacity: 0.55; } 100% { opacity: 0; } }
-@keyframes launch-streak { from { transform: translateY(-1000px); } to { transform: translateY(1000px); } }
-@keyframes launch-rocket {
-  0% { transform: translateY(90px); }
-  20% { transform: translateY(90px); }
-  25% { transform: translateY(80px) rotate(0.5deg); }
-  44% { transform: translateY(30px); }
-  84% { transform: translateY(20px); }
-  96% { transform: translateY(-230px) scale(0.3); opacity: 1; }
-  100% { transform: translateY(-240px) scale(0.25); opacity: 0; }
-}
-@keyframes launch-flame-on { from { opacity: 0; transform: scaleY(0.2); } to { opacity: 1; transform: scaleY(1); } }
-@keyframes launch-flame { from { transform: scaleY(1); } to { transform: scaleY(1.35); } }
-@keyframes launch-dest { 0% { opacity: 0; transform: scale(0.25); } 20% { opacity: 1; } 100% { opacity: 1; transform: scale(1.25); } }
 
-/* Reduzir movimento: só o espaço, o destino e o fato, sem animação. */
-.launch-reduced .launch-space, .launch-reduced .launch-stars, .launch-reduced .launch-dest, .launch-reduced .launch-fact, .launch-reduced .launch-source { animation: none; opacity: 1; }
-.launch-reduced .launch-rocket, .launch-reduced .launch-ground, .launch-reduced .launch-globe, .launch-reduced .launch-smoke, .launch-reduced .launch-streaks, .launch-reduced .launch-count, .launch-reduced .launch-liftoff { display: none; }
+/* Reduzir movimento: a cena 3D fica parada no destino; aparece só o fato. */
+.launch-reduced .launch-fact, .launch-reduced .launch-source { animation: none; opacity: 1; }
+.launch-reduced .launch-count, .launch-reduced .launch-liftoff { display: none; }

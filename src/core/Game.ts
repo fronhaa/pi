@@ -22,7 +22,8 @@ import { Hud } from '@/ui/Hud';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CrewBubble } from '@/ui/CrewBubble';
 import { showCard, showEnd, showMissionStart, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
-import { playLaunchIntro } from '@/ui/LaunchIntro';
+import { playLaunchIntro, prefersReducedMotion } from '@/ui/LaunchIntro';
+import { LaunchScene } from '@/scene/LaunchScene';
 import { IntroGuide } from '@/ui/IntroGuide';
 import { IntroDirector } from './intro';
 import { showModeChoice } from '@/ui/coop';
@@ -64,6 +65,8 @@ const BEDTIME_DAY_FRACTION = 0.7;
  */
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
+  /** Intro da viagem passando: o quadro desenha só ela (a base fica parada por trás). */
+  private launch: LaunchScene | null = null;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(50, 1, 0.1, 600);
   private readonly controls: OrbitControls;
@@ -276,7 +279,19 @@ export class Game {
       this.setLocation(place);
       this.newMission();
       // Viagem da Terra até a base (só visual, dá para pular); a missão começa quando o foguete chega.
-      playLaunchIntro(place, () => this.startMission());
+      this.playLaunch(place);
+    });
+  }
+
+  /** Viagem da Terra até a base em 3D cartoon (src/scene/LaunchScene.ts) com o texto por cima; depois, a missão. */
+  private playLaunch(place: Location): void {
+    this.launch?.dispose();
+    this.launch = new LaunchScene(place, prefersReducedMotion());
+    this.launch.resize(window.innerWidth, window.innerHeight);
+    playLaunchIntro(place, () => {
+      this.launch?.dispose();
+      this.launch = null;
+      this.startMission();
     });
   }
 
@@ -736,7 +751,7 @@ export class Game {
       showPlaceChoice((place) => {
         this.setLocation(place);
         this.newMission();
-        playLaunchIntro(place, () => this.startMission());
+        this.playLaunch(place);
       }),
     );
   }
@@ -831,12 +846,19 @@ export class Game {
     // Desloca a imagem para cima: a base fica visível acima do plano de energia.
     this.camera.setViewOffset(w, h, 0, h * (portrait ? 0.06 : 0.16), w, h);
     this.camera.updateProjectionMatrix();
+    this.launch?.resize(w, h);
   }
 
   private frame(time: number): void {
     this.timer.update(time);
     const rawDt = this.timer.getDelta();
     const dt = Math.min(rawDt, 0.1); // animações
+
+    if (this.launch) {
+      this.launch.update();
+      this.renderer.render(this.launch.scene, this.launch.camera);
+      return;
+    }
 
     const t = this.timer.getElapsed();
     this.controls.update();
