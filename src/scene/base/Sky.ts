@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { QUALITY } from '@/render/quality';
 import { PALETTE } from '@/render/toon';
 import type { Scenario } from '@/scenarios';
 import { seededRandom } from './layout';
@@ -57,7 +58,7 @@ export class Sky {
     this.sun = new THREE.DirectionalLight(0xfff0dc, 2.2);
     this.sun.position.set(-30, 40, 20);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.mapSize.set(QUALITY.shadowMapSize, QUALITY.shadowMapSize);
     Object.assign(this.sun.shadow.camera, { left: -36, right: 36, top: 36, bottom: -36, near: 1, far: 130 });
     this.sun.shadow.bias = -0.0005;
     // Recomendado no doc dos modelos (docs/rover-e-base-de-pesquisa.md): evita manchas onde uma peça recebe a
