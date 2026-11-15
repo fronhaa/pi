@@ -186,14 +186,22 @@ function bunkSpot(dx: number, level: 0 | 1): THREE.Vector3 {
  * Aparelhos da academia que um astronauta usa (F9: esteira e bicicleta, como na Estação Espacial).
  * `heading` segue a convenção do andar: 0 olha para −Z; aqui todos olham para a frente (+Z), para a câmera.
  */
-export const GYM_DX = 1.8;
+/**
+ * Posição (x, relativa ao centro da academia) de cada aparelho. A academia é o módulo da ponta: à esquerda
+ * fica a parede (anel da porta de acoplamento), então a esteira fica perto do meio, com folga para os braços
+ * de quem corre; a bicicleta vem logo depois e o aparelho de força (só decoração) vai para a outra ponta.
+ */
+export const TREADMILL_DX = -1.15;
+export const BIKE_DX = 0.45;
+export const GYM_DX = 1.9;
 /** Onde fica o quadril de quem pedala, em Z, em relação ao centro do módulo (a bicicleta é montada em volta). */
 export const BIKE_Z = -0.3;
 export const GYM_STATIONS = [
   // Esteira: clipe `walk`; `speed` em m/s.
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X - GYM_DX, HABITAT_FLOOR_Y + 0.14, HABITAT_POSITION.z), heading: Math.PI, clip: 'walk', speed: 1.8 },
+  // Esteira mais baixa, para a cabeça de quem corre não chegar no teto.
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + TREADMILL_DX, HABITAT_FLOOR_Y + 0.08, HABITAT_POSITION.z), heading: Math.PI, clip: 'walk', speed: 1.8 },
   // Bicicleta: sentado, clipe `pedal` (src/render/chibiPedal.ts); `speed` é a velocidade do clipe (1 = uma volta por segundo).
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X, HABITAT_FLOOR_Y, HABITAT_POSITION.z + BIKE_Z), heading: Math.PI, clip: 'pedal', speed: 0.9 },
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + BIKE_DX, HABITAT_FLOOR_Y, HABITAT_POSITION.z + BIKE_Z), heading: Math.PI, clip: 'pedal', speed: 0.9 },
 ] as const;
 
 /**
