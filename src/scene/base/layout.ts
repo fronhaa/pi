@@ -168,13 +168,18 @@ export const LYING_SCALE = 1;
  * Medidas da cama: colchão de 0,7 m de fundo e 0,18 m de altura. A origem do boneco deitado (no meio da espessura
  * dele) fica BUNK_BODY_Y acima do centro da cama; o capacete deitado tem ~0,84 m.
  */
-export const BED_DEPTH = 0.7;
+export const BED_DEPTH = 0.85;
 export const BED_THICKNESS = 0.18;
 const BUNK_BODY_Y = BED_THICKNESS / 2 + 0.43 * LYING_SCALE;
 /** Fundo dos módulos, onde ficam a bancada e os aparelhos (z relativo ao centro do casco). */
 export const BACK_Z = -0.55;
-/** Beliches um pouco mais para o meio do casco que a bancada: o casco é redondo e a cama de cima fica perto dele. */
-export const BUNK_Z = -0.42;
+/**
+ * Beliches encostados no fundo do módulo (z relativo ao eixo do casco). O casco é redondo: mais para trás, o capacete
+ * de quem dorme na cama de cima sairia pelo casco. Medido com o corpo do chibi nas 4 camas.
+ */
+export const BUNK_Z = -0.65;
+/** Frente do colchão (z relativo ao eixo do casco): por onde o astronauta entra na cama. */
+export const BED_FRONT_Z = BUNK_Z + BED_DEPTH / 2;
 /**
  * Faixa por onde se anda dentro do alojamento: mais à frente que o eixo do casco, para as pernas não passarem
  * pela borda das camas de baixo (relativa ao centro do casco).

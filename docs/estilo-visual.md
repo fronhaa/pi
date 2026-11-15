@@ -141,8 +141,9 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 - Túneis: raio `TUBE_RADIUS` (1,2 m), com ~2,1 m livres acima do piso: o astronauta (1,87 m) passa **em pé**. A cúpula
   tem 6 m de raio para a passarela ter altura até a boca dos túneis. Se um teto ficar baixo, ele se curva sozinho
   (`Astronaut.fitHeadroom`, altura em `headroomAt`).
-- Beliche: **1 m livre acima de cada colchão** (`BUNK_LEVELS`, como a NASA recomenda para sentar na cama), camas em
-  `BUNK_Z`, colchão de `BED_DEPTH` (0,7 m). O boneco deitado fica em tamanho normal (`LYING_SCALE = 1`). Deitar: de pé
+- Beliche: **1 m livre acima de cada colchão** (`BUNK_LEVELS`, como a NASA recomenda para sentar na cama), camas
+  **encostadas no fundo do módulo** (`BUNK_Z`, centro a 0,65 m do eixo; o fundo do colchão fica a ~10 cm da parede no
+  piso), colchão de `BED_DEPTH` (0,85 m). Mais para trás, o capacete de quem dorme na cama de cima sairia pelo casco redondo. O boneco deitado fica em tamanho normal (`LYING_SCALE = 1`). Deitar: de pé
   na frente da cama, de frente para os pés dela, deita para trás girando em volta do quadril (`Astronaut.lieBlend`).
 - Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
   (GDD, "Atividades dentro da base", B): quem está dentro sem ordem há 8 s vai à esteira ou à bicicleta (`GYM_STATIONS`,
