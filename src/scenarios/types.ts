@@ -22,9 +22,16 @@ export interface Scenario {
   sky: { day: number; dust: number; alert: number; night: number };
   sun: {
     color: number;
-    position: readonly [number, number, number];
     /** Intensidade com o Sol pleno (a luz do dia, de 0 a 1, vem do estado da cena). */
     intensity: number;
+    /**
+     * Caminho do Sol ao longo do sol (dia): de `azimuth[0]` a `azimuth[1]` (rad, 0 = +X, π/2 = +Z, o lado da
+     * câmera) e altura de `elevation[0]` (nas pontas) a `elevation[1]` (no meio do dia), em rad.
+     * Em Marte ele nasce, cruza o céu e se põe; no polo sul da Lua anda baixo, quase paralelo ao horizonte.
+     */
+    path: { azimuth: readonly [number, number]; elevation: readonly [number, number] };
+    /** O Sol se põe à noite (Marte). Na Lua (polo sul), não: a noite é o descanso da tripulação. */
+    sets: boolean;
   };
   /** Luz ambiente (céu + chão). */
   hemiIntensity: number;

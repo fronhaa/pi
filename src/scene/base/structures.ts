@@ -81,10 +81,12 @@ export class BaseStructures {
     const base = toonMesh(new THREE.CylinderGeometry(r + 0.1, r + 0.2, 0.4, 24), PALETTE.tech);
     base.position.set(center.x, 0.2, center.z);
     this.root.add(base);
+    // Canteiros: mais plantas na cúpula maior, fora da passarela que cruza a estufa de leste a oeste.
     const rng = seededRandom(3);
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 34; i++) {
       const a = rng() * Math.PI * 2;
       const d = rng() * (r - 1.2);
+      if (Math.abs(Math.sin(a) * d) < 1.1) continue;
       const plant = toonMesh(new THREE.SphereGeometry(0.35 + rng() * 0.25, 10, 8), PALETTE.plant, 0.05);
       plant.position.set(center.x + Math.cos(a) * d, 0.7 + rng() * 0.3, center.z + Math.sin(a) * d);
       this.plants.push(plant);

@@ -144,6 +144,9 @@ export class Rover {
   private studyLeft = 0;
   /** Paradas de estudo nesta expedição. */
   private studies = 0;
+  /** Amostras coletadas no sol `samplesSol` (uma por parada de estudo): o painel mostra os tubos enchendo. */
+  private samples = 0;
+  private samplesSol = -1;
   /** Distância percorrida no caminho da garagem (aproximação → pé da rampa → topo → dentro). */
   private dockS = 0;
   private serviceLeft = 1;
@@ -264,6 +267,11 @@ export class Rover {
   }
 
   /** Na garagem, entregando amostras ou em revisão? (para testes) */
+  /** Amostras que o rover já coletou neste sol (só visual: quem decide os tubos gastos é a regra, src/sim/day.ts). */
+  get samplesToday(): number {
+    return this.samplesSol === this.sol ? this.samples : 0;
+  }
+
   get isServicing(): boolean {
     return this.phase === 'service';
   }
@@ -664,6 +672,11 @@ export class Rover {
         return;
       }
       this.studies++;
+      if (this.samplesSol !== this.sol) {
+        this.samplesSol = this.sol;
+        this.samples = 0;
+      }
+      this.samples++;
       this.phase = 'study';
       this.studyLeft = STUDY_SECONDS;
       this.blocked = false;

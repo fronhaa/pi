@@ -72,6 +72,8 @@ export class Hud {
   private state: GameState | null = null;
   private plan: EnergyPlan = { life: 3, shield: 1, science: 3 };
   private busy = false;
+  /** Amostras que o rover já coletou hoje (cena): os tubos do painel enchem ao vivo. */
+  private samplesToday = 0;
   /** Durante a noite, mostra o resultado do dia ainda com o número do sol que acabou. */
   private nightView: { res: Resources; sol: number } | null = null;
 
@@ -213,6 +215,8 @@ export class Hud {
       const k = invert ? 100 - v : v;
       return k >= 50 ? 'good' : k >= 25 ? 'warn' : 'bad';
     };
+    // Tubos: o que sobra, já descontando as amostras que o rover coletou hoje (ao vivo).
+    const tubesLeft = (r.tubes ?? CONFIG.samples.tubes) - (this.tubesPlan()?.filled ?? 0);
     patchChildren(this.resources, [
       h('h2', { id: 'res-title' }, 'Base'),
       resource('res.battery', 'help.battery', r.battery, CONFIG.battery.max, level(r.battery)),
@@ -222,17 +226,35 @@ export class Hud {
       resource('res.science', 'help.science', r.science, CONFIG.science.goal, 'sci', [], t('res.goal', { n: CONFIG.science.goal })),
       // Tubos de amostra (regra em src/sim/day.ts): ficam amarelos/vermelhos quando faltam poucas expedições.
       // Com energia na ciência, mostra já o que a expedição de hoje vai gastar ("−3 hoje"); o número cai na noite.
-      resource('res.tubes', 'help.tubes', r.tubes ?? CONFIG.samples.tubes, CONFIG.samples.tubes, level(((r.tubes ?? CONFIG.samples.tubes) / CONFIG.samples.tubes) * 100), [], this.tubesToday()),
+      resource('res.tubes', 'help.tubes', tubesLeft, CONFIG.samples.tubes, level((tubesLeft / CONFIG.samples.tubes) * 100), [], this.tubesToday()),
     ]);
   }
 
   /** O que a expedição de hoje vai fazer com os tubos (pela prévia do plano), ou nada à noite e sem ciência. */
-  private tubesToday(): string | undefined {
-    if (this.nightView || !this.state || this.plan.science === 0) return undefined;
+  /** O rover coletou mais uma amostra (cena): atualiza os tubos do painel. */
+  setSamplesToday(n: number): void {
+    this.samplesToday = n;
+    this.renderResources();
+  }
+
+  /**
+   * Tubos de hoje pela prévia do plano: quantos a expedição vai encher e quantos o rover já encheu (ao vivo,
+   * uma amostra por parada de estudo). À noite, sem ciência ou sem prévia: nada (vale o número da regra).
+   */
+  private tubesPlan(): { used: number; filled: number; none: boolean } | null {
+    if (this.nightView || !this.state || this.plan.science === 0) return null;
     const pv = this.cb.preview?.(this.getPlan());
-    if (!pv) return undefined;
-    if (pv.tubesUsed > 0) return t('res.tubes.today', { n: pv.tubesUsed });
-    return pv.noTubes ? t('res.tubes.none') : undefined;
+    if (!pv) return null;
+    const used = pv.tubesUsed ?? 0;
+    return { used, filled: Math.min(this.samplesToday, used), none: !!pv.noTubes };
+  }
+
+  private tubesToday(): string | undefined {
+    const p = this.tubesPlan();
+    if (!p) return undefined;
+    if (p.none) return t('res.tubes.none');
+    if (p.used === 0) return undefined;
+    return p.filled > 0 ? t('res.tubes.filled', { n: p.filled, total: p.used }) : t('res.tubes.today', { n: p.used });
   }
 
   private renderMessages(): void {

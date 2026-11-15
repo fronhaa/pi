@@ -18,6 +18,8 @@ const INTERACT_RADIUS = 3;
 const FALLBACK_SPEED = 2.4;
 /** Andar pelos corredores até um problema de dentro (s). Valor de jogo. */
 const INSIDE_WALK_SECONDS = 2;
+/** Andando de verdade até a estufa (src/scene/crewRoutine.ts): começa ao chegar, mas espera no máximo isto (s). */
+const INSIDE_WALK_MAX_SECONDS = 8;
 /** Depois de consertar, a dupla volta logo; parada lá fora sem tarefa, volta depois disto (s). */
 const RETURN_AFTER_DONE = 0.8;
 const RETURN_WHEN_IDLE = 12;
@@ -73,6 +75,11 @@ export class CrewTasks {
   // ---------- modo em grupo (docs/servidor-coop.md, "EVA no modo em grupo") ----------
   /** Escolhe o parceiro da EVA entre os livres. Sem isso, o primeiro livre. */
   pickBuddy: ((free: Role[], leader: Role) => Role | undefined) | null = null;
+  /**
+   * A cena diz se o astronauta já chegou à estufa andando por dentro (com a física carregada). Sem isso,
+   * vale o tempo fixo de corredor (INSIDE_WALK_SECONDS).
+   */
+  insideArrived: ((role: Role) => boolean) | null = null;
   /** Há uma dupla lá fora comandada por OUTRO jogador: ninguém daqui sai (máximo uma dupla). */
   remoteEva = false;
 
@@ -323,7 +330,10 @@ export class CrewTasks {
       if (!needsEva(p.kind)) {
         if (a.phase === 'walking') {
           a.insideLeft = (a.insideLeft ?? 0) - dt;
-          if (a.insideLeft <= 0) {
+          const arrived = this.motion && this.insideArrived
+            ? this.insideArrived(role) || a.insideLeft <= INSIDE_WALK_SECONDS - INSIDE_WALK_MAX_SECONDS
+            : a.insideLeft <= 0;
+          if (arrived) {
             a.phase = 'working';
             this.onChange();
           }

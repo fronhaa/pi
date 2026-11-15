@@ -13,7 +13,20 @@ export interface SkyFrame {
   /** Luz do Sol de hoje, de 0 a 1 (Lua; em Marte é sempre 1). */
   sunlight: number;
   time: number;
+  dt: number;
+  /** Hora do sol (dia): 0 = nascer, 0,5 = meio-dia, 1 = pôr; acima de 1, abaixo do horizonte (noite). */
+  dayTime: number;
 }
+
+/** Distância do disco do Sol (m) e o raio dele: um pouco maior que o real, para a criança enxergar. */
+const SUN_DISTANCE = 170;
+const SUN_RADIUS = 4;
+/** O Sol anda até a hora pedida aos poucos (fração do dia por segundo): o pôr do sol leva uns 2 s. */
+const SUN_SPEED = 0.45;
+/** Luz do Sol para posicionar a sombra (m do centro da base). */
+const LIGHT_DISTANCE = 60;
+/** Céu do pôr e do nascer do sol em Marte: alaranjado perto do horizonte. */
+const SKY_LOW_SUN = new THREE.Color(0xd08a5a);
 
 /**
  * Céu e luz: fundo e névoa, Sol e luz ambiente, estrelas, o pontinho da Terra (FX-002) e a poeira no ar.
@@ -25,6 +38,9 @@ export class Sky {
   private readonly stars: THREE.Points;
   private readonly earthDot: THREE.Mesh;
   private readonly dustParticles: THREE.Points;
+  /** Disco do Sol no céu e a hora atual dele (amortecida). */
+  private readonly sunDisc: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
+  private sunT = 0.2;
   private scenario!: Scenario;
   private readonly colors = { day: new THREE.Color(), dust: new THREE.Color(), alert: new THREE.Color(), night: new THREE.Color() };
 
@@ -54,6 +70,9 @@ export class Sky {
     root.add(this.earthDot);
     this.dustParticles = buildDustParticles();
     root.add(this.dustParticles);
+    this.sunDisc = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS, 16, 12), new THREE.MeshBasicMaterial({ color: 0xfff4d6, fog: false }));
+    root.add(this.sunDisc);
+    root.add(this.sun.target);
     this.setScenario(scenario);
   }
 
@@ -67,14 +86,47 @@ export class Sky {
     this.earthDot.visible = !s.airless;
     this.hemi.groundColor.setHex(s.terrain.soil);
     this.sun.color.setHex(s.sun.color);
-    this.sun.position.set(...s.sun.position);
+    this.sunDisc.material.color.setHex(s.sun.color).lerp(new THREE.Color(0xffffff), 0.5);
+    this.placeSun();
     (this.dustParticles.material as THREE.PointsMaterial).color.setHex(s.terrain.dust);
+  }
+
+  /**
+   * Onde o Sol está agora (direção, a partir do centro da base), pelo caminho do cenário e a hora `sunT`.
+   * Acima de 1 (noite em Marte), continua descendo abaixo do horizonte; na Lua ele não se põe.
+   */
+  private sunDirection(): { dir: THREE.Vector3; elevation: number } {
+    const { azimuth, elevation } = this.scenario.sun.path;
+    const t = this.scenario.sun.sets ? this.sunT : THREE.MathUtils.clamp(this.sunT, 0, 1);
+    const az = THREE.MathUtils.lerp(azimuth[0], azimuth[1], t);
+    // Altura: das pontas ao meio-dia pelo seno; depois do pôr (t > 1), negativa.
+    const el = elevation[0] + (elevation[1] - elevation[0]) * Math.sin(Math.PI * THREE.MathUtils.clamp(t, 0, 1)) - (t > 1 ? (t - 1) * 1.5 : 0) - (t < 0 ? -t * 1.5 : 0);
+    const dir = new THREE.Vector3(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
+    return { dir, elevation: el };
+  }
+
+  private placeSun(): { elevation: number } {
+    const { dir, elevation } = this.sunDirection();
+    this.sun.position.copy(dir).multiplyScalar(LIGHT_DISTANCE);
+    this.sun.target.position.set(0, 0, 0);
+    this.sunDisc.position.copy(dir).multiplyScalar(SUN_DISTANCE);
+    this.sunDisc.visible = elevation > -0.05;
+    return { elevation };
   }
 
   update(f: SkyFrame): void {
     const s = this.scenario;
     const n = f.night;
+    // O Sol anda até a hora do jogo. Começou um sol novo (a hora voltou para a manhã)? Ele nasce de novo do
+    // lado certo, em vez de voltar para trás pelo céu.
+    if (f.dayTime < this.sunT - 0.5) this.sunT = s.sun.sets ? -0.1 : f.dayTime;
+    this.sunT += THREE.MathUtils.clamp(f.dayTime - this.sunT, -SUN_SPEED * f.dt, SUN_SPEED * f.dt);
+    const { elevation } = this.placeSun();
+    // Sol baixo: menos luz (nascer e pôr), e em Marte o céu fica alaranjado perto do horizonte.
+    const low = 1 - THREE.MathUtils.smoothstep(elevation, 0.05, 0.45);
+    const sunUp = THREE.MathUtils.smoothstep(elevation, -0.05, 0.12);
     const sky = this.colors.day.clone().lerp(this.colors.dust, f.dust);
+    if (!s.airless) sky.lerp(SKY_LOW_SUN, low * 0.35);
     if (f.alert) sky.lerp(this.colors.alert, 0.45);
     sky.lerp(this.colors.night, n);
     (this.scene.background as THREE.Color).copy(sky);
@@ -86,7 +138,7 @@ export class Sky {
 
     // Sem ar, a poeira fica nos painéis, mas não escurece o céu (não há vento para levantá-la).
     const skyDust = s.airless ? 0 : f.dust;
-    this.sun.intensity = THREE.MathUtils.lerp(s.sun.intensity * (1 - skyDust * 0.5) * (0.2 + 0.8 * f.sunlight), 0.15, n);
+    this.sun.intensity = THREE.MathUtils.lerp(s.sun.intensity * (1 - skyDust * 0.5) * (0.2 + 0.8 * f.sunlight) * (0.35 + 0.65 * sunUp), 0.15, n);
     this.hemi.intensity = THREE.MathUtils.lerp(s.hemiIntensity, 0.35, n);
     // Sem ar, as estrelas aparecem até de dia.
     (this.stars.material as THREE.PointsMaterial).opacity = s.airless ? Math.max(0.75, n) : n;

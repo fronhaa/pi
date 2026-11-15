@@ -87,6 +87,8 @@ export class Game {
   private hudTick = 0;
   private problemTipShown = false;
   private evaFactShown = false;
+  /** Amostras do rover neste sol já mostradas no painel. */
+  private samplesShown = 0;
 
   private constructor(
     container: HTMLElement,
@@ -174,6 +176,8 @@ export class Game {
     // Modo em grupo: a EVA é da sala (no máximo uma dupla); o servidor guarda quem a comanda.
     this.tasks.onEvaEnd = () => this.coop?.evaEnded();
     this.tasks.pickBuddy = (free) => (this.coop ? this.coop.pickBuddy(free) : free[0]);
+    // Conserto de dentro começa quando o astronauta chega à estufa andando pelo corredor.
+    this.tasks.insideArrived = (role) => this.routine.arrivedAtTask(role);
     this.tasks.onResolved = (p) => {
       this.markers.remove(p.uid);
       if (p.kind === 'roverStuck') this.base.setRoverStuck(null);
@@ -657,6 +661,20 @@ export class Game {
     });
   }
 
+  /**
+   * Hora do sol para o Sol andar no céu (só cena): de manhã (plano) ele acabou de nascer; no dia, cruza o céu
+   * com o relógio do dia; à noite, se põe.
+   */
+  private dayTime(): number {
+    if (this.night) return 1.15;
+    if (this.phase === 'day') {
+      const total = CONFIG.problems.daySeconds;
+      const elapsed = this.coop ? total - (this.coop.dayRemaining ?? total) : this.dayElapsed;
+      return 0.25 + 0.6 * THREE.MathUtils.clamp(elapsed / total, 0, 1);
+    }
+    return 0.2;
+  }
+
   // ---------- render ----------
 
   private resize(): void {
@@ -683,6 +701,7 @@ export class Game {
     const crewPositions = ROLES.filter((r) => this.crew.members[r].root.visible && !this.motion?.isInside(r)).map(
       (r) => this.crew.members[r].root.position,
     );
+    this.base.setDayTime(this.dayTime());
     this.base.update(dt, t, crewPositions);
     if (this.phase === 'day' && !this.paused) {
       this.updateDay(dt);
@@ -695,6 +714,12 @@ export class Game {
     this.markers.update(t, this.camera);
     this.updateOffscreen();
     this.coop?.crewTick(dt);
+    // Tubos enchendo ao vivo: cada parada de estudo do rover é uma amostra (o número final vem da regra, na noite).
+    const samples = this.base.roverSamplesToday;
+    if (samples !== this.samplesShown) {
+      this.samplesShown = samples;
+      this.hud.setSamplesToday(samples);
+    }
     for (const r of ROLES) this.crew.members[r].setWorking(this.phase === 'day' && this.tasks.isRoleWorking(r));
     if (this.motion) {
       this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)

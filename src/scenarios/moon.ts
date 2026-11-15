@@ -14,7 +14,7 @@ export const MOON: Scenario = {
   terrain: { soil: MOON_PALETTE.soil, rock: MOON_PALETTE.rock, lit: MOON_PALETTE.lit, dust: MOON_PALETTE.dust },
   sky: { day: MOON_PALETTE.sky, dust: MOON_PALETTE.sky, alert: 0x3a1418, night: 0x050609 },
   // Polo sul da Lua: o Sol fica sempre baixo no horizonte, com sombras compridas.
-  sun: { color: 0xffffff, position: [-30, 16, 34], intensity: 2.6 },
+  sun: { color: 0xffffff, intensity: 2.6, path: { azimuth: [0.35 * Math.PI, 0.95 * Math.PI], elevation: [0.17, 0.4] }, sets: false },
   hemiIntensity: 1.05,
   // As mesas de Marte viram bordas de cratera baixas.
   mesaHeight: 0.45,

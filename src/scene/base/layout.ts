@@ -16,7 +16,7 @@ import type { ProblemKind } from '@/sim/types';
  * cientista perto do rover, comandante perto da antena. Precisam ficar FORA das caixas de `obstacles`.
  */
 export const POSTS: Record<Role, THREE.Vector3> = {
-  commander: new THREE.Vector3(7.6, 0, -4.2),
+  commander: new THREE.Vector3(7.6, 0, -4.4),
   engineer: new THREE.Vector3(-9.0, 0, 8.4),
   medic: new THREE.Vector3(-3.6, 0, -6.2),
   scientist: new THREE.Vector3(10.5, 0, 9.5),
@@ -40,12 +40,13 @@ export const POSTS: Record<Role, THREE.Vector3> = {
 
 /** Cúpula com a estufa: o núcleo da base. */
 export const DOME_CENTER = new THREE.Vector3(0, 0, -1);
-export const DOME_RADIUS = 3.6;
+/** Raio da cúpula (m). Maior que os módulos: a estufa é o núcleo e o maior espaço da base. */
+export const DOME_RADIUS = 5;
 /**
  * Até onde o túnel entra na cúpula: ali a cúpula ainda tem a altura do túnel (o casco fica a ~2,1 m do chão).
  * O túnel vai daqui até a porta de acoplamento do módulo.
  */
-const TUBE_START = 2.9;
+const TUBE_START = Math.sqrt(DOME_RADIUS ** 2 - 2.1 ** 2) - 0.05;
 const TUBE_LENGTH = 1.8;
 /** Porta de acoplamento de cada módulo: ±3,25 m do centro no modelo (em escala). */
 const PORT = 3.25;
@@ -60,14 +61,14 @@ export const HABITAT_DOOR_LOCAL_Z = 4.1;
 /** Abrigo de regolito (tempestade solar): à frente e à esquerda da base, longe do caminho do rover. */
 export const SHELTER_CENTER = new THREE.Vector3(-13.5, 0, 8.5);
 /** Torre da antena (com a luz de alarme): atrás da cúpula, à direita. */
-export const TOWER_POSITION = new THREE.Vector3(5.5, 0, -7);
+export const TOWER_POSITION = new THREE.Vector3(DOME_CENTER.x + 6.5, 0, DOME_CENTER.z - 7);
 /** Contêiner da bateria (o medidor fica na frente), atrás do laboratório, perto da torre. */
-export const BATTERY_POSITION = new THREE.Vector3(10.6, 0, -5.4);
+export const BATTERY_POSITION = new THREE.Vector3(HABITAT_POSITION.x + 1.7, 0, DOME_CENTER.z - 5.4);
 /**
  * Campo de painéis solares, à direita da base (como no concept art): 2 fileiras de 5, começando aqui.
  * Fica a ~3 m do laboratório: a tripulação passa entre os dois para ir da porta para trás da base.
  */
-export const PANELS_ORIGIN = new THREE.Vector3(14.5, 0, 2);
+export const PANELS_ORIGIN = new THREE.Vector3(HABITAT_POSITION.x + 6.6, 0, 2);
 
 /**
  * Escala dos módulos do habitat (cascos, pernas, teto). Em 100% o casco tem 3,3 m de diâmetro e o astronauta
@@ -177,7 +178,7 @@ export const GYM_STATIONS = [
 ] as const;
 
 /** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
-export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(DOME_CENTER.x + 1.8, 0.4, DOME_CENTER.z - 1.8);
+export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(DOME_CENTER.x + DOME_RADIUS * 0.45, 0.4, DOME_CENTER.z - DOME_RADIUS * 0.45);
 
 /**
  * Onde a tripulação entra à noite (ponto no chão, em frente à porta): no habitat para dormir,
@@ -194,8 +195,8 @@ export const ENTRANCES = {
  * Problema novo em src/sim/problems.ts? Precisa de um lugar aqui (o TypeScript cobra).
  */
 export const PROBLEM_SPOTS: Record<ProblemKind, THREE.Vector3> = {
-  dustyPanels: new THREE.Vector3(19.5, 0, 6.6),
-  greenhouseLeak: new THREE.Vector3(DOME_CENTER.x + 3.0, 0, DOME_CENTER.z - 3.0),
+  dustyPanels: new THREE.Vector3(PANELS_ORIGIN.x + 5, 0, 6.6),
+  greenhouseLeak: new THREE.Vector3(DOME_CENTER.x + DOME_RADIUS * 0.85, 0, DOME_CENTER.z - DOME_RADIUS * 0.85),
   antenna: new THREE.Vector3(TOWER_POSITION.x + 2.3, 0, TOWER_POSITION.z),
   roverStuck: new THREE.Vector3(22, 0, 13),
   tornBag: new THREE.Vector3(SHELTER_CENTER.x, 0, SHELTER_CENTER.z + 3.9),

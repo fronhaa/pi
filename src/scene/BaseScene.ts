@@ -54,6 +54,8 @@ export class BaseScene {
   private state: SceneState | null = null;
   private scenario: Scenario = SCENARIOS.mars;
   private nightAmount = 0;
+  /** Hora do sol (dia), de 0 (nascer) a 1 (pôr): o Sol anda pelo céu (src/scene/base/Sky.ts). */
+  private dayTime = 0.2;
 
   constructor(scene: THREE.Scene) {
     scene.add(this.root);
@@ -136,6 +138,16 @@ export class BaseScene {
     return this.rover.isWaiting;
   }
 
+  /** Amostras que o rover já coletou neste sol (o painel mostra os tubos enchendo). */
+  get roverSamplesToday(): number {
+    return this.rover.samplesToday;
+  }
+
+  /** Hora do sol: 0 = nascer, 0,5 = meio-dia, 1 = pôr; acima de 1, noite. Chamado a cada frame pelo Game. */
+  setDayTime(t: number): void {
+    this.dayTime = t;
+  }
+
   setState(state: SceneState): void {
     this.state = state;
     this.structures.setState(state.res, this.scenario.terrain.dust);
@@ -152,7 +164,7 @@ export class BaseScene {
     // Na Lua (polo sul) o Sol não se põe a cada 24 h: o descanso da tripulação quase não escurece a cena.
     // Só a noite fria da sombra das montanhas fica escura de verdade.
     const n = s.shadow ? this.nightAmount : this.nightAmount * this.scenario.restDarkness;
-    this.sky.update({ night: n, dust: s.res.dust / CONFIG.dust.max, alert: s.alert, sunlight: s.sunlight ?? 1, time });
+    this.sky.update({ night: n, dust: s.res.dust / CONFIG.dust.max, alert: s.alert, sunlight: s.sunlight ?? 1, time, dt, dayTime: this.dayTime });
     this.habitat.update(n);
     this.structures.update(time, s.alert || s.stormNight, s.earthMessage);
     this.rover.update(dt, time, crew, s.scienceBlocks, s.night, s.sol ?? 0);

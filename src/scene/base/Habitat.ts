@@ -156,6 +156,24 @@ export class Habitat {
 
   /** Túneis pressurizados ligando a cúpula a cada módulo (vista superior do concept art). */
   private buildTubes(): void {
+    // Passarela que cruza a cúpula de leste a oeste, na altura do piso dos módulos: a tripulação anda por ela
+    // do laboratório ao alojamento (src/scene/crewRoutine.ts). Os canteiros ficam embaixo, dos dois lados.
+    const east = TUBES[0].from;
+    const west = TUBES[1].from;
+    const length = east.x - west.x;
+    const deck = toonMesh(new THREE.BoxGeometry(length, 0.08, 1.2), PALETTE.tech, 0.02);
+    deck.position.set((east.x + west.x) / 2, HABITAT_FLOOR_Y - 0.04, east.z);
+    this.root.add(deck);
+    for (const side of [-1, 1]) {
+      const rail = toonMesh(new THREE.BoxGeometry(length, 0.05, 0.05), PALETTE.accent, 0);
+      rail.position.set(deck.position.x, HABITAT_FLOOR_Y + 0.75, east.z + side * 0.6);
+      this.root.add(rail);
+      for (const k of [-0.4, -0.15, 0.15, 0.4]) {
+        const post = toonMesh(new THREE.BoxGeometry(0.05, HABITAT_FLOOR_Y + 0.75 - 0.4, 0.05), PALETTE.tech, 0);
+        post.position.set(deck.position.x + k * length, (HABITAT_FLOOR_Y + 0.75 + 0.4) / 2, east.z + side * 0.6);
+        this.root.add(post);
+      }
+    }
     for (const t of TUBES) {
       const len = t.from.distanceTo(t.to);
       const geo = new THREE.CylinderGeometry(0.85, 0.85, len, 16);
