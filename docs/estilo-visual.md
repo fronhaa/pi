@@ -196,7 +196,7 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 - **Viagem (~7 s, só visual), igual no celular e no computador:** ao escolher, o foguete **ganha velocidade dando a volta na Terra** (o motor acende em `T_BURN`, "Motor ligado!") (pelo menos meia volta, cada vez mais rápido),
   com a câmera ainda de longe. No ponto em que a reta tangente à órbita passa pelo destino (`tangentDeparture`; sair na direção Terra → planeta erraria por um raio de órbita, e a Lua fica perto) (no mapa, onde a Lua ou Marte estão
   hoje; na clássica, o ponto da tela onde o planeta aparece, levado para o plano da Terra, porque lá os planetas
-  ficam em profundidades diferentes), ele sai em linha reta com a velocidade que ganhou (`T_LEAVE`), que cai até a de cruzeiro (`CRUISE`), e na chegada para na superfície do planeta (`ARRIVE_K`), sem entrar nele. O planeta que não foi escolhido some
+  ficam em profundidades diferentes), ele sai em linha reta com a velocidade que ganhou (`T_LEAVE`), que cai até a de cruzeiro (`TRIP`: a viagem até a Lua é bem mais calma que a de Marte), e na chegada para na superfície do planeta (`ARRIVE_K`), sem entrar nele. O planeta que não foi escolhido some
   logo que a criança escolhe, para ficar claro para onde o foguete vai;
   sempre se afastando da Terra. A câmera desce até ele, sem corte: o planeta escolhido VIRA o destino (começa onde estava na escolha, do mesmo tamanho na tela, e desliza até a frente do foguete, `destStart`) e o Sol e as órbitas do mapa somem aos poucos (`mapFade`) e vai para trás dele (o "para cima" da tela vira a direção da
   viagem), aparecem linhas de velocidade e o destino crescendo, e ele entra no planeta.

@@ -39,14 +39,18 @@ const T_LEAVE = 1.6;
 const T_DEST = 2.0;
 const T_ARRIVE = 5.4;
 export const LAUNCH_SECONDS = 7;
-/** Depois de sair da órbita, o motor continua acelerando (unidades do desenho por s²). */
-const ACCEL = 22;
 /**
- * Depois de sair, a velocidade que ganhou na volta cai até a de cruzeiro (unidades/s) em ~LEAVE_EASE segundos: sem
- * isso o foguete disparava e passava direto pelo destino.
+ * Depois de sair da órbita: a velocidade que ganhou na volta cai até a de cruzeiro (unidades/s) em ~`ease` segundos
+ * e o motor segue acelerando devagar (`accel`, unidades/s²); `streaks` = ritmo das linhas de velocidade. Sem a queda
+ * o foguete disparava e passava direto pelo destino. A Lua é perto (4 dias, F31): viagem bem mais calma que a de
+ * Marte.
  */
-const CRUISE = 40;
-const LEAVE_EASE = 0.35;
+const TRIP = {
+  mars: { cruise: 40, accel: 22, ease: 0.35, streaks: 60 },
+  moon: { cruise: 22, accel: 8, ease: 0.2, streaks: 33 },
+} as const;
+/** Lua: velocidade máxima (rad/s na órbita) ao sair da volta; Marte sai com toda a que ganhou. */
+const MOON_LEAVE_OMEGA = 2.2;
 /** Na chegada o foguete vai até a superfície do destino, não até o meio (fração do caminho até o centro). */
 const ARRIVE_K = 0.66;
 const DEST_Z = -60;
@@ -167,6 +171,10 @@ export class LaunchScene {
   private thetaSweep = 0;
   /** Velocidade (unidades/s) com que o foguete sai da órbita: a que ganhou dando a volta. */
   private vLeave = 0;
+  /** Velocidade angular na saída da volta (rad/s): a curva da volta termina nela (ver rocketPath). */
+  private omegaLeave = 0;
+  /** Ritmo da viagem depois da saída (TRIP[destino]). */
+  private trip: (typeof TRIP)[Place] = TRIP.mars;
   /** Planeta escolhido (o outro some logo, para ficar claro para onde o foguete vai). */
   private chosen: Place | null = null;
   /**
@@ -279,9 +287,16 @@ export class LaunchScene {
     const depart = this.tangentDeparture(target);
     this.dir.copy(target).sub(this.orbitPoint(depart, this.tmpA)).setZ(0).normalize();
     let sweep = (((depart - this.thetaStart) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-    if (sweep < OMEGA * T_LEAVE * 1.6) sweep += 2 * Math.PI;
+    // Lua: só dá a volta extra se precisasse frear (a viagem até ela é calma); Marte: com folga, para ganhar embalo.
+    if (sweep < OMEGA * T_LEAVE * (place === 'moon' ? 1.05 : 1.6)) sweep += 2 * Math.PI;
+    this.trip = TRIP[place];
     this.thetaSweep = sweep;
-    this.vLeave = ORBIT_R * (OMEGA + (2 * (sweep - OMEGA * T_LEAVE)) / T_LEAVE);
+    // Velocidade na saída: a de "acelerar o tempo todo" (Marte). Na Lua, limitada (viagem calma) e sem passar de
+    // 2,7 × a média da volta, para a curva nunca andar para trás.
+    let omegaLeave = OMEGA + (2 * (sweep - OMEGA * T_LEAVE)) / T_LEAVE;
+    if (place === 'moon') omegaLeave = Math.min(omegaLeave, MOON_LEAVE_OMEGA, (2.7 * sweep) / T_LEAVE);
+    this.omegaLeave = omegaLeave;
+    this.vLeave = ORBIT_R * omegaLeave;
     this.right.set(this.dir.y, -this.dir.x, 0);
     this.buildDestination(place);
     this.buildPhotoCards(['earth', place]);
@@ -372,18 +387,25 @@ export class LaunchScene {
   }
 
   /**
-   * Posição do foguete: da escolha até o ponto de saída (T_LEAVE), acelera em volta da Terra (o ângulo cresce com o
-   * quadrado do tempo, sem tranco na largada); dali, em linha reta rumo ao destino: sai com a velocidade que ganhou,
-   * que cai até a de cruzeiro (CRUISE), e o motor segue acelerando devagar.
+   * Posição do foguete: da escolha até o ponto de saída (T_LEAVE), acelera em volta da Terra (sem tranco na largada
+   * nem na saída); dali, em linha reta rumo ao destino: sai com a velocidade que ganhou,
+   * que cai até a de cruzeiro, e o motor segue acelerando devagar (TRIP).
    */
   private rocketPath(t: number, out: THREE.Vector3): THREE.Vector3 {
     if (this.started === null) return this.orbitPoint(this.idleTheta() + t * OMEGA, out);
     if (t < T_LEAVE) {
-      const extra = this.thetaSweep - OMEGA * T_LEAVE;
-      return this.orbitPoint(this.thetaStart + OMEGA * t + extra * (t / T_LEAVE) ** 2, out);
+      // Curva de Hermite: sai do ritmo da órbita (OMEGA) e chega ao ponto de saída com `omegaLeave`. Para Marte é a
+      // mesma parábola de "acelerar o tempo todo"; para a Lua acelera e chega mais manso.
+      const k = t / T_LEAVE;
+      const h10 = k ** 3 - 2 * k ** 2 + k;
+      const h01 = -2 * k ** 3 + 3 * k ** 2;
+      const h11 = k ** 3 - k ** 2;
+      const theta = this.thetaStart + T_LEAVE * OMEGA * h10 + this.thetaSweep * h01 + T_LEAVE * this.omegaLeave * h11;
+      return this.orbitPoint(theta, out);
     }
     const u = t - T_LEAVE;
-    const along = CRUISE * u + (this.vLeave - CRUISE) * LEAVE_EASE * (1 - Math.exp(-u / LEAVE_EASE)) + ACCEL * u * u;
+    const { cruise, accel, ease } = this.trip;
+    const along = cruise * u + (this.vLeave - cruise) * ease * (1 - Math.exp(-u / ease)) + accel * u * u;
     return this.orbitPoint(this.thetaStart + this.thetaSweep, out).addScaledVector(this.dir, along);
   }
 
@@ -544,7 +566,7 @@ export class LaunchScene {
   private moveStreaks(t: number, path: THREE.Vector3, speed: number): void {
     const pos = this.streaks.geometry.attributes.position as THREE.BufferAttribute;
     const arr = pos.array as Float32Array;
-    const shift = (t * 60) % 40;
+    const shift = (t * this.trip.streaks) % 40;
     const p = this.tmpC;
     for (let i = 0; i < arr.length; i += 6) {
       const along = ((this.streakBase[i + 1] - shift + 40) % 40) - 20;
