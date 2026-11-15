@@ -12,7 +12,9 @@ import {
   GARAGE_RAMP,
   GARAGE_ROTATION_Y,
   GARAGE_SCALE,
+  BIKE_DX,
   GYM_DX,
+  TREADMILL_DX,
   GYM_OFFSET_X,
   HABITAT_FLOOR_Y,
   HABITAT_POSITION,
@@ -324,26 +326,26 @@ export class Habitat {
 
     // Academia: esteira e bicicleta viradas para a frente (GYM_STATIONS) e um aparelho de força no fundo.
     const g = GYM_OFFSET_X;
-    const treadBase = toonMesh(new THREE.BoxGeometry(0.8, 0.12, 1.7), PALETTE.light, 0.04);
-    treadBase.position.set(g - GYM_DX, y + 0.06, 0);
+    const treadBase = toonMesh(new THREE.BoxGeometry(0.8, 0.07, 1.7), PALETTE.light, 0.04);
+    treadBase.position.set(g + TREADMILL_DX, y + 0.035, 0);
     inside.add(treadBase);
     const belt = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.02, 1.5), new THREE.MeshBasicMaterial({ color: PALETTE.shadow }));
-    belt.position.set(g - GYM_DX, y + 0.13, 0);
+    belt.position.set(g + TREADMILL_DX, y + 0.075, 0);
     inside.add(belt);
     for (const side of [-0.38, 0.38]) {
       const rail = toonMesh(new THREE.BoxGeometry(0.05, 1.0, 0.05), PALETTE.tech, 0);
-      rail.position.set(g - GYM_DX + side, y + 0.6, 0.75);
+      rail.position.set(g + TREADMILL_DX + side, y + 0.6, 0.75);
       inside.add(rail);
     }
     const panel = toonMesh(new THREE.BoxGeometry(0.85, 0.2, 0.12), PALETTE.accent, 0);
-    panel.position.set(g - GYM_DX, y + 1.1, 0.75);
+    panel.position.set(g + TREADMILL_DX, y + 1.1, 0.75);
     inside.add(panel);
 
     // Bicicleta montada a partir de BIKE_FIT, para banco, pedal e guidão baterem com o clipe `pedal`.
     const hipY = y + BIKE_FIT.seatedHipHeight;
     const bike = (w: number, h: number, d: number, color: number, bx: number, by: number, bz: number, outline = 0.04) => {
       const mesh = toonMesh(new THREE.BoxGeometry(w, h, d), color, outline);
-      mesh.position.set(g + bx, by, BIKE_Z + bz);
+      mesh.position.set(g + BIKE_DX + bx, by, BIKE_Z + bz);
       inside.add(mesh);
     };
     const front = BIKE_FIT.bars.z + 0.2; // coluna do guidão à frente do volante
@@ -356,12 +358,12 @@ export class Habitat {
     bike(0.06, 0.04, front - BIKE_FIT.bars.z + 0.03, PALETTE.tech, 0, barsY, (front + BIKE_FIT.bars.z) / 2, 0);
     const crankY = hipY + BIKE_FIT.crank.y;
     const hub = toonMesh(new THREE.CylinderGeometry(0.07, 0.07, 0.1, 14).rotateZ(Math.PI / 2), PALETTE.tech, 0.03);
-    hub.position.set(g, crankY, BIKE_Z + BIKE_FIT.crank.z);
+    hub.position.set(g + BIKE_DX, crankY, BIKE_Z + BIKE_FIT.crank.z);
     inside.add(hub);
     bike(0.05, crankY - y, 0.05, PALETTE.tech, 0, (y + crankY) / 2, BIKE_FIT.crank.z, 0); // suporte do eixo
     // Volante (a "roda" da bicicleta ergométrica), entre o pedal e o guidão.
     const wheel = toonMesh(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 18).rotateZ(Math.PI / 2), PALETTE.accent, 0.04);
-    wheel.position.set(g, y + 0.25, BIKE_Z + 0.4);
+    wheel.position.set(g + BIKE_DX, y + 0.25, BIKE_Z + 0.4);
     inside.add(wheel);
 
     const rack = toonMesh(new THREE.BoxGeometry(1.3, 1.6, 0.12), PALETTE.tech, 0.03);
