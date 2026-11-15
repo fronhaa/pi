@@ -42,10 +42,11 @@ Guia completo, com as 6 regras de ouro, exemplos e o modo cientista: [linguagem-
 | `end.lost.life.text` | 25 |
 | `help.battery`, `help.life` | 22 |
 
-**Atualização (15/11/2026):** nenhuma frase de texto do jogo passa de **12 palavras**, em Marte e na Lua, nos dois
-idiomas (`src/i18n/strings/` e `src/i18n/moon.ts`). A única exceção é `crew.hint.keys`, que é uma lista de teclas, não
-uma frase. Ainda falta: no máximo **2 frases por caixa** (ex.: `help.dose` tem 5 frases curtas) e **ícone + negrito**
-nos alertas.
+**Atualização (15/11/2026):** todo texto do jogo tem **no máximo 2 frases de até 12 palavras**, em Marte e na Lua,
+nos dois idiomas (`src/i18n/strings/` e `src/i18n/moon.ts`; a tela "Dados da NASA", `data.*`, é o "modo cientista" e
+pode ter mais detalhe). Exceção: `crew.hint.keys`, que é uma lista de teclas. Números difíceis saíram da visão padrão
+(ex.: "M6.4" no aviso do Sol ficou na dica do mouse; "km/s" saiu do aviso de tempestade; "38%", "168 h" saíram dos
+balões). Ainda falta: **ícone + 2 ou 3 palavras em negrito** em todos os alertas (os balões e o guia do treino já têm).
 
 Exemplo de como encurtar sem perder o conteúdo:
 
@@ -115,7 +116,7 @@ Para quem implementa (inicialmente o Marcelo). **Corrigir** = problema encontrad
 | --- | --- | --- | --- | --- |
 | 1 | Corrigir | **Botão "Pular" no toque** quando há astronauta selecionado | No celular não há como pular, então a lição da gravidade (aviso do primeiro pulo) nunca aparece | Tocando só na tela, a criança pula e vê o aviso dos 38% |
 | 2 | Corrigir | **Conferir a altura do pulo.** Teoria: 2,2 m/s em 3,73 m/s² dá ~0,65 m; o teste do PR #9 mediu ~0,4 m | A tela afirma para a criança que o pulo sobe 2,6× mais; o jogo precisa mostrar isso | Altura medida por passo de física fica a menos de 10% da teoria, ou o texto/valor é ajustado |
-| 3 | Corrigir | **Encurtar os textos ao padrão novo** ([linguagem-e-ui-criancas.md](linguagem-e-ui-criancas.md)): frases de 8 a 12 palavras, ícone + negrito, termo da NASA explicado. Feito: até 12 palavras por frase (ver [seção 2](#texto)). Falta: até 2 frases por caixa, ícone + negrito | Leitura de 7 a 9 anos | Nenhum texto de jogo passa de 2 frases nem de 12 palavras por frase |
+| 3 | Corrigir | **Encurtar os textos ao padrão novo** ([linguagem-e-ui-criancas.md](linguagem-e-ui-criancas.md)): frases de 8 a 12 palavras, ícone + negrito, termo da NASA explicado. Feito: até 12 palavras por frase e até 2 frases por caixa (ver [seção 2](#texto)). Falta: ícone + negrito em todos os alertas | Leitura de 7 a 9 anos | Nenhum texto de jogo passa de 2 frases nem de 12 palavras por frase |
 | 4 | Corrigir | Incluir o pulo na dica de toque (`crew.hint.touch`) quando o item 1 existir | A dica precisa mostrar tudo o que dá para fazer | A dica cita andar e pular |
 | 5 | Decidir | **Revelar as barras aos poucos:** sol 1 mostra bateria, vida e blindagem; dose aparece no primeiro alerta de tempestade; ciência quando a criança põe o primeiro bloco nela | 5 barras + poeira de uma vez é muito para 7 anos; o desafio pede 2 a 3 recursos | Sol 1 com no máximo 3 barras; cada barra nova chega com o "?" aberto uma vez |
 | 6 | Decidir | **Pergunta antes e depois** ([seção 5](#pergunta-antes-e-depois-dentro-do-jogo)) | Dá um número de impacto para o pitch, sem coletar dados | As duas telas existem, nos dois idiomas, sem nada salvo fora do aparelho |

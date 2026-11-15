@@ -1,4 +1,4 @@
-# Mars Exploration: Missão Jezero
+# Artemis Quest (Mars Exploration: Missão Jezero)
 
 Jogo de navegador para o desafio [Build a Junior Astronaut Mission Trainer](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/)
 (NASA Space Apps 2026). Crianças de 7 a 12 anos comandam uma base na cratera Jezero, em Marte, por 15 sóis,

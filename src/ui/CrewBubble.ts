@@ -10,7 +10,8 @@ const TOP_SAFE_GUIDING = 250;
 const BUBBLE_SECONDS = 9;
 
 /**
- * Balão em cima de um astronauta: um fato real da NASA que tem a ver com o que ELE está fazendo (indo à academia,
+ * Balão em cima de um astronauta (texto no padrão ~400L, docs/linguagem-e-ui-criancas.md: ícone + título em negrito
+ * e no máximo 2 frases curtas): um fato real da NASA que tem a ver com o que ELE está fazendo (indo à academia,
  * trabalhando na estufa, pulando, saindo em EVA). Segue o astronauta na tela; se ele sair do enquadramento, fica
  * preso na borda (sem a setinha). Some sozinho ou ao tocar. Só mostra: quem decide quando é o Game.
  */
@@ -21,11 +22,12 @@ export class CrewBubble {
   private readonly tmp = new THREE.Vector3();
 
   /** `anchor` dá o ponto no mundo (em cima da cabeça) a cada quadro; null = o astronauta sumiu (some o balão). */
-  show(text: string, source: string | undefined, anchor: () => THREE.Vector3 | null): void {
+  show(title: string, text: string, source: string | undefined, anchor: () => THREE.Vector3 | null): void {
     this.hide();
     this.anchor = anchor;
     this.left = BUBBLE_SECONDS;
     this.el = h('button', { class: 'crew-bubble panel', type: 'button', role: 'status', onclick: () => this.hide() },
+      h('strong', { class: 'crew-bubble-title' }, title),
       h('span', {}, text),
       source ? h('small', {}, source) : null,
     );

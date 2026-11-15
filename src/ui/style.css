@@ -1,4 +1,4 @@
-/* Interface da Missão Jezero (UI-001). Amigável para 7–12 anos: botões grandes, bordas grossas e arredondadas. */
+/* Interface do Artemis Quest (UI-001). Amigável para 7–12 anos: botões grandes, bordas grossas e arredondadas. */
 :root {
   --ink: #473c3a;
   --paper: #fbf4ec;
@@ -257,6 +257,8 @@ body.guiding .toast { top: 250px; }
   width: max-content; max-width: min(300px, calc(100vw - 32px)); text-align: center; cursor: pointer;
   font-family: var(--font); color: var(--ink); font-size: 15px; font-weight: 600; line-height: 1.3;
 }
+.crew-bubble-title { display: block; font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+.crew-bubble > span { font-weight: 500; }
 .crew-bubble small { display: block; font-weight: 400; font-size: 11px; opacity: 0.8; margin-top: 3px; }
 /* Setinha apontando para a cabeça (some quando o balão está preso na borda). */
 .crew-bubble::after {

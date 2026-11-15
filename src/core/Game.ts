@@ -150,9 +150,9 @@ export class Game {
     this.crew.setSheltered(true);
     this.routine = new CrewRoutine(this.crew);
     // Fatos da NASA num balão em cima de quem está fazendo aquilo (src/ui/CrewBubble.ts).
-    this.routine.onFirstExercise = (role) => this.bubbleOver([role], t('fact.exercise'), t('fact.exercise.source'));
+    this.routine.onFirstExercise = (role) => this.bubbleOver([role], 'fact.exercise', t('fact.exercise.source'));
     // Fato da estufa inflável da NASA para a Lua e Marte (F20), na primeira vez que alguém trabalha na estufa.
-    this.routine.onFirstGreenhouse = (role) => this.bubbleOver([role], t('fact.greenhouseInflatable'), t('fact.greenhouseInflatable.source'));
+    this.routine.onFirstGreenhouse = (role) => this.bubbleOver([role], 'fact.greenhouseInflatable', t('fact.greenhouseInflatable.source'));
 
     const uiRoot = document.createElement('div');
     uiRoot.id = 'ui';
@@ -212,7 +212,7 @@ export class Game {
     this.tasks.onEvaStart = ([a, b]) => {
       const names = { a: t(`crew.${a}` as StringKey), b: t(`crew.${b}` as StringKey) };
       // Primeira EVA: o fato real da NASA sobre quanto tempo se passa lá fora.
-      if (!this.evaFactShown) this.bubbleOver([a, b], t('eva.fact'), t('eva.fact.source'));
+      if (!this.evaFactShown) this.bubbleOver([a, b], 'eva.fact', t('eva.fact.source'));
       else this.hud.toast(t('eva.start', names));
       this.evaFactShown = true;
       this.coop?.evaStarted([a, b]);
@@ -373,7 +373,7 @@ export class Game {
           this.hud.setCrew('ready', role);
           this.refreshDayHud();
         },
-        onFirstJump: (role) => this.bubbleOver([role], t('crew.fact.gravity'), t('crew.fact.source')),
+        onFirstJump: (role) => this.bubbleOver([role], 'crew.fact.gravity', t('crew.fact.source')),
         // Em grupo, cada jogador só controla o astronauta do(s) próprio(s) papel(is).
         canControl: (role) => this.canControl(role),
       });
@@ -427,9 +427,9 @@ export class Game {
   }
 
   /** Fato da NASA num balão em cima de quem está fazendo aquilo (com dois, no meio da dupla). */
-  private bubbleOver(roles: Role[], text: string, source?: string): void {
+  private bubbleOver(roles: Role[], key: 'fact.exercise' | 'fact.greenhouseInflatable' | 'crew.fact.gravity' | 'eva.fact', source?: string): void {
     const at = new THREE.Vector3();
-    this.bubble.show(text, source, () => {
+    this.bubble.show(t(`${key}.title`), t(key), source, () => {
       at.set(0, 0, 0);
       for (const r of roles) at.add(this.crew.members[r].root.getWorldPosition(BUBBLE_TMP));
       return at.divideScalar(roles.length).add(BUBBLE_ABOVE_HEAD);

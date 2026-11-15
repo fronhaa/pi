@@ -1,4 +1,6 @@
-# Mars Exploration: Missão Jezero: documento de design do jogo (GDD)
+# Artemis Quest: documento de design do jogo (GDD)
+
+> **Nome do jogo:** Artemis Quest (desde 15/11/2026, com o logotipo em `public/assets/ui/artemis-quest-logo.png`). Antes: "Mars Exploration: Missão Jezero"; a missão continua na cratera Jezero, em Marte (e no polo sul da Lua).
 
 > Documento vivo. Origem: GDD do time ("Tab 1"), versão de 14/11/2026, que substitui o rascunho "Base Marte Pi" (ver o histórico do git).
 > Requisitos do desafio: [desafio.md](desafio.md). Mudou uma regra do jogo? Atualize aqui no mesmo PR; todo número real precisa de fonte.
@@ -707,7 +709,7 @@ Uma faixa com os 4 astronautas. Cada ícone tem **no máximo 3 informações**; 
 
 ### Cartões "Você sabia?" desta parte
 
-Uma vez por partida cada um ([regras dos fatos](ciencia-marte.md#regras-deste-documento)). Os fatos ligados a um astronauta aparecem num **balão em cima dele** (`src/ui/CrewBubble.ts`), não no meio da tela: exercício (F9, em quem vai à academia), estufa inflável (F20, em quem trabalha na estufa), gravidade (F12, em quem pulou) e tempo de EVA (na dupla que sai). O balão segue o astronauta na tela, fica preso na borda se ele sair do enquadramento, some em 9 s ou ao tocar e espera enquanto houver uma janela aberta.
+Uma vez por partida cada um ([regras dos fatos](ciencia-marte.md#regras-deste-documento)). Os fatos ligados a um astronauta aparecem num **balão em cima dele** (`src/ui/CrewBubble.ts`), não no meio da tela: exercício (F9, em quem vai à academia), estufa inflável (F20, em quem trabalha na estufa), gravidade (F12, em quem pulou) e tempo de EVA (na dupla que sai). O balão segue o astronauta na tela, fica preso na borda se ele sair do enquadramento, some em 9 s ou ao tocar e espera enquanto houver uma janela aberta. O texto segue o padrão ~400L ([linguagem-e-ui-criancas.md](linguagem-e-ui-criancas.md)): ícone + título em negrito ("💪 Hora de malhar!") e no máximo 2 frases curtas, com números simples ("mais de 2 vezes", "no máximo um dia por semana"). Números difíceis (38%, 168 h) não aparecem; o estudo OSD-342 fica na tela de fontes (Data sources).
 
 | Momento | Fato | Chave sugerida |
 | --- | --- | --- |
