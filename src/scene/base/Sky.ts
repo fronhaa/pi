@@ -133,7 +133,9 @@ export class Sky {
     // Sol baixo: menos luz (nascer e pôr), e em Marte o céu fica alaranjado perto do horizonte.
     const low = 1 - THREE.MathUtils.smoothstep(elevation, 0.05, 0.45);
     const sunUp = THREE.MathUtils.smoothstep(elevation, -0.05, 0.12);
-    const sky = this.colors.day.clone().lerp(this.colors.dust, f.dust);
+    // `f.dust` passa de 1 só no treino da introdução (névoa mais fechada); cor, Sol e partículas param em 1.
+    const dust = Math.min(1, f.dust);
+    const sky = this.colors.day.clone().lerp(this.colors.dust, dust);
     if (!s.airless) sky.lerp(SKY_LOW_SUN, low * 0.35);
     if (f.alert) sky.lerp(this.colors.alert, 0.45);
     sky.lerp(this.colors.night, n);
@@ -145,7 +147,7 @@ export class Sky {
     fog.far = s.airless ? 300 : THREE.MathUtils.lerp(140, 70, f.dust);
 
     // Sem ar, a poeira fica nos painéis, mas não escurece o céu (não há vento para levantá-la).
-    const skyDust = s.airless ? 0 : f.dust;
+    const skyDust = s.airless ? 0 : dust;
     this.sun.intensity = THREE.MathUtils.lerp(s.sun.intensity * (1 - skyDust * 0.5) * (0.2 + 0.8 * f.sunlight) * (0.35 + 0.65 * sunUp), 0.15, n);
     this.hemi.intensity = THREE.MathUtils.lerp(s.hemiIntensity, 0.35, n);
     // Sem ar, as estrelas aparecem até de dia.
@@ -153,7 +155,7 @@ export class Sky {
     (this.earthDot.material as THREE.MeshBasicMaterial).opacity = n;
 
     const dp = this.dustParticles;
-    (dp.material as THREE.PointsMaterial).opacity = s.airless ? 0 : THREE.MathUtils.lerp(0, 0.7, Math.min(1, f.dust * 1.5)) * (1 - n * 0.6);
+    (dp.material as THREE.PointsMaterial).opacity = s.airless ? 0 : THREE.MathUtils.lerp(0, 0.7, Math.min(1, dust * 1.5)) * (1 - n * 0.6);
     dp.position.x = ((f.time * 3) % 20) - 10;
   }
 }

@@ -196,6 +196,20 @@
 }
 .toast small { display: block; font-weight: 400; font-size: 12px; opacity: 0.8; margin-top: 2px; }
 
+/* ---------- treino dos sóis 1 a 3 (src/ui/IntroGuide.ts) ---------- */
+.intro-guide {
+  position: fixed; left: 50%; top: 70px; transform: translateX(-50%); z-index: 14;
+  width: min(440px, calc(100vw - 32px)); box-sizing: border-box; text-align: left;
+  font-family: var(--font); color: var(--ink);
+}
+.intro-guide h3 { margin: 2px 0 4px; font-size: 19px; }
+.intro-guide p { margin: 0 0 10px; font-size: 16px; line-height: 1.35; }
+.intro-badge { font-size: 12px; font-weight: 600; opacity: 0.75; }
+.intro-actions { display: flex; justify-content: space-between; gap: 8px; }
+.intro-actions .btn { min-height: 44px; font-family: inherit; }
+.intro-skip { background: transparent; font-weight: 500; }
+body.guiding .toast { top: 250px; }
+
 /* ---------- hover sobre astronautas e problemas ---------- */
 .hover-label {
   position: fixed; z-index: 4; pointer-events: none;
@@ -279,6 +293,10 @@
   /* Logo abaixo dos recursos, na faixa livre da grade (mesmo espaçamento dos painéis). */
   .crew-chip { grid-row: 3; grid-column: 1; font-size: 12px; white-space: normal; text-align: center; }
   .toast { top: 40vh; font-size: 14px; }
+  .intro-guide { top: 56px; }
+  .intro-guide h3 { font-size: 17px; }
+  .intro-guide p { font-size: 15px; }
+  body.guiding .toast { top: 48vh; }
 }
 
 /* ---------- telas baixas (notebooks com ~700 px de altura) ---------- */

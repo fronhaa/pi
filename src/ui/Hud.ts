@@ -21,6 +21,8 @@ export interface DayView {
   evaBanned: boolean;
   /** Tem uma dupla lá fora (ou na câmara de descompressão). */
   evaActive: boolean;
+  /** Dia de treino (sóis 1 a 3, sem problemas): o painel só explica que os painéis estão fazendo energia. */
+  training?: boolean;
   crew: { role: RoleId; place: 'inside' | 'airlock' | 'outside' }[];
   problems: {
     uid: number;
@@ -47,6 +49,10 @@ export interface HudCallbacks {
   onNasaData(): void;
   onToggleLang(): void;
   onHowTo(): void;
+  /** Fecha ou abre o casco das cápsulas (só visual). */
+  onToggleHull(): void;
+  /** O casco está aberto (transparente)? */
+  hullsOpen(): boolean;
   /** Bateria que a base gasta até amanhã (Marte: a noite; Lua: descanso ou noite fria da sombra). */
   nightCost?(): number;
 }
@@ -216,6 +222,11 @@ export class Hud {
       ),
       this.goal,
       h('div', { class: 'top-actions' },
+        // Ver a base por dentro (casco transparente) ou por fora (fechado, como é de verdade).
+        topButton('👁️', t(this.cb.hullsOpen() ? 'top.hull.close' : 'top.hull.open'), () => {
+          this.cb.onToggleHull();
+          this.renderTop();
+        }),
         topButton('📖', t('top.help'), () => this.cb.onHowTo()),
         topButton('🛰️', t('top.nasaData'), () => this.cb.onNasaData()),
         langSwitch(getLang(), () => this.cb.onToggleLang()),
@@ -353,9 +364,13 @@ export class Hud {
         h('span', { class: 'clock', 'aria-label': t('day.remaining', { s: v.remaining }) }, `☀️ ${t('day.remaining', { s: v.remaining })}`),
         this.collapseButton(),
       ),
-      v.evaBanned ? h('p', { class: 'day-warn', role: 'status' }, t('eva.banned')) : h('p', { class: 'day-hint' }, t('day.hint')),
-      crewRow,
-      ...(items.length ? items : [h('p', { class: 'day-hint' }, t('day.none'))]),
+      ...(v.training
+        ? [h('p', { class: 'day-hint' }, t('intro.day'))]
+        : [
+            v.evaBanned ? h('p', { class: 'day-warn', role: 'status' }, t('eva.banned')) : h('p', { class: 'day-hint' }, t('day.hint')),
+            crewRow,
+            ...(items.length ? items : [h('p', { class: 'day-hint' }, t('day.none'))]),
+          ]),
       this.coop?.note ? h('p', { class: 'coop-note', role: 'status' }, this.coop.note) : '',
       !this.coop || this.coop.canEnd
         ? h('div', { class: 'plan-actions' },

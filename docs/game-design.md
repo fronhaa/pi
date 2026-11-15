@@ -37,7 +37,7 @@ Termos científicos que o jogo explica no contexto, nunca de antemão: sol (dia 
 
 ## Loop de jogo
 
-Todo sol tem uma única decisão obrigatória: dividir a energia. Cartas aparecem em alguns sóis, e o jogo só termina quando a base cai ou quando o sol 15 acaba.
+Todo sol tem uma única decisão obrigatória: dividir a energia. Cartas aparecem em alguns sóis, e o jogo só termina quando a base cai ou quando o sol 15 acaba. Os sóis 1 a 3 são um [treino guiado](#introdução-sóis-1-a-3).
 
 ```mermaid
 flowchart LR
@@ -85,7 +85,28 @@ Todos esses números são simplificados para o jogo e ficam em um único arquivo
 
 ## Eventos e decisões
 
-Cada partida sorteia 1 das 6 [missões históricas](#calendário-da-missão-janelas-históricas-reais), que traz 3 tempestades solares reais, além de 1 tempestade de poeira e 4 das 8 cartas de decisão. Assim, nenhuma partida é igual à outra, o que incentiva a criança a testar estratégias diferentes.
+Cada partida sorteia 1 das 6 [missões históricas](#calendário-da-missão-janelas-históricas-reais), que traz 3 tempestades solares reais, além de 1 tempestade de poeira (entre o sol 4 e o 12) e 4 das 8 cartas de decisão (entre o sol 4 e o 14). Assim, nenhuma partida é igual à outra, o que incentiva a criança a testar estratégias diferentes.
+
+### Introdução: sóis 1 a 3
+
+Os 3 primeiros sóis (dias, na Lua) são um **treino guiado**, dentro dos 15 sóis da missão. Assim, as janelas históricas reais (DONKI e Horizons) e o modo em grupo continuam iguais. Decidido pelo time em 15/11/2026 ([ADR 0012](decisoes/0012-sois-de-introducao.md)).
+
+**Regras (`CONFIG.intro`, `src/sim/config.ts`).** Nesses sóis **não há cartas, problemas pela base nem tempestade de poeira**: tudo isso começa no sol 4. As tempestades solares já começavam no sol 4 (todas as missões históricas também). A energia, a noite, a ciência e os tubos valem normalmente: a criança já joga, só que sem surpresas. O alerta de uma tempestade do sol 4 chega no sol 3, como sempre (um sol antes).
+
+**O guia (só solo).** Um balão no alto da tela, que não bloqueia o jogo, mostra um passo por vez (no máximo 3 por vez, como pede o [aprende jogando](publico-e-impacto.md#interface-e-controle)), com "Próximo" e "Pular o treino". A cena faz junto o que o texto diz, **só no visual** (nada muda nos números):
+
+| Sol | Passos | O que a cena faz |
+| --- | --- | --- |
+| 1, manhã | 🏠 Esta é a sua base · 👁️ Veja por dentro (o botão 👁️ mostra os quartos, a academia e a estufa) · ☀️ De dia, energia do Sol | A base começa **fechada** (casco opaco, como é de verdade) e **abre** (fica transparente) no segundo passo |
+| 1, noite | 🌙 À noite, a bateria | A noite de sempre |
+| 2, manhã | 📡 Mensagem da Terra (com o atraso real do sol) · 🌍 A Terra está longe · 🔋 Guarde para a noite (com o gasto da noite) | A antena pisca com a mensagem |
+| 3, manhã | 🌪️ Treino: tempestade de poeira ("pode durar semanas ou meses", [F27](ciencia-marte.md#f27-tempestades-de-poeira-duram-semanas-ou-meses)) · ☀️ Treino: tempestade solar (a Terra avisa: blindagem) · ✅ Fim do treino ("nada mudou na base") | Por alguns segundos, o céu enche de poeira; depois, o alarme do abrigo e a antena acendem |
+
+- **Dia de treino:** nos sóis 1 a 3 não há problemas, mas o dia não pula direto para a noite: ele dura **12 s** (só visual), para a criança ver o Sol cruzar o céu enquanto o painel diz "os painéis fazem energia com a luz do Sol".
+- **Lua:** o treino do sol 3 é a **sombra das montanhas** (a luz do Sol some por alguns segundos; "às vezes por dias"), porque na Lua não há vento nem tempestade de poeira. A mensagem chega em ~1 segundo.
+- **Botão 👁️ "Ver por dentro / Ver por fora"** no topo, em toda a missão (solo e grupo): fecha ou abre o casco das cápsulas, da estufa e dos túneis.
+- **Em grupo**, as regras dos sóis 1 a 3 são as mesmas (o servidor roda o mesmo `src/sim`), mas sem o guia e sem o dia curto: "Começar o dia" vai direto para a noite, como antes. A base começa aberta.
+- O "📖 Como jogar" (3 passos) continua no topo; a missão solo não abre mais com ele, porque o treino ensina na hora.
 
 **Tempestade solar e atraso de comunicação.** O alerta chega pela antena um sol antes do impacto. Ele diz a força da tempestade, a data real do evento e quantos minutos a mensagem levou para chegar: na missão histórica, o atraso real daquele sol (JPL Horizons); sem ela, sorteado entre 3 e 22. No sol do impacto, um segundo aviso lembra que é a última chance de reforçar a blindagem. As tempestades acontecem entre o sol 4 e o sol 14, com pelo menos 2 sóis de distância entre elas.
 
@@ -402,7 +423,7 @@ Tempos e efeitos são valores iniciais de jogo, ainda a balancear.
 - Trabalho fora da base é uma EVA em dupla e passa pela câmara de descompressão (3 segundos para sair e 3 para voltar). Cada tarefa fora soma +1 de dose, na escala do jogo (INTERPRETADO). Dentro, não soma.
 - No sol em que a tempestade chega, com o aviso da Terra recebido, ninguém sai (EVA proibida). Os problemas de fora daquele sol ficam para o dia seguinte, sem castigo. Esta regra substitui a antiga "durante um alerta, o comandante fica na antena".
 - Na noite de tempestade, quem estiver fora corre para o abrigo; o que ficou pela metade continua no dia seguinte.
-- Aparecem só 1 ou 2 problemas por dia, a partir do sol 3, para não sobrecarregar crianças de 7 a 12 anos. Eles substituem as cartas "Painéis empoeirados" e "Vazamento na estufa"; as outras cartas continuam.
+- Aparecem só 1 ou 2 problemas por dia, a partir do sol 4 (depois do [treino](#introdução-sóis-1-a-3)), para não sobrecarregar crianças de 7 a 12 anos. Eles substituem as cartas "Painéis empoeirados" e "Vazamento na estufa"; as outras cartas continuam.
 - O dia sempre pode ser pausado, e pode correr mais devagar para crianças menores.
 
 **Ligação com o modo Terra e Marte.** A Terra não controla astronautas, mas pode avisar antes ("poeira a caminho dos painéis"). Se a antena ficar desalinhada, a mensagem da Terra não chega. Assim, consertar a antena passa a importar para os dois lados.
@@ -565,7 +586,7 @@ Valores **iniciais, a balancear** (ver [Balanceamento](#balanceamento-das-tarefa
 
 **Regras:**
 
-1. Só existem nos **dias em tempo real** (a partir do sol 3), e estão disponíveis **desde o começo do dia**. Nos sóis 1 e 2 a criança aprende só a energia ([aprende jogando](publico-e-impacto.md#interface-e-controle)).
+1. Só existem nos **dias em tempo real** (a partir do sol 4), e estão disponíveis **desde o começo do dia**. Nos sóis 1 a 3 ([treino](#introdução-sóis-1-a-3)) a criança aprende só a energia ([aprende jogando](publico-e-impacto.md#interface-e-controle)).
 2. São **opcionais**: não fazer não tem consequência, só perde o bônus. É a diferença para os problemas, que cobram a conta à noite.
 3. Mandar um astronauta é **igual aos problemas**: tocar no astronauta e na estação (ícone 🌱 ou 🔬 em vez de "!"), o botão "Enviar" na lista do dia, ou chegar perto e apertar **E**.
 4. **Dentro da base**: não passam pela câmara de descompressão e **não somam dose**. É o contraste de propósito com os consertos lá fora.
@@ -604,7 +625,7 @@ Valores **iniciais, a balancear** (ver [Balanceamento](#balanceamento-das-tarefa
 
 **Pronto quando:**
 
-- [ ] A partir do sol 3, a lista do dia mostra "Se sobrar tempo:" com 🌱 e 🔬.
+- [ ] A partir do sol 4, a lista do dia mostra "Se sobrar tempo:" com 🌱 e 🔬.
 - [ ] Mandar um astronauta à estufa: ele entra, trabalha 15 s e o suporte de vida sobe 3, sem dose.
 - [ ] Cada estação só pode ser usada uma vez por dia.
 - [ ] Não fazer as tarefas não muda nada à noite.
@@ -939,7 +960,7 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 | Meta da missão (topo) | ⭐ ciência "18 de 100" (com barra) e 🧪 tubos de amostra ("32 tubos · −3 hoje"). Ciência é o objetivo, não algo que mantém a base viva; os tubos mostram o que a ciência gasta. Cada um abre o "?" ao tocar |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |
-| Janelas | Tutorial (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
+| Janelas | Treino dos sóis 1 a 3 (balão no alto), "Como jogar" (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |
 
 ### Prévia do plano de energia
 

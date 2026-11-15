@@ -20,7 +20,26 @@ export function seeThroughHull<M extends THREE.Material>(mat: M, opacity: number
   // Sombra pelos dois lados: por padrão o three.js só desenha a face de trás na sombra, e num casco fechado
   // ela fica atrás de quem está dentro; aí o sol "atravessava" o metal.
   m.shadowSide = THREE.DoubleSide;
+  // Opacidade "aberta" (vista por dentro): a cena pode fechar o casco (opaco) e abrir de novo (src/scene/BaseScene.ts).
+  m.userData.hullOpacity = opacity;
   return m;
+}
+
+/**
+ * Abre ou fecha um casco feito com `seeThroughHull`: `open` 0 = fechado (opaco, como é de verdade), 1 = aberto
+ * (transparente, para ver por dentro). Devolve false se o material não é de casco.
+ */
+export function setHullOpen(mat: THREE.Material, open: number): boolean {
+  const target = mat.userData.hullOpacity as number | undefined;
+  if (target === undefined) return false;
+  const transparent = open > 0.01;
+  if (mat.transparent !== transparent) {
+    mat.transparent = transparent;
+    mat.depthWrite = !transparent;
+    mat.needsUpdate = true;
+  }
+  mat.opacity = THREE.MathUtils.lerp(1, target, open);
+  return true;
 }
 
 /** Cores do casco dos módulos (research-base.glb): painéis, faixa escura e faixa laranja. */

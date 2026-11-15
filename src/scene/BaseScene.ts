@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PALETTE } from '@/render/toon';
+import { PALETTE, setHullOpen } from '@/render/toon';
 import { CONFIG, type Location } from '@/sim/config';
 import type { Resources } from '@/sim/types';
 import { SCENARIOS, scenarioOf, type Scenario } from '@/scenarios';
@@ -26,6 +26,20 @@ export interface SceneState {
   /** Lua: luz do Sol de hoje (0–1). O Sol passa atrás dos morros e a cena fica mais clara ou mais escura. */
   sunlight?: number;
 }
+
+/**
+ * Treino da introdução (sóis 1 a 3, GDD): só visual, nada muda nos números. `dust` enche o céu de poeira (1 = a
+ * tempestade do jogo; até 1,4 a névoa fecha mais, para a criança ver bem), `alert` acende o alarme do abrigo e a antena
+ * (o aviso da Terra) e `dark` (0–1) apaga a luz do Sol (sombra das montanhas, na Lua).
+ */
+export interface SceneDemo {
+  dust?: number;
+  alert?: boolean;
+  dark?: number;
+}
+
+/** Segundos para o casco abrir ou fechar. */
+const HULL_SECONDS = 1.6;
 
 /** Cores de terreno que mudam de um cenário para o outro (as outras, como prédios e plantas, são as mesmas). */
 const TERRAIN_KEYS = ['soil', 'rock', 'lit', 'dust'] as const;
@@ -60,6 +74,14 @@ export class BaseScene {
   private nightAmount = 0;
   /** Hora do sol (dia), de 0 (nascer) a 1 (pôr): o Sol anda pelo céu (src/scene/base/Sky.ts). */
   private dayTime = 0.2;
+  /** Casco das cápsulas: 0 = fechado (opaco), 1 = aberto (transparente). Começa aberto, como sempre foi. */
+  private hullOpen = 1;
+  private hullTarget = 1;
+  private hullDirty = true;
+  /** Treino da introdução: o que mostrar e o quanto já entrou (0–1, entra e sai devagar). */
+  private demo: SceneDemo = {};
+  private demoK = 0;
+  private demoTarget = 0;
 
   constructor(scene: THREE.Scene) {
     scene.add(this.root);
@@ -133,6 +155,38 @@ export class BaseScene {
     else console.warn('Base de pesquisa (.glb) não carregou; usando o módulo simples.', base.reason);
     if (rover.status === 'fulfilled') this.rover.useModel(rover.value);
     else console.warn('Rover (.glb) não carregou; usando o rover simples.', rover.reason);
+    // Os cascos dos modelos novos nascem abertos: aplica o estado atual (fechado ou aberto).
+    this.hullDirty = true;
+  }
+
+  /** Fecha (opaco, como é de verdade) ou abre (transparente, para ver por dentro) o casco das cápsulas e da estufa. */
+  setHullsOpen(open: boolean, instant = false): void {
+    this.hullTarget = open ? 1 : 0;
+    if (instant) this.hullOpen = this.hullTarget;
+    this.hullDirty = true;
+  }
+
+  get hullsOpen(): boolean {
+    return this.hullTarget === 1;
+  }
+
+  /** Treino da introdução (só visual). `null` encerra: a poeira e o alerta saem devagar. */
+  setDemo(demo: SceneDemo | null): void {
+    if (demo) this.demo = demo;
+    this.demoTarget = demo ? 1 : 0;
+  }
+
+  private updateHulls(dt: number): void {
+    if (!this.hullDirty && this.hullOpen === this.hullTarget) return;
+    const step = dt / HULL_SECONDS;
+    this.hullOpen += THREE.MathUtils.clamp(this.hullTarget - this.hullOpen, -step, step);
+    const k = THREE.MathUtils.smootherstep(this.hullOpen, 0, 1);
+    this.root.traverse((o) => {
+      const mat = (o as THREE.Mesh).material;
+      if (!mat) return;
+      for (const m of Array.isArray(mat) ? mat : [mat]) setHullOpen(m, k);
+    });
+    this.hullDirty = false;
   }
 
   setRoverStuck(at: THREE.Vector3 | null): void {
@@ -185,15 +239,22 @@ export class BaseScene {
     // Na Lua (polo sul) o Sol não se põe a cada 24 h: o descanso da tripulação quase não escurece a cena.
     // Só a noite fria da sombra das montanhas fica escura de verdade.
     const n = s.shadow ? this.nightAmount : this.nightAmount * this.scenario.restDarkness;
-    this.sky.update({ night: n, dust: s.res.dust / CONFIG.dust.max, alert: s.alert, sunlight: s.sunlight ?? 1, time, dt, dayTime: this.dayTime });
+    this.updateHulls(dt);
+    // Treino (introdução): soma ao que a cena já mostra, sem mexer no estado do jogo.
+    this.demoK = THREE.MathUtils.damp(this.demoK, this.demoTarget, 1.8, dt);
+    const d = this.demoK;
+    const dust = Math.max(s.res.dust / CONFIG.dust.max, (this.demo.dust ?? 0) * d);
+    const alert = s.alert || (!!this.demo.alert && d > 0.4);
+    const sunlight = (s.sunlight ?? 1) * (1 - (this.demo.dark ?? 0) * d);
+    this.sky.update({ night: n, dust, alert, sunlight, time, dt, dayTime: this.dayTime });
     this.habitat.update(n);
     this.structures.update({
       time,
       dt,
       darkness: n,
       night: s.night,
-      alarmOn: s.alert || s.stormNight,
-      earthMessage: s.earthMessage,
+      alarmOn: alert || s.stormNight,
+      earthMessage: s.earthMessage || (!!this.demo.alert && d > 0.4),
       battery: s.res.battery / CONFIG.battery.max,
       sunDir: this.sky.sunVector,
     });
