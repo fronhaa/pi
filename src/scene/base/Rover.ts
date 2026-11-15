@@ -112,6 +112,12 @@ export class Rover {
   /** Distância percorrida no caminho da garagem (aproximação → pé da rampa → topo → dentro). */
   private dockS = 0;
   private serviceLeft = 1;
+  /**
+   * Uma expedição por sol, como a regra dos tubos (3 tubos por sol com ciência, src/sim/day.ts):
+   * depois de entregar as amostras, o rover fica estacionado até o próximo sol.
+   */
+  private sol = 0;
+  private expeditionSol = -1;
   private readonly warning: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   /** Cabeça da câmera (gira para olhar a rocha), braço robótico (desce para estudar) e luz do instrumento. */
   private readonly head: THREE.Group;
@@ -400,7 +406,8 @@ export class Rover {
    * Um passo da animação. `crew` = astronautas visíveis lá fora (o rover desvia deles);
    * sem blocos de ciência, ou à noite, ele fica parado.
    */
-  update(dt: number, time: number, crew: THREE.Vector3[], scienceBlocks: number, night: boolean): void {
+  update(dt: number, time: number, crew: THREE.Vector3[], scienceBlocks: number, night: boolean, sol = 0): void {
+    this.sol = sol;
     if (this.stuckAt) {
       this.root.position.set(this.stuckAt.x + 1.6, terrainHeight(this.stuckAt.x, this.stuckAt.z) - 0.25, this.stuckAt.z + 0.6);
       this.root.rotation.set(0.18, 0.7, 0.12);
@@ -414,7 +421,7 @@ export class Rover {
       this.animateTools(false, dt, time);
     }
     const amber = this.blocked && Math.sin(time * 10) > 0;
-    const service = this.phase === 'service' && Math.sin(time * 3) > 0;
+    const service = this.phase === 'service' && this.serviceLeft > 0 && Math.sin(time * 3) > 0;
     this.warning.material.color.setHex(amber ? 0xffb020 : service ? LIGHT_SERVICE : 0x5a4a2a);
   }
 
@@ -461,7 +468,9 @@ export class Rover {
       this.serviceLeft -= dt;
       // Primeiro entrega as amostras (braço estendido), depois a revisão (braço guardado, luz verde).
       this.animateTools(this.serviceLeft > SERVICE_SECONDS - DELIVER_SECONDS, dt, time);
-      if (this.serviceLeft <= 0) {
+      // Pronto. Já saiu neste sol? Fica estacionado até o próximo (uma expedição por sol, como os tubos).
+      if (this.serviceLeft <= 0 && this.sol > this.expeditionSol) {
+        this.expeditionSol = this.sol;
         this.phase = 'dockOut';
         this.dockS = Rover.dockLength();
       }

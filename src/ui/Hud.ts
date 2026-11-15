@@ -339,7 +339,11 @@ export class Hud {
       if (!pv) return null;
       if (k === 'life') return arrow(s.res.life, pv.after.life, t('preview.tonight'));
       if (k === 'shield') return arrow(s.res.shield, pv.after.shield, t('preview.tonight'));
-      return h('span', { class: `forecast ${pv.sciGain > 0 ? 'up' : 'same'}` }, pv.stormTonight && pv.sciGain > 0 ? t('preview.scienceStorm', { n: fmt(pv.sciGain) }) : `+${fmt(pv.sciGain)}`);
+      const gain = pv.stormTonight && pv.sciGain > 0 ? t('preview.scienceStorm', { n: fmt(pv.sciGain) }) : `+${fmt(pv.sciGain)}`;
+      // Custo em tubos de amostra (regra em src/sim/day.ts): a expedição de hoje gasta 3; sem tubos, a ciência cai.
+      // `tubesUsed` pode faltar na prévia de um servidor antigo (modo em grupo).
+      const tubes = pv.tubesUsed > 0 ? t('preview.tubes', { n: pv.tubesUsed }) : pv.noTubes ? t('preview.noTubes') : '';
+      return h('span', { class: `forecast ${pv.sciGain > 0 ? 'up' : 'same'}` }, tubes ? `${gain} · ${tubes}` : gain);
     };
     const warnings: { text: string; tone: 'bad' | 'warn' | 'info' }[] = [];
     if (pv) {

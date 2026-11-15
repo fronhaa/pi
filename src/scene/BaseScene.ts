@@ -18,6 +18,8 @@ export interface SceneState {
   stormNight: boolean;
   earthMessage: boolean;
   scienceBlocks: number;
+  /** Sol (dia) atual: o rover faz uma expedição por sol, como a regra dos tubos (src/sim/day.ts). */
+  sol?: number;
   /** Lua: dia de sombra das montanhas (a luz do Sol fica fraca). */
   shadow?: boolean;
   /** Lua: luz do Sol de hoje (0–1). O Sol passa atrás dos morros e a cena fica mais clara ou mais escura. */
@@ -153,6 +155,6 @@ export class BaseScene {
     this.sky.update({ night: n, dust: s.res.dust / CONFIG.dust.max, alert: s.alert, sunlight: s.sunlight ?? 1, time });
     this.habitat.update(n);
     this.structures.update(time, s.alert || s.stormNight, s.earthMessage);
-    this.rover.update(dt, time, crew, s.scienceBlocks, s.night);
+    this.rover.update(dt, time, crew, s.scienceBlocks, s.night, s.sol ?? 0);
   }
 }

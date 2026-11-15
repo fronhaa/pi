@@ -650,6 +650,7 @@ export class Game {
       stormNight: this.stormNight,
       earthMessage: !this.night && s.messages.some((m) => m.kind !== 'dustNow' && m.kind !== 'shadowNow'),
       scienceBlocks: this.plan.science,
+      sol: s.sol,
       // De noite, o estado já é o do dia seguinte: a sombra que vale é a da noite que está passando.
       shadow: this.night ? this.shadowNight : s.messages.some((m) => m.kind === 'shadowNow'),
       sunlight: this.night ? this.nightSun : this.coop ? 1 : this.mission.sunlightToday() / 100,
