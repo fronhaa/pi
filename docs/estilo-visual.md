@@ -177,8 +177,10 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 
 - Depois de escolher Marte ou Lua: foguete cartoon (primitivas com `toonMesh` e contorno) decola da base na Terra,
   passa pelas nuvens, a Terra fica para trás e ele chega ao destino. ~9 s, só visual.
-- **Tela de escolha (Marte ou Lua):** a mesma cena é o fundo: a Terra girando no espaço com o foguete na base
-  (à direita no computador, embaixo da caixa no celular). Ao escolher, a câmera desce até a base (~1,6 s) e começa a contagem.
+- **Tela de escolha (Marte ou Lua):** "palco" no espaço da mesma cena: o foguete flutuando no meio, Marte e Lua em 3D
+  (lado a lado em cima no celular; dos lados no computador) e a Terra embaixo. A criança toca no planeta: botões de
+  verdade (`src/ui/PlaceChoice.ts`) do tamanho do planeta, com nome e dica curta; o planeta cresce sob o dedo ou o mouse.
+  Ao escolher, a câmera mergulha olhando a Terra até a base (~1,6 s) e começa a contagem.
 - **Sem HUD até a nave chegar:** a classe `pre-mission` no `body` esconde o HUD (`#ui`), balões, setas, guia e avisos
   na tela de escolha e na viagem. Sai quando o foguete chega (`Game.playLaunch`).
 - Usa o renderizador do jogo: enquanto passa, o quadro desenha só a intro (a base não é desenhada, não pesa no celular).

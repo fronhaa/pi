@@ -21,9 +21,10 @@ import type { CrewMotion } from '@/scene/crewMotion';
 import { Hud } from '@/ui/Hud';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CrewBubble } from '@/ui/CrewBubble';
-import { showCard, showEnd, showMissionStart, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
+import { showCard, showEnd, showMissionStart, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
 import { playLaunchIntro, prefersReducedMotion } from '@/ui/LaunchIntro';
 import { LAUNCH_ZOOM_SECONDS, LaunchScene } from '@/scene/LaunchScene';
+import { showPlaceChoice3D } from '@/ui/PlaceChoice';
 import { IntroGuide } from '@/ui/IntroGuide';
 import { IntroDirector } from './intro';
 import { showModeChoice } from '@/ui/coop';
@@ -275,8 +276,7 @@ export class Game {
 
   /** Solo: escolhe Marte ou Lua, cria a missão do lugar e começa o treino dos sóis 1 a 3 (o guia ensina na hora). */
   private startSolo(): void {
-    this.showLaunchPad();
-    showPlaceChoice((place) => {
+    showPlaceChoice3D(this.showLaunchPad(), (place) => {
       this.setLocation(place);
       this.newMission();
       // Viagem da Terra até a base (só visual, dá para pular); a missão começa quando o foguete chega.
@@ -304,7 +304,7 @@ export class Game {
   }
 
   /**
-   * Tela de escolha (Marte ou Lua): de fundo, a Terra 3D girando no espaço com o foguete na base, sem HUD
+   * Tela de escolha (Marte ou Lua) em 3D: o foguete no espaço e os dois planetas para tocar, sem HUD
    * (classe `pre-mission` no body). A mesma cena vira a viagem em `playLaunch`.
    */
   private showLaunchPad(): LaunchScene {
@@ -769,8 +769,7 @@ export class Game {
     this.hud.setState(this.mission.state);
     // Jogar de novo: escolhe o lugar outra vez (dá para experimentar Marte e Lua e comparar).
     showEnd(this.mission.state, () => {
-      this.showLaunchPad();
-      showPlaceChoice((place) => {
+      showPlaceChoice3D(this.showLaunchPad(), (place) => {
         this.setLocation(place);
         this.newMission();
         this.playLaunch(place);

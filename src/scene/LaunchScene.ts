@@ -7,8 +7,9 @@ import { t as tr, type StringKey } from '@/i18n';
  * nuvens, a Terra fica para trás e ele chega a Marte ou à Lua. Só visual. ~9 s, sincronizada com o texto por cima
  * (src/ui/LaunchIntro.ts: contagem, "Liftoff!", fato real e "Pular").
  *
- * Antes da escolha (Marte ou Lua), a mesma cena é o fundo da tela de escolha: a Terra girando no espaço, com a base
- * no alto. Ao escolher (`begin`), a câmera desce até a base e começa a contagem.
+ * Antes da escolha, a mesma cena é a tela de escolha: um "palco" no espaço com o foguete flutuando, Marte e Lua em 3D
+ * (a criança toca no planeta; botões por cima em src/ui/PlaceChoice.ts) e a Terra embaixo. Ao escolher (`begin`),
+ * a câmera desce até a base na Terra e começa a contagem.
  *
  * Desenhada pelo renderizador do jogo (src/core/Game.ts): enquanto ela passa, a cena da base não é desenhada, então
  * não pesa mais no celular. O tempo é o relógio da própria cena (`update` lê performance.now).
@@ -22,6 +23,11 @@ const DEST_Z = -60;
 /** Destino um pouco à esquerda: a câmera fica à direita do foguete, então assim ele aparece no meio da tela. */
 const DEST_X = -11;
 export const LAUNCH_SECONDS = 9;
+/** Tela de escolha: palco no espaço bem acima da Terra, câmera a esta distância dele. */
+const STAGE_Y = 600;
+const STAGE_DIST = 40;
+/** Raio dos planetas como são montados (a escala ajusta para a tela de escolha e para o destino). */
+const PLANET_R = 14;
 /** Descida da câmera, da Terra vista do espaço (tela de escolha) até a base, antes da contagem. */
 export const LAUNCH_ZOOM_SECONDS = 1.6;
 
@@ -81,14 +87,19 @@ export class LaunchScene {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
   private readonly created = performance.now();
-  /** Quando a viagem começou (null = ainda na tela de escolha, Terra girando). */
+  /** Quando a viagem começou (null = ainda na tela de escolha). */
   private started: number | null = null;
   private reduced = false;
-  /** Ângulo da câmera em volta da Terra na hora em que a viagem começou (a descida parte dele). */
-  private orbitAtStart = 0;
   private aspect = 1;
-  private width = 1;
   private height = 1;
+  /** Tela de escolha, longe da Terra no espaço: foguete flutuando, Marte e Lua para tocar e a Terra embaixo. */
+  private readonly stage = new THREE.Group();
+  private readonly stageRocket: THREE.Object3D;
+  private readonly stageEarth: THREE.Object3D;
+  private readonly planets: Record<'mars' | 'moon', THREE.Group>;
+  private readonly planetRadius = { mars: 1, moon: 1 };
+  private hover: 'mars' | 'moon' | null = null;
+  private hh = 1;
   private readonly rocket = new THREE.Group();
   private readonly flame = new THREE.Group();
   private readonly puffs: { mesh: THREE.Mesh; born: number; dir: THREE.Vector3 }[] = [];
@@ -111,7 +122,8 @@ export class LaunchScene {
     sun.position.set(6, 10, 8);
     this.scene.add(sun);
 
-    this.scene.add(this.buildEarth());
+    const earth = this.buildEarth();
+    this.scene.add(earth);
     this.buildPad();
     this.buildClouds();
     this.buildRocket();
@@ -120,7 +132,59 @@ export class LaunchScene {
     const s = this.buildStreaks();
     this.streaks = s.lines;
     this.streakBase = s.base;
+
+    // Tela de escolha: cópias do foguete e da Terra (mesmas peças) e os dois planetas.
+    this.stageRocket = this.rocket.clone(true);
+    this.stageEarth = earth.clone(true);
+    this.planets = { mars: makePlanet('mars'), moon: makePlanet('moon') };
+    this.stage.add(this.stageRocket, this.stageEarth, this.planets.mars, this.planets.moon);
+    this.stage.position.y = STAGE_Y;
+    this.scene.add(this.stage);
     this.update();
+  }
+
+  /** Planeta sob o dedo ou o mouse (cresce um pouco). */
+  setHover(place: 'mars' | 'moon' | null): void {
+    this.hover = place;
+  }
+
+  /** Onde cada planeta da tela de escolha aparece na tela (pixels CSS): centro e raio, para os botões por cima. */
+  planetScreen(place: 'mars' | 'moon'): { x: number; y: number; r: number } {
+    const p = this.tmpB.copy(this.planets[place].position).add(this.stage.position).project(this.camera);
+    const w = this.height * this.aspect;
+    return { x: ((p.x + 1) / 2) * w, y: ((1 - p.y) / 2) * this.height, r: (this.planetRadius[place] / this.hh) * (this.height / 2) };
+  }
+
+  /** Arruma a tela de escolha pelo tamanho da tela (celular em pé: planetas em cima, lado a lado). */
+  private layoutStage(time: number): void {
+    const hh = STAGE_DIST * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    const hw = hh * this.aspect;
+    this.hh = hh;
+    const portrait = this.aspect < 0.8;
+    const r = portrait ? Math.min(0.34 * hw, 0.2 * hh) : Math.min(0.2 * hw, 0.27 * hh);
+    const py = portrait ? 0.22 * hh : 0.12 * hh;
+    // Perto do meio no computador: nas bordas da tela a perspectiva achata as esferas.
+    const px = portrait ? 0.5 * hw : 0.42 * hw;
+    for (const [place, sx] of [['mars', -1], ['moon', 1]] as const) {
+      const g = this.planets[place];
+      this.planetRadius[place] = r * (this.hover === place ? 1.12 : 1);
+      const target = this.planetRadius[place] / PLANET_R;
+      g.scale.setScalar(g.scale.x + (target - g.scale.x) * 0.2);
+      g.position.set(sx * px, py + Math.sin(time * 1.3 + sx) * 0.02 * hh, 0);
+      g.rotation.y = time * 0.25;
+    }
+    // Foguete flutuando no meio, um pouco inclinado, com a chama baixa.
+    const rocketH = (portrait ? 0.3 : 0.38) * hh;
+    this.stageRocket.scale.setScalar(rocketH / 3.3);
+    this.stageRocket.position.set(0, (portrait ? -0.38 : -0.22) * hh + Math.sin(time * 1.8) * 0.03 * hh, 0);
+    this.stageRocket.rotation.z = Math.sin(time * 0.9) * 0.08;
+    const flame = this.stageRocket.getObjectByName('flame');
+    flame?.scale.set(0.7, 0.7 * (1 + 0.25 * Math.sin(time * 30)), 0.7);
+    // A Terra embaixo, de onde o foguete saiu (só o alto dela aparece).
+    const er = (portrait ? 1.1 : 0.45) * hw;
+    this.stageEarth.scale.setScalar(er / R);
+    this.stageEarth.position.set(0, -hh - (portrait ? 0.55 : 0.6) * er, -er * 0.5);
+    this.stageEarth.rotation.y = time * 0.05;
   }
 
   /** Começa a viagem: a câmera desce até a base e, depois de LAUNCH_ZOOM_SECONDS, a contagem. */
@@ -129,20 +193,14 @@ export class LaunchScene {
     this.buildDestination(place);
     this.buildPhotoCards(place === 'mars' ? ['launchMars', 'earth', 'mars'] : ['launchMoon', 'earth', 'moon']);
     this.reduced = reduced;
-    this.orbitAtStart = this.orbitAngle();
+    this.hover = null;
     this.started = performance.now();
-  }
-
-  /** Câmera girando devagar em volta da Terra (tela de escolha). */
-  private orbitAngle(): number {
-    return ((performance.now() - this.created) / 1000) * 0.12;
   }
 
   /** Tamanho da tela: no celular em pé, ângulo maior para caber a torre e o foguete inteiros. */
   resize(w: number, h: number): void {
     const aspect = w / Math.max(1, h);
     this.aspect = aspect;
-    this.width = w;
     this.height = h;
     this.camera.aspect = aspect;
     this.camera.fov = aspect < 0.8 ? 62 : 46;
@@ -150,7 +208,7 @@ export class LaunchScene {
   }
 
   /**
-   * Avança a animação pelo relógio (ou num instante dado, para teste). Antes de `begin`: Terra girando no espaço.
+   * Avança a animação pelo relógio (ou num instante dado, para teste). Antes de `begin`: tela de escolha.
    * Tempo negativo = descida da câmera até a base. Com "reduzir movimento", vai direto para a chegada.
    */
   update(at?: number): void {
@@ -186,7 +244,8 @@ export class LaunchScene {
     }
 
     // Céu: azul até ~12 de altura (passa pelas nuvens ainda de dia), depois espaço; estrelas aparecem junto.
-    const space = Math.max(away, smooth((y - 12) / 36));
+    // Na descida da tela de escolha o céu só clareia perto do chão.
+    const space = Math.max(smooth(away * 3), smooth((y - 12) / 36));
     this.bg.copy(this.skyDay).lerp(this.skySpace, space);
     (this.stars.material as THREE.PointsMaterial).opacity = space;
     this.stars.visible = space > 0.02;
@@ -223,18 +282,15 @@ export class LaunchScene {
     this.camera.position.set(pos[0], y + pos[1], pos[2]);
     this.tmpA.set(look[0], y + look[1], look[2]);
     if (away > 0) {
-      // Vista do espaço: a Terra inteira embaixo, a base no alto dela (a caixa de escolha fica no meio da tela).
-      const a = idle ? this.orbitAngle() : this.orbitAtStart;
-      const d = this.aspect < 0.8 ? 200 : 135;
-      this.tmpB.set(Math.sin(a) * d, -R + d * (this.aspect < 0.8 ? 0.22 : 0.42), Math.cos(a) * d);
+      // Tela de escolha: câmera de frente para o palco no espaço. Ao escolher, desce até a base na Terra.
+      this.tmpB.set(0, STAGE_Y, STAGE_DIST);
       this.camera.position.lerp(this.tmpB, away);
-      // No celular em pé a caixa de escolha ocupa o meio e o alto: a Terra aparece embaixo dela.
-      this.tmpB.set(0, -R + R * (this.aspect < 0.8 ? 3.1 : 0.25), 0);
-      this.tmpA.lerp(this.tmpB, away);
+      // O olhar vira para a base antes da câmera chegar: na descida a Terra aparece e cresce (sem céu vazio).
+      this.tmpB.set(0, STAGE_Y, 0);
+      this.tmpA.lerp(this.tmpB, idle ? 1 : away ** 4);
     }
-    // Tela deitada: a caixa de escolha fica no meio, então a Terra vai para a direita (desloca a imagem).
-    if (away > 0 && this.aspect >= 0.8) this.camera.setViewOffset(this.width, this.height, -0.34 * this.width * away, 0, this.width, this.height);
-    else if (this.camera.view?.enabled) this.camera.clearViewOffset();
+    this.stage.visible = away > 0.5;
+    if (this.stage.visible) this.layoutStage((performance.now() - this.created) / 1000);
     this.camera.lookAt(this.tmpA);
     this.placeCards(t);
     // Vistas do espaço, as nuvens viravam uma "torre" esquisita em cima da base.
@@ -445,6 +501,7 @@ export class LaunchScene {
     inner.position.y = -0.65;
     this.flame.add(outer, inner);
     this.flame.position.y = -0.3;
+    this.flame.name = 'flame';
     this.rocket.add(this.flame);
 
     this.rocket.position.y = ROCKET_BASE;
@@ -501,30 +558,11 @@ export class LaunchScene {
     return { lines, base };
   }
 
-  /** Marte (vermelho, crateras e calota polar) ou Lua (cinza, crateras). */
+  /** Destino da viagem: o mesmo planeta da tela de escolha. */
   private buildDestination(place: 'mars' | 'moon'): void {
-    const r = 14;
-    const mars = place === 'mars';
-    const planet = toonMesh(new THREE.SphereGeometry(r, 48, 32), mars ? PALETTE.rock : MOON_PALETTE.rock, 0.025);
+    const planet = makePlanet(place);
+    planet.scale.setScalar(14 / PLANET_R);
     this.dest.add(planet);
-    const craterColor = mars ? 0xa84a2c : 0x8a8890;
-    const craterMat = toonMaterial(craterColor);
-    const craterGeo = new THREE.SphereGeometry(1, 16, 8);
-    let s = 11;
-    const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
-    for (let i = 0; i < 16; i++) {
-      const dir = new THREE.Vector3(rnd() * 2 - 1, rnd() * 1.6 - 0.8, rnd() * 2 - 1).normalize();
-      const size = 1 + rnd() * 2.2;
-      const c = new THREE.Mesh(craterGeo, craterMat);
-      c.position.copy(dir).multiplyScalar(r - size * 0.15);
-      c.lookAt(this.tmpB.copy(dir).multiplyScalar(2 * r));
-      c.scale.set(size, size, size * 0.3);
-      this.dest.add(c);
-    }
-    if (mars) {
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(r * 1.01, 32, 8, 0, Math.PI * 2, 0, 0.42), toonMaterial(0xf2ede6));
-      this.dest.add(cap);
-    }
     this.dest.rotation.z = 0.35;
     this.dest.visible = false;
     this.scene.add(this.dest);
@@ -623,4 +661,28 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[
   }
   if (line) lines.push(line);
   return lines;
+}
+
+/** Marte (vermelho, crateras e calota polar) ou Lua (cinza, crateras), com raio PLANET_R. */
+function makePlanet(place: 'mars' | 'moon'): THREE.Group {
+  const g = new THREE.Group();
+  const r = PLANET_R;
+  const mars = place === 'mars';
+  g.add(toonMesh(new THREE.SphereGeometry(r, 48, 32), mars ? PALETTE.rock : MOON_PALETTE.rock, 0.025));
+  const craterMat = toonMaterial(mars ? 0xa84a2c : 0x8a8890);
+  const craterGeo = new THREE.SphereGeometry(1, 16, 8);
+  const out = new THREE.Vector3();
+  let s = mars ? 11 : 23;
+  const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  for (let i = 0; i < 16; i++) {
+    const dir = new THREE.Vector3(rnd() * 2 - 1, rnd() * 1.6 - 0.8, rnd() * 2 - 1).normalize();
+    const size = (1 + rnd() * 2.2) * (r / 14);
+    const c = new THREE.Mesh(craterGeo, craterMat);
+    c.position.copy(dir).multiplyScalar(r - size * 0.15);
+    c.lookAt(out.copy(dir).multiplyScalar(2 * r));
+    c.scale.set(size, size, size * 0.3);
+    g.add(c);
+  }
+  if (mars) g.add(new THREE.Mesh(new THREE.SphereGeometry(r * 1.01, 32, 8, 0, Math.PI * 2, 0, 0.42), toonMaterial(0xf2ede6)));
+  return g;
 }
