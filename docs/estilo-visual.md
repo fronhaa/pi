@@ -94,7 +94,7 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   [`src/scene/base/layout.ts`](../src/scene/base/layout.ts): a **cúpula** da estufa é o núcleo (`DOME_CENTER`), e túneis
   (`TUBES`, cilindros claros com anel laranja na ponta) a ligam a quatro módulos do mesmo `research-base.glb`, sem mudar o
   design: **laboratório** a leste (com o airlock virado para a câmera, a bancada e o observatório), **alojamento** a oeste
-  (`QUARTERS_OFFSET_X`, dois beliches, uma cama por astronauta) com a **academia** acoplada na ponta, e a **garagem do
+  (`QUARTERS_MODULES`, dois módulos com quartos individuais, uma cama por astronauta) com a **academia** acoplada na ponta, e a **garagem do
   rover** ao sul (`GARAGE_POSITION`, casco correndo em Z, em 100% de escala para o rover caber, com piso e uma **rampa**
   com faixas e corrimãos laranja até o chão: `GARAGE_RAMP`). Base de comunicação acoplada na ponta do laboratório, painéis à direita (`PANELS_ORIGIN`) e bateria na frente da base de comunicação.
   As janelas acendem à noite.
@@ -146,14 +146,17 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   (dá para ver quem passa), com piso e um anel laranja em cada ponta. A cúpula
   tem 6 m de raio para a passarela ter altura até a boca dos túneis. Se um teto ficar baixo, ele se curva sozinho
   (`Astronaut.fitHeadroom`, altura em `headroomAt`).
-- Beliche: **1 m livre acima de cada colchão** (`BUNK_LEVELS`, como a NASA recomenda para sentar na cama), camas
-  **encostadas no fundo do módulo** (`BUNK_Z`, centro a 0,65 m do eixo; o fundo do colchão fica a ~10 cm da parede no
-  piso), colchão de `BED_DEPTH` (0,85 m). Mais para trás, o capacete de quem dorme na cama de cima sairia pelo casco redondo. O boneco deitado fica em tamanho normal (`LYING_SCALE = 1`). Deitar: de pé
-  na frente da cama, de frente para os pés dela, deita para trás girando em volta do quadril (`Astronaut.lieBlend`).
-- Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
+- **Quartos individuais** ([ADR 0010](decisoes/0010-quartos-individuais-em-vez-de-beliche.md)): dois módulos de quartos
+  (`QUARTERS_MODULES`), cada um com dois quartos separados por uma divisória translúcida, do fundo até perto da faixa do
+  corredor. Em cada quarto, uma **cama baixa** (`BED_LEVEL`, estrado de quatro pés, aberto embaixo) encostada no fundo
+  (`BED_Z`, colchão de `BED_DEPTH` = 0,85 m) e um armário ao lado da divisória. Engenheiro e médico no primeiro módulo,
+  comandante e cientista no segundo (`BED_SPOTS`). O boneco deitado fica em tamanho normal (`LYING_SCALE = 1`).
+  Deitar: de pé de costas para a cama, **senta na beirada** (pose `sit`, montada por código em `src/render/chibiSit.ts`)
+  e deita girando em volta do quadril, pondo as pernas na cama (`Astronaut.bedBlend`); levantar é o mesmo ao contrário.
+- Academia: módulo da ponta (`GYM_OFFSET_X`, depois dos dois módulos de quartos), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
   (GDD, "Atividades dentro da base", B): quem está dentro sem ordem há 8 s vai à esteira ou à bicicleta (`GYM_STATIONS`,
-  `walk` no lugar na esteira; sentado pedalando na bicicleta, com o clipe `pedal`), descansa deitado no beliche e volta ao posto. Na primeira vez aparece o fato F9.
-- À noite (sem tempestade) cada astronauta dorme deitado na sua cama (`BUNK_SPOTS`); na noite de tempestade, está no abrigo.
+  `walk` no lugar na esteira; sentado pedalando na bicicleta, com o clipe `pedal`), descansa deitado no seu quarto e volta ao posto. Na primeira vez aparece o fato F9.
+- À noite (sem tempestade) cada astronauta dorme deitado na cama do seu quarto (`BED_SPOTS`); na noite de tempestade, está no abrigo.
 - O resto é feito com primitivas (leve). Modelos `.glb` novos: exportar do Blender em glTF Binary,
   eixo Y para cima, em metros, com cores sólidas; ao carregar, trocar os materiais por `toonMaterial(cor)`.
   Coloque em `public/assets/models/` com nome em `kebab-case`.

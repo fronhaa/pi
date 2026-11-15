@@ -7,6 +7,8 @@ export interface Rock {
   x: number;
   z: number;
   r: number;
+  /** A pedra na cena (para tirar as que caem dentro de um prédio). */
+  mesh?: THREE.Object3D;
 }
 
 /**
@@ -77,8 +79,8 @@ function buildRocks(root: THREE.Object3D): Rock[] {
     if (Math.abs(x - ROVER_DOCK.approach.x) < r + 2.5 && z > ROVER_DOCK.foot.z - 1 && z < ROVER_DOCK.approach.z + 3) continue;
     // Nada de pedra em cima do abrigo de regolito e dos sacos em volta dele.
     if (Math.hypot(x - SHELTER_CENTER.x, z - SHELTER_CENTER.z) < r + 4.5) continue;
-    rocks.push({ x, z, r });
     const rock = toonMesh(geo, color, 0.04);
+    rocks.push({ x, z, r, mesh: rock });
     rock.scale.set(sx, sy, sz);
     rock.position.set(x, terrainHeight(x, z) + s * 0.2, z);
     rock.rotation.set(rng(), rng() * 3, rng());

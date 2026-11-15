@@ -5,7 +5,9 @@ import { BIKE_FIT } from '@/render/chibiPedal';
 import {
   BACK_Z,
   BIKE_Z,
-  BUNK_Z,
+  BED_FRONT_Z,
+  BED_LEVEL,
+  BED_Z,
   BED_DEPTH,
   BED_THICKNESS,
   GREENHOUSE_STAIRS,
@@ -15,8 +17,6 @@ import {
   TUBE_RADIUS,
   WALKWAY,
   WALKWAY_WIDTH,
-  BUNK_DX,
-  BUNK_LEVELS,
   GARAGE_FLOOR_Y,
   GARAGE_POSITION,
   GARAGE_RAMP,
@@ -31,12 +31,19 @@ import {
   HABITAT_SCALE,
   MODULE_FLOOR_LENGTH,
   MODULE_FLOOR_WIDTH,
+  QUARTERS_MODULES,
   QUARTERS_OFFSET_X,
+  ROOM_BED_DX,
+  ROOM_LOCKER_DX,
   TUBES,
   addObstacle,
   type Obstacle,
 } from './layout';
 
+
+/** Divisória entre os quartos: altura e até onde vai no fundo (z relativo ao eixo do casco). */
+const ROOM_WALL_HEIGHT = 2.2;
+const ROOM_WALL_BACK_Z = -1.15;
 
 /** Força da luminária de cada cabine (PointLight, sem sombra). */
 const CABIN_LIGHT_INTENSITY = 6;
@@ -102,7 +109,7 @@ export class Habitat {
       w.position.set(wx, 3.2, 1.55);
       fb.add(w);
     }
-    for (const ox of [QUARTERS_OFFSET_X, GYM_OFFSET_X]) {
+    for (const ox of [...QUARTERS_MODULES, GYM_OFFSET_X]) {
       const extra = hull.clone();
       extra.position.x = ox / HABITAT_SCALE; // o grupo inteiro está em HABITAT_SCALE
       fb.add(extra);
@@ -296,7 +303,7 @@ export class Habitat {
 
   /**
    * Por dentro do habitat (visto pelo casco translúcido): um piso em cada módulo, console no
-   * laboratório, dois beliches (4 camas, uma por astronauta) no alojamento e a academia (esteira,
+   * laboratório, quatro quartos individuais (dois em cada módulo de quartos, uma cama cada) e a academia (esteira,
    * bicicleta e aparelho de força, como na Estação Espacial, F9). Serve para os dois modelos.
    */
   private buildInterior(): void {
@@ -306,7 +313,7 @@ export class Habitat {
     // Um piso por módulo: entre eles ficam as portas de acoplamento (um piso contínuo aparecia por fora).
     // Cada cabine tem luminária no teto: o casco faz sombra e o sol não entra, então a luz de dentro é dela.
     const lampMat = new THREE.MeshBasicMaterial({ color: 0xfff1d0 });
-    for (const ox of [0, QUARTERS_OFFSET_X, GYM_OFFSET_X]) {
+    for (const ox of [0, ...QUARTERS_MODULES, GYM_OFFSET_X]) {
       const floor = toonMesh(new THREE.BoxGeometry(MODULE_FLOOR_LENGTH, 0.08, MODULE_FLOOR_WIDTH), PALETTE.tech, 0);
       floor.position.set(ox, y - 0.04, 0);
       inside.add(floor);
@@ -346,40 +353,36 @@ export class Habitat {
       }
     }
 
-    // Alojamento: armários nas pontas e uma mesinha na frente, entre os dois que ficam ali.
-    for (const lx of [QUARTERS_OFFSET_X - 2.38, QUARTERS_OFFSET_X + 2.38]) {
-      const locker = toonMesh(new THREE.BoxGeometry(0.36, 1.6, 0.6), PALETTE.tech, 0.03);
-      locker.position.set(lx, y + 0.8, BACK_Z + 0.05);
-      inside.add(locker);
-    }
-    const table = toonMesh(new THREE.CylinderGeometry(0.32, 0.32, 0.06, 16), PALETTE.light, 0.03);
-    table.position.set(QUARTERS_OFFSET_X, y + 0.7, 0.3);
-    inside.add(table);
-    const leg = toonMesh(new THREE.CylinderGeometry(0.05, 0.05, 0.68, 8), PALETTE.tech, 0);
-    leg.position.set(QUARTERS_OFFSET_X, y + 0.34, 0.3);
-    inside.add(leg);
-    const mug = toonMesh(new THREE.CylinderGeometry(0.06, 0.05, 0.12, 10), PALETTE.accent, 0);
-    mug.position.set(QUARTERS_OFFSET_X + 0.1, y + 0.79, 0.3);
-    inside.add(mug);
-
-    // Alojamento: dois beliches encostados no fundo, cada um com duas camas.
-    for (const bx of [QUARTERS_OFFSET_X - BUNK_DX, QUARTERS_OFFSET_X + BUNK_DX]) {
-      for (const level of BUNK_LEVELS) {
+    // Alojamento: quartos individuais (ADR 0010). Em cada módulo de quartos, dois quartos separados por uma
+    // divisória que vai do fundo até perto da faixa do corredor; em cada quarto, uma cama baixa (de um andar) e um
+    // armário ao lado da divisória.
+    const wallMat = seeThroughHull(toonMaterial(HULL_COLORS.shell), 0.45);
+    const wallFront = BED_FRONT_Z + 0.1; // um pouco à frente das camas, sem entrar na faixa do corredor
+    for (const mx of QUARTERS_MODULES) {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.05, ROOM_WALL_HEIGHT, wallFront - ROOM_WALL_BACK_Z), wallMat);
+      wall.position.set(mx, y + ROOM_WALL_HEIGHT / 2, (wallFront + ROOM_WALL_BACK_Z) / 2);
+      wall.renderOrder = 1.5;
+      inside.add(wall);
+      for (const side of [-1, 1]) {
+        const bx = mx + side * ROOM_BED_DX;
+        // Estrado com quatro pés, aberto embaixo: sentado na beirada, ele recolhe os pés para baixo da cama.
+        for (const [lx, lz] of [[-0.88, -1], [0.88, -1], [-0.88, 1], [0.88, 1]]) {
+          const leg = toonMesh(new THREE.BoxGeometry(0.06, BED_LEVEL - 0.09, 0.06), PALETTE.tech, 0);
+          leg.position.set(bx + lx, y + (BED_LEVEL - 0.09) / 2, BED_Z + lz * (BED_DEPTH / 2 - 0.05));
+          inside.add(leg);
+        }
         const bed = toonMesh(new THREE.BoxGeometry(1.9, BED_THICKNESS, BED_DEPTH), PALETTE.light, 0.04);
-        bed.position.set(bx, y + level, BUNK_Z);
+        bed.position.set(bx, y + BED_LEVEL, BED_Z);
         inside.add(bed);
         const blanket = toonMesh(new THREE.BoxGeometry(1.3, 0.08, BED_DEPTH + 0.02), PALETTE.panel, 0);
-        blanket.position.set(bx + 0.25, y + level + 0.12, BUNK_Z);
+        blanket.position.set(bx + 0.25, y + BED_LEVEL + 0.12, BED_Z);
         inside.add(blanket);
         const pillow = toonMesh(new THREE.BoxGeometry(0.4, 0.12, BED_DEPTH - 0.15), 0xffffff, 0);
-        pillow.position.set(bx - 0.7, y + level + 0.14, BUNK_Z);
+        pillow.position.set(bx - 0.7, y + BED_LEVEL + 0.14, BED_Z);
         inside.add(pillow);
-      }
-      for (const px of [-0.93, 0.93]) {
-        const postH = BUNK_LEVELS[1] + 0.3;
-        const post = toonMesh(new THREE.BoxGeometry(0.06, postH, 0.06), PALETTE.tech, 0);
-        post.position.set(bx + px, y + postH / 2, BUNK_Z + BED_DEPTH / 2 - 0.02);
-        inside.add(post);
+        const locker = toonMesh(new THREE.BoxGeometry(0.36, 1.6, 0.6), PALETTE.tech, 0.03);
+        locker.position.set(mx + side * ROOM_LOCKER_DX, y + 0.8, BACK_Z + 0.05);
+        inside.add(locker);
       }
     }
 
@@ -447,7 +450,7 @@ export class Habitat {
     // A academia encaixa do mesmo jeito no alojamento.
     // Cabines em HABITAT_SCALE; a torre do airlock e o armário ficam em 100% e no mesmo lugar de antes.
     m.root.scale.setScalar(HABITAT_SCALE);
-    const extras = [QUARTERS_OFFSET_X, GYM_OFFSET_X].map((ox) => {
+    const extras = [...QUARTERS_MODULES, GYM_OFFSET_X].map((ox) => {
       const module = m.root.clone(true);
       for (const name of ['access_tower', 'sample_station', 'observatory_base', 'observatory_ring', 'observatory', 'dish', 'dish_pole']) {
         const o = module.getObjectByName(name);

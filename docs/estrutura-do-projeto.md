@@ -37,7 +37,7 @@ src/
 │   │   ├── Rover.ts     rover andando, estudando, desviando, atolado
 │   │   └── Sky.ts       céu, Sol, estrelas, Terra, poeira no ar
 │   ├── Crew.ts          visual dos astronautas (cor por papel, chibi .glb, poses)
-│   ├── crewRoutine.ts   rotina dentro da base (posto → academia → beliche; descansa antes da academia)
+│   ├── crewRoutine.ts   rotina dentro da base (posto → academia → quarto; senta e deita na cama; descansa antes da academia)
 │   ├── crewMotion.ts    física de andar (Rapier, sob demanda)
 │   └── ProblemMarkers.ts os "!" na cena
 ├── core/                ORQUESTRAÇÃO (liga sim, cena e interface)

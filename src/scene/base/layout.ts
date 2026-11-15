@@ -79,11 +79,19 @@ export const SHELTER_CENTER = new THREE.Vector3(-13.5, 0, 8.5);
 export const MODULE_FLOOR_LENGTH = 6.5 * HABITAT_SCALE;
 /**
  * Alojamento, medido a partir do laboratório: do outro lado da cúpula (raio oeste), ligado a ela por um túnel.
- * O interior (beliches, mesa) e os pontos de dentro usam este deslocamento.
+ * O interior (quartos, camas) e os pontos de dentro usam este deslocamento.
  */
 export const QUARTERS_OFFSET_X = 2 * (DOME_CENTER.x - HABITAT_POSITION.x);
 /** A academia encaixa na ponta do alojamento, como antes (port_b na port_a). */
-export const GYM_OFFSET_X = QUARTERS_OFFSET_X - 7 * HABITAT_SCALE;
+/**
+ * Quartos individuais (ADR 0010, como a NASA recomenda e como é na CHAPEA, F15 e F18): dois módulos de quartos, cada um
+ * com dois quartos separados por uma divisória. O segundo encaixa na ponta do primeiro (port_b na port_a), e a academia
+ * vem depois dele.
+ */
+export const QUARTERS_B_OFFSET_X = QUARTERS_OFFSET_X - 7 * HABITAT_SCALE;
+/** Os dois módulos de quartos (deslocamento em x a partir do laboratório). */
+export const QUARTERS_MODULES = [QUARTERS_OFFSET_X, QUARTERS_B_OFFSET_X] as const;
+export const GYM_OFFSET_X = QUARTERS_B_OFFSET_X - 7 * HABITAT_SCALE;
 
 /**
  * Base de comunicação (comm-base.glb, docs/base-comunicacao-e-bateria.md): bloco com a torre de antena e a luz
@@ -162,28 +170,27 @@ export const TUBES: readonly { from: THREE.Vector3; to: THREE.Vector3 }[] = [
   { from: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START), to: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_END) },
 ];
 /**
- * Altura (centro) das duas camas de cada beliche, acima do piso: **1 m livre acima de cada colchão**, como a NASA
- * recomenda para quem dorme conseguir sentar (F18). Acima da cama de cima, o casco deixa ~1,1 m.
+ * Altura (centro) da cama de cada quarto, acima do piso: cama de um andar, baixa o bastante para o chibi (pernas
+ * curtas) sentar na beirada com os pés no chão. Acima dela o casco deixa bem mais de 1 m (NASA, F18).
  */
-export const BUNK_LEVELS = [0.31, 1.49] as const;
+export const BED_LEVEL = 0.23;
+/** Topo do colchão, acima do piso: onde ele senta. */
+export const BED_TOP = BED_LEVEL + 0.09;
 /** O boneco deitado fica em tamanho normal (antes, em 80%, era encolhido para caber entre as camas). */
 export const LYING_SCALE = 1;
 /**
- * Medidas da cama: colchão de 0,7 m de fundo e 0,18 m de altura. A origem do boneco deitado (no meio da espessura
- * dele) fica BUNK_BODY_Y acima do centro da cama; o capacete deitado tem ~0,84 m.
+ * Medidas da cama: colchão de 0,85 m de fundo e 0,18 m de altura. A origem do boneco deitado (no meio da espessura
+ * dele) fica BED_BODY_Y acima do centro da cama; o capacete deitado tem ~0,84 m.
  */
 export const BED_DEPTH = 0.85;
 export const BED_THICKNESS = 0.18;
-const BUNK_BODY_Y = BED_THICKNESS / 2 + 0.43 * LYING_SCALE;
+const BED_BODY_Y = BED_THICKNESS / 2 + 0.43 * LYING_SCALE;
 /** Fundo dos módulos, onde ficam a bancada e os aparelhos (z relativo ao centro do casco). */
 export const BACK_Z = -0.55;
-/**
- * Beliches encostados no fundo do módulo (z relativo ao eixo do casco). O casco é redondo: mais para trás, o capacete
- * de quem dorme na cama de cima sairia pelo casco. Medido com o corpo do chibi nas 4 camas.
- */
-export const BUNK_Z = -0.65;
-/** Frente do colchão (z relativo ao eixo do casco): por onde o astronauta entra na cama. */
-export const BED_FRONT_Z = BUNK_Z + BED_DEPTH / 2;
+/** Camas encostadas no fundo do quarto (z relativo ao eixo do casco). */
+export const BED_Z = -0.65;
+/** Frente do colchão (z relativo ao eixo do casco): onde o astronauta senta para deitar. */
+export const BED_FRONT_Z = BED_Z + BED_DEPTH / 2;
 /**
  * Faixa por onde se anda dentro do alojamento: mais à frente que o eixo do casco, para as pernas não passarem
  * pela borda das camas de baixo (relativa ao centro do casco).
@@ -257,35 +264,40 @@ export function insideHull(zFromAxis: number, y: number): boolean {
 
 /**
  * Onde cada papel fica DENTRO do habitat, visível pelo casco translúcido: comandante e cientista no
- * laboratório (perto do console), engenheiro e médico no alojamento (em frente aos beliches).
+ * laboratório (perto do console), engenheiro e médico no alojamento (no corredor, em frente aos quartos).
  */
 export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
   commander: new THREE.Vector3(HABITAT_POSITION.x - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
   scientist: new THREE.Vector3(HABITAT_POSITION.x + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
-  // No alojamento, na faixa da frente (QUARTERS_LANE_Z): virando para olhar em volta, não encosta no beliche.
+  // No alojamento, na faixa da frente (QUARTERS_LANE_Z): virando para olhar em volta, não encosta nas camas.
   engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + QUARTERS_LANE_Z + 0.05),
   medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + QUARTERS_LANE_Z + 0.05),
 };
 
-/** Centro de cada beliche em relação ao centro do alojamento. */
-export const BUNK_DX = 1.25;
+/** Centro da cama de cada quarto em relação ao centro do módulo (um quarto em cada metade). */
+export const ROOM_BED_DX = 1.62;
+/** Armário de cada quarto, ao lado da divisória (em relação ao centro do módulo, para dentro do quarto). */
+export const ROOM_LOCKER_DX = 0.42;
 /** Comprimento do boneco deitado. */
 const LYING_LENGTH = 1.85 * LYING_SCALE;
 
-/** Cama de cada papel no alojamento (beliche, cabeça no travesseiro em −X): onde dorme à noite e descansa. */
-export const BUNK_SPOTS: Record<Role, THREE.Vector3> = {
-  engineer: bunkSpot(-BUNK_DX, 0),
-  medic: bunkSpot(-BUNK_DX, 1),
-  commander: bunkSpot(BUNK_DX, 0),
-  scientist: bunkSpot(BUNK_DX, 1),
+/**
+ * Cama de cada papel (cabeça no travesseiro em −X): onde dorme à noite e descansa. Engenheiro e médico no primeiro
+ * módulo de quartos (perto dos postos deles), comandante e cientista no segundo. Um quarto para cada um.
+ */
+export const BED_SPOTS: Record<Role, THREE.Vector3> = {
+  engineer: bedSpot(QUARTERS_OFFSET_X, -1),
+  medic: bedSpot(QUARTERS_OFFSET_X, 1),
+  commander: bedSpot(QUARTERS_B_OFFSET_X, -1),
+  scientist: bedSpot(QUARTERS_B_OFFSET_X, 1),
 };
 
-function bunkSpot(dx: number, level: 0 | 1): THREE.Vector3 {
+function bedSpot(moduleX: number, side: -1 | 1): THREE.Vector3 {
   // O boneco deitado tem os pés na origem: a origem fica na ponta da cama, longe do travesseiro.
   return new THREE.Vector3(
-    HABITAT_POSITION.x + QUARTERS_OFFSET_X + dx + LYING_LENGTH / 2,
-    HABITAT_FLOOR_Y + BUNK_LEVELS[level] + BUNK_BODY_Y,
-    HABITAT_POSITION.z + BUNK_Z,
+    HABITAT_POSITION.x + moduleX + side * ROOM_BED_DX + LYING_LENGTH / 2,
+    HABITAT_FLOOR_Y + BED_LEVEL + BED_BODY_Y,
+    HABITAT_POSITION.z + BED_Z,
   );
 }
 
@@ -313,13 +325,14 @@ export const GYM_STATIONS = [
 
 /**
  * Para onde cada papel olha quando está parado no seu posto (GDD, "Para onde o astronauta olha"):
- * no laboratório, a sua tela da bancada; no alojamento, o armário (engenheiro) e a mesinha (médico).
+ * no laboratório, a sua tela da bancada; no alojamento, o armário do seu quarto.
  */
 export const HABITAT_LOOK: Record<Role, THREE.Vector3> = {
   commander: new THREE.Vector3(HABITAT_POSITION.x - 0.9, HABITAT_FLOOR_Y + 1.3, HABITAT_POSITION.z + BACK_Z - 0.2),
   scientist: new THREE.Vector3(HABITAT_POSITION.x + 0.9, HABITAT_FLOOR_Y + 1.3, HABITAT_POSITION.z + BACK_Z - 0.2),
-  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 2.38, HABITAT_FLOOR_Y + 1, HABITAT_POSITION.z + BACK_Z),
-  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X, HABITAT_FLOOR_Y + 0.7, HABITAT_POSITION.z + 0.3),
+  // No alojamento, o armário do seu quarto.
+  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - ROOM_LOCKER_DX, HABITAT_FLOOR_Y + 1, HABITAT_POSITION.z + BACK_Z),
+  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + ROOM_LOCKER_DX, HABITAT_FLOOR_Y + 1, HABITAT_POSITION.z + BACK_Z),
 };
 
 /**
