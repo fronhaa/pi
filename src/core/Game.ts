@@ -19,7 +19,8 @@ import { ProblemMarkers } from '@/scene/ProblemMarkers';
 import type { CrewMotion } from '@/scene/crewMotion';
 import { Hud } from '@/ui/Hud';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
-import { showCard, showEnd, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
+import { CrewBubble } from '@/ui/CrewBubble';
+import { showCard, showEnd, showMissionStart, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
 import { IntroGuide } from '@/ui/IntroGuide';
 import { IntroDirector } from './intro';
 import { showModeChoice } from '@/ui/coop';
@@ -38,6 +39,9 @@ const LOOK_AT_CAMERA_SECONDS = 2;
 const NIGHT_MS = 2200;
 /** Dia do treino (sóis 1 a 3, sem problemas): só para ver o Sol cruzar o céu (s). Visual, não é regra. */
 const INTRO_DAY_SECONDS = 12;
+/** O balão de fato fica um pouco acima do capacete (o astronauta tem ~1,9 m). */
+const BUBBLE_ABOVE_HEAD = new THREE.Vector3(0, 2.2, 0);
+const BUBBLE_TMP = new THREE.Vector3();
 /** A noite espera a tripulação entrar, mas no máximo isto (ms); quem não chegou entra direto. */
 const NIGHT_MAX_MS = 6000;
 
@@ -101,6 +105,8 @@ export class Game {
   private readonly tasks: CrewTasks;
   private readonly markers = new ProblemMarkers();
   private readonly offscreen: OffscreenArrows;
+  /** Balão de fato da NASA em cima de um astronauta (academia, estufa, pulo, EVA). */
+  private readonly bubble = new CrewBubble();
   private hudTick = 0;
   private problemTipShown = false;
   private evaFactShown = false;
@@ -142,9 +148,10 @@ export class Game {
     // A tripulação fica dentro da base por padrão; só aparece lá fora numa EVA (GDD).
     this.crew.setSheltered(true);
     this.routine = new CrewRoutine(this.crew);
-    this.routine.onFirstExercise = () => this.hud.toast(t('fact.exercise'), t('fact.exercise.source'));
+    // Fatos da NASA num balão em cima de quem está fazendo aquilo (src/ui/CrewBubble.ts).
+    this.routine.onFirstExercise = (role) => this.bubbleOver([role], t('fact.exercise'), t('fact.exercise.source'));
     // Fato da estufa inflável da NASA para a Lua e Marte (F20), na primeira vez que alguém trabalha na estufa.
-    this.routine.onFirstGreenhouse = () => this.hud.toast(t('fact.greenhouseInflatable'), t('fact.greenhouseInflatable.source'));
+    this.routine.onFirstGreenhouse = (role) => this.bubbleOver([role], t('fact.greenhouseInflatable'), t('fact.greenhouseInflatable.source'));
 
     const uiRoot = document.createElement('div');
     uiRoot.id = 'ui';
@@ -203,7 +210,7 @@ export class Game {
     this.tasks.onEvaStart = ([a, b]) => {
       const names = { a: t(`crew.${a}` as StringKey), b: t(`crew.${b}` as StringKey) };
       // Primeira EVA: o fato real da NASA sobre quanto tempo se passa lá fora.
-      if (!this.evaFactShown) this.hud.toast(t('eva.fact'), t('eva.fact.source'));
+      if (!this.evaFactShown) this.bubbleOver([a, b], t('eva.fact'), t('eva.fact.source'));
       else this.hud.toast(t('eva.start', names));
       this.evaFactShown = true;
       this.coop?.evaStarted([a, b]);
@@ -260,8 +267,18 @@ export class Game {
     showPlaceChoice((place) => {
       this.setLocation(place);
       this.newMission();
-      this.beginSol();
+      this.startMission();
     });
+  }
+
+  /** Abertura da missão: a missão histórica (datas reais) aparece logo depois da escolha, antes do sol 1 e do treino. */
+  private startMission(): void {
+    const h = this.mission.state.historical;
+    if (!h) {
+      this.beginSol();
+      return;
+    }
+    showMissionStart(t('mission.start', { id: h.id, date: formatDate(h.startUtc) }), t('mission.source'), () => this.beginSol());
   }
 
   /** Troca o lugar da base: textos, cena e gravidade (as regras vêm da Mission criada depois). */
@@ -354,7 +371,7 @@ export class Game {
           this.hud.setCrew('ready', role);
           this.refreshDayHud();
         },
-        onFirstJump: () => this.hud.toast(t('crew.fact.gravity'), t('crew.fact.source')),
+        onFirstJump: (role) => this.bubbleOver([role], t('crew.fact.gravity'), t('crew.fact.source')),
         // Em grupo, cada jogador só controla o astronauta do(s) próprio(s) papel(is).
         canControl: (role) => this.canControl(role),
       });
@@ -404,6 +421,16 @@ export class Game {
         (this.targetMarker.material as THREE.MeshBasicMaterial).opacity = 0.9;
       },
       onHover: (role) => this.setHovered(role),
+    });
+  }
+
+  /** Fato da NASA num balão em cima de quem está fazendo aquilo (com dois, no meio da dupla). */
+  private bubbleOver(roles: Role[], text: string, source?: string): void {
+    const at = new THREE.Vector3();
+    this.bubble.show(text, source, () => {
+      at.set(0, 0, 0);
+      for (const r of roles) at.add(this.crew.members[r].root.getWorldPosition(BUBBLE_TMP));
+      return at.divideScalar(roles.length).add(BUBBLE_ABOVE_HEAD);
     });
   }
 
@@ -598,6 +625,7 @@ export class Game {
     // Lua: erupções reais sorteadas (o atraso das missões históricas é Terra-Marte; não serve para a Lua).
     const historical = this.location === 'mars' ? pickHistorical(this.missions.missions, seed, isFirstGame()) : null;
     this.mission = new Mission(seed, this.flares.flares, historical, this.location);
+    this.bubble.hide();
     // Solo começa pelo treino (a base fechada); em grupo, sem treino.
     this.intro.reset(!this.coop);
     this.hud.setState(this.mission.state);
@@ -611,9 +639,6 @@ export class Game {
     this.hud.setState(s);
     this.hud.newSol();
     this.updateScene();
-    if (s.sol === 1 && s.historical) {
-      this.hud.toast(t('mission.start', { id: s.historical.id, date: formatDate(s.historical.startUtc) }), t('mission.source'));
-    }
     this.intro.morning(s, this.mission.nightCost());
     if (s.pendingCard) {
       showCard(s.pendingCard, (option) => {
@@ -690,7 +715,7 @@ export class Game {
       showPlaceChoice((place) => {
         this.setLocation(place);
         this.newMission();
-        this.beginSol();
+        this.startMission();
       }),
     );
   }
@@ -795,6 +820,7 @@ export class Game {
     }
     this.markers.update(t, this.camera);
     this.updateOffscreen();
+    this.bubble.update(dt, this.camera, this.renderer.domElement);
     this.coop?.crewTick(dt);
     // Tubos enchendo ao vivo: cada parada de estudo do rover é uma amostra (o número final vem da regra, na noite).
     const samples = this.base.roverSamplesToday;

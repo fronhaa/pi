@@ -76,6 +76,11 @@ export interface DialogAction {
  * Janela modal acessível (role=dialog, foco no primeiro botão, Esc fecha se `dismissible`).
  * Retorna a função que fecha a janela.
  */
+/** Logotipo do jogo (public/assets/ui): no topo das janelas de abertura. */
+function gameLogo(): HTMLImageElement {
+  return h('img', { class: 'dialog-logo', src: `${import.meta.env.BASE_URL}assets/ui/artemis-quest-logo.png`, alt: 'Artemis Quest', width: 720, height: 367 });
+}
+
 export function openDialog(opts: {
   title: string;
   body: Child[];
@@ -83,6 +88,8 @@ export function openDialog(opts: {
   row?: boolean;
   dismissible?: boolean;
   label?: string;
+  /** Logotipo do jogo acima do título (janelas de abertura). */
+  logo?: boolean;
 }): () => void {
   const previous = document.activeElement as HTMLElement | null;
   const titleId = `dlg-${Date.now()}-${openCount++}`;
@@ -100,6 +107,7 @@ export function openDialog(opts: {
   const dialog = h(
     'div',
     { class: 'dialog', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId },
+    opts.logo ? gameLogo() : null,
     h('h2', { id: titleId }, opts.title),
     ...opts.body,
     h('div', { class: `actions${opts.row ? ' row' : ''}` }, ...buttons),

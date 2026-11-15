@@ -25,7 +25,8 @@ export interface CrewMotionOptions {
   input: Input;
   camera: THREE.Camera;
   onSelect?: (role: Role) => void;
-  onFirstJump?: () => void;
+  /** Primeiro pulo da partida (o jogo mostra o fato da gravidade em cima de quem pulou). */
+  onFirstJump?: (role: Role) => void;
   /** Modo em grupo: quais astronautas ESTE jogador controla (os outros são de outros jogadores). Sem isso, todos. */
   canControl?: (role: Role) => boolean;
   /** Rover animado pela cena: ganha um corpo cinemático que bloqueia os astronautas. */
@@ -304,7 +305,7 @@ export class CrewMotion {
           this.opts.crew.members[role].jump();
           if (!this.jumped) {
             this.jumped = true;
-            this.opts.onFirstJump?.();
+            this.opts.onFirstJump?.(role);
           }
         }
       }
