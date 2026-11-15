@@ -88,6 +88,8 @@ interface Walker {
   /** Já apareceu dentro alguma vez (no começo do jogo ele já está no lugar; depois, entra pela porta). */
   placed: boolean;
   wasInside: boolean;
+  /** Estava deitado no quadro anterior (subindo ou descendo do beliche)? */
+  wasLying: boolean;
 }
 
 /**
@@ -108,7 +110,7 @@ export class CrewRoutine {
   onFirstExercise: () => void = () => {};
   private exerciseShown = false;
   private readonly walkers = Object.fromEntries(
-    ROLES.map((r) => [r, { at: 'post', idle: 0, left: 0, station: 0, rested: true, pos: HABITAT_SPOTS[r].clone(), path: [], going: null, placed: false, wasInside: false } as Walker]),
+    ROLES.map((r) => [r, { at: 'post', idle: 0, left: 0, station: 0, rested: true, pos: HABITAT_SPOTS[r].clone(), path: [], going: null, placed: false, wasInside: false, wasLying: false } as Walker]),
   ) as Record<Role, Walker>;
 
   constructor(private readonly crew: Crew) {}
@@ -280,8 +282,10 @@ export class CrewRoutine {
         const lying = w.path[0].lying;
         // Deitando ao lado da cama: o corpo começa logo acima do chão, nunca enfiado nele.
         if (lying) w.pos.y = Math.max(w.pos.y, FLOOR_Y + LYING_HALF);
-        // Levantando ao lado da cama: fica de pé direto no chão (em pé lá em cima, a cabeça passaria do casco).
-        else if (w.pos.y > FLOOR_Y + 0.01 && w.pos.y <= FLOOR_Y + LYING_HALF + 0.01) w.pos.y = FLOOR_Y;
+        // Levantando ao lado da cama (estava deitado): fica de pé direto no chão (em pé lá em cima, a cabeça
+        // passaria do casco). Só nesse momento: a esteira, por exemplo, fica um pouco acima do piso.
+        else if (w.wasLying) w.pos.y = FLOOR_Y;
+        w.wasLying = lying;
         const speed = lying ? CLIMB_SPEED : activity === 'task' ? TASK_WALK_SPEED : f.sleeping ? NIGHT_WALK_SPEED : WALK_SPEED;
         let step = speed * dt;
         let heading = a.model.rotation.y;
