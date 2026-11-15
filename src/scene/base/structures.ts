@@ -438,7 +438,8 @@ export class BaseStructures {
       const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.75, LED_HEIGHT - 0.5, 16, 1, true), this.ledBeamMat);
       beam.scale.x = 1.5;
       beam.position.set(x, (LED_HEIGHT + 0.5) / 2, z);
-      beam.renderOrder = 2;
+      // Antes do casco (renderOrder 1+): ele escreve profundidade e esconderia o facho que está dentro.
+      beam.renderOrder = 0.5;
       this.root.add(beam);
       for (const ox of [-1, 1]) {
         const post = toonMesh(new THREE.CylinderGeometry(0.035, 0.035, LED_HEIGHT - 0.4, 6), PALETTE.tech, 0);
@@ -471,7 +472,8 @@ export class BaseStructures {
       this.root.add(head);
       const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 1.3, FIBER_LAMP_HEIGHT - 0.5, 20, 1, true), this.fiberBeamMat);
       beam.position.set(lamp.x, (FIBER_LAMP_HEIGHT + 0.5) / 2, lamp.z);
-      beam.renderOrder = 2;
+      // Antes do casco (renderOrder 1+): ele escreve profundidade e esconderia o facho que está dentro.
+      beam.renderOrder = 0.5;
       this.root.add(beam);
       const spot = new THREE.SpotLight(FIBER_COLOR, 0, 7, 0.55, 0.7, 1.2);
       spot.position.copy(lamp);

@@ -15,7 +15,11 @@ export function seeThroughHull<M extends THREE.Material>(mat: M, opacity: number
   const m = mat.clone();
   m.transparent = true;
   m.opacity = opacity;
-  m.depthWrite = false;
+  // Escreve profundidade mesmo transparente: as peças do casco são desenhadas em camadas (renderOrder: casca, faixas,
+  // anéis, janelas...) e, sem isto, as janelas do lado de TRÁS eram desenhadas por cima da casca da frente. No "See
+  // inside" elas surgiam de uma vez, com o casco ainda quase opaco (a troca brusca). O que está dentro (opaco, e os
+  // fachos de luz, desenhados antes do casco) continua aparecendo através dele.
+  m.depthWrite = true;
   m.side = THREE.FrontSide;
   // Sombra pelos dois lados: por padrão o three.js só desenha a face de trás na sombra, e num casco fechado
   // ela fica atrás de quem está dentro; aí o sol "atravessava" o metal.
@@ -35,7 +39,6 @@ export function setHullOpen(mat: THREE.Material, open: number): boolean {
   const transparent = open > 0.01;
   if (mat.transparent !== transparent) {
     mat.transparent = transparent;
-    mat.depthWrite = !transparent;
     mat.needsUpdate = true;
   }
   mat.opacity = THREE.MathUtils.lerp(1, target, open);
