@@ -42,14 +42,27 @@ const DRIVE_SPEED = 2.4;
 const TURN_RATE = 1.3;
 /** Parado estudando no destino (s). */
 const STUDY_SECONDS = 5;
-/** Quanto à frente ele olha para desviar (m), meia-largura com folga e distância segura de um astronauta. */
-const LOOKAHEAD = 6;
+/**
+ * Planejamento do caminho, como o AutoNav do Perseverance (as câmeras montam o terreno em 3D à frente):
+ * ele avalia várias direções até PLAN_RANGE m e escolhe a melhor por uma nota (custo), muito antes de chegar
+ * no obstáculo. Assim começa a curva cedo e suave, em vez de desviar em cima da hora.
+ */
+const PLAN_RANGE = 10;
+/** Folga que ele prefere manter dos obstáculos (m, além da meia-largura); mais perto, a nota piora e ele freia. */
+const COMFORT = 1.6;
+/** Direções avaliadas, a partir da direção do próximo ponto: de −100° a +100°, de 7° em 7°. */
+const CANDIDATES = Array.from({ length: 29 }, (_, i) => (i - 14) * 0.125);
+/** Uma direção só vale se tiver pelo menos isto livre à frente (m). */
+const MIN_FREE = 2.5;
+/** Pesos da nota: desviar do destino, virar agora, mudar de ideia, caminho fechado lá na frente, pouca folga. */
+const COST = { detour: 1, turn: 0.6, change: 0.8, blocked: 2, tight: 1.5 };
+/** Quão rápido a direção planejada acompanha a escolha nova (1/s): amortece o zigue-zague. */
+const PLAN_SMOOTH = 4;
+/** Meia-largura do rover com folga (m) e distância segura de um astronauta. */
 const ROVER_HALF = 0.9;
 const CREW_SAFE = 1.4;
 /** Astronauta colado: para na hora. */
 const CREW_NEAR = 1.7;
-/** Direções que ele testa para desviar (rad, a partir da direção do destino). */
-const DETOURS = [0, 0.35, -0.35, 0.7, -0.7, 1.05, -1.05, 1.4, -1.4, 1.75, -1.75];
 /** Ângulo do braço: guardado (em pé) e estudando (apontado para o chão à frente). */
 const ARM_STOWED = 1.35;
 const ARM_DEPLOYED = -0.75;
@@ -99,6 +112,9 @@ export class Rover {
   /** Rodas (giram conforme a distância percorrida) e direção do nariz (0 = +X; gira no sentido anti-horário visto de cima). */
   private readonly wheels: THREE.Object3D[] = [];
   private heading = 0;
+  /** Direção planejada (amortecida) e a última escolhida pelo planejamento. */
+  private planned: number | null = null;
+  private lastChoice: number | null = null;
   private target: Target | null = null;
   private lastRock: Rock | null = null;
   /**
@@ -207,6 +223,7 @@ export class Rover {
     if (at) this.phase = 'drive'; // atolou no meio do caminho: a entrada na garagem recomeça depois
     if (!at && wasStuck) {
       this.target = null;
+      this.planned = null;
       this.phase = 'drive';
     }
   }
@@ -258,7 +275,7 @@ export class Rover {
    * Folga (m) entre o rover, se ele estivesse neste ponto, e a coisa mais perto: prédios (caixas), áreas
    * proibidas (abrigo com os sacos, cúpula) e pedras. Negativa = encostando ou dentro.
    */
-  private clearance(x: number, z: number): number {
+  private clearance(x: number, z: number, ignore: Rock | null = null): number {
     let best = Infinity;
     for (const o of this.obstacles) {
       const dx = Math.abs(x - o.center.x) - o.half.x - ROVER_HALF;
@@ -266,7 +283,7 @@ export class Rover {
       best = Math.min(best, dx > 0 || dz > 0 ? Math.hypot(Math.max(dx, 0), Math.max(dz, 0)) : Math.max(dx, dz));
     }
     for (const k of ROVER_KEEP_OUT) best = Math.min(best, Math.hypot(x - k.x, z - k.z) - k.r - ROVER_HALF);
-    for (const k of this.rocks) best = Math.min(best, Math.hypot(x - k.x, z - k.z) - k.r - ROVER_HALF);
+    for (const k of this.rocks) if (k !== ignore) best = Math.min(best, Math.hypot(x - k.x, z - k.z) - k.r - ROVER_HALF);
     return best;
   }
 
@@ -280,7 +297,8 @@ export class Rover {
     if (this.studies >= EXPEDITION_STUDIES) {
       const a = ROVER_DOCK.approach;
       const dist = Math.hypot(a.x - p.x, a.z - p.z);
-      this.target = { x: a.x, z: a.z, stop: 0.6, rock: null, home: true, driving: 0, limit: (dist / DRIVE_SPEED) * 3 + 15 };
+      // Para a ~2 m: com curvas suaves ele não acerta um ponto exato; o resto ele faz devagar, alinhando com a rampa.
+      this.target = { x: a.x, z: a.z, stop: 2, rock: null, home: true, driving: 0, limit: (dist / DRIVE_SPEED) * 3 + 15 };
       return;
     }
     const { near, far } = exploreRange(scienceBlocks);
@@ -290,12 +308,12 @@ export class Rover {
     });
     let x: number;
     let z: number;
-    let stop = 1;
+    let stop = 2;
     let rock: Rock | null = null;
     if (rocks.length) {
       rock = rocks[Math.floor(Math.random() * rocks.length)];
       ({ x, z } = rock);
-      stop = rock.r + 1.6;
+      stop = rock.r + 2.2; // para em frente à pedra; com curvas suaves, sem tentar chegar colado
     } else {
       let tries = 0;
       do {
@@ -307,6 +325,7 @@ export class Rover {
     }
     const dist = Math.hypot(x - p.x, z - p.z);
     this.target = { x, z, stop, rock, driving: 0, limit: (dist / DRIVE_SPEED) * 2.5 + 8 };
+    this.lastChoice = null;
     this.lastRock = rock;
   }
 
@@ -356,20 +375,74 @@ export class Rover {
    * Para onde virar agora: a direção do próximo ponto, se estiver livre; senão, o desvio livre mais perto dela
    * (empatados, o que exige virar menos). null = nenhuma passagem.
    */
+  /**
+   * O que as câmeras "veem" numa direção até `length` m: quanto dá para andar livre e a menor folga no caminho.
+   * Astronautas contam como obstáculo (CREW_SAFE). Se ele já está encostado em algo, vale enquanto se afasta.
+   */
+  private profile(heading: number, length: number, crew: THREE.Vector3[]): { free: number; clear: number } {
+    const p = this.root.position;
+    const fx = Math.cos(heading);
+    const fz = -Math.sin(heading);
+    const at = (x: number, z: number) => {
+      // A pedra que ele vai estudar não conta: o caminho termina antes dela (no ponto de parada).
+      let c = this.fromBase(x, z) > RANGE_MAX + 6 ? -1 : this.clearance(x, z, this.target?.rock ?? null);
+      for (const m of crew) c = Math.min(c, Math.hypot(m.x - x, m.z - z) - CREW_SAFE);
+      return c;
+    };
+    let last = at(p.x, p.z);
+    let clear = Infinity;
+    const step = 0.5;
+    for (let s = step; s <= length + 1e-6; s += step) {
+      const c = at(p.x + fx * s, p.z + fz * s);
+      if (c < 0 && c <= last) return { free: s - step, clear };
+      clear = Math.min(clear, c);
+      last = c;
+    }
+    return { free: length, clear };
+  }
+
+  /**
+   * Para onde ir agora: avalia CANDIDATES direções em volta da direção do próximo ponto e fica com a de
+   * menor custo (desvio, curva, mudança de ideia, caminho fechado adiante e pouca folga). null = nenhuma passagem.
+   */
   private steer(crew: THREE.Vector3[]): number | null {
     const t = this.target!;
     const w = this.waypoint();
     const p = this.root.position;
     const toTarget = Math.atan2(-(w.z - p.z), w.x - p.x);
-    const length = w.final ? Math.min(LOOKAHEAD, Math.max(1, Math.hypot(t.x - p.x, t.z - p.z) - t.stop)) : LOOKAHEAD;
-    const turn = (h: number) => Math.abs(Math.atan2(Math.sin(h - this.heading), Math.cos(h - this.heading)));
-    const options = DETOURS.map((d) => toTarget + d).sort((a, b) => Math.abs(a - toTarget) - Math.abs(b - toTarget) || turn(a) - turn(b));
-    const ahead = options.find((h) => this.pathFree(h, length, crew));
-    if (ahead !== undefined) return ahead;
+    const length = w.final ? Math.min(PLAN_RANGE, Math.max(1, Math.hypot(t.x - p.x, t.z - p.z) - t.stop)) : PLAN_RANGE;
+    const angle = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+    const costOf = (h: number): number => {
+      const { free, clear } = this.profile(h, length, crew);
+      if (free < Math.min(length, MIN_FREE)) return Infinity;
+      return (
+        COST.detour * angle(h, toTarget) +
+        COST.turn * angle(h, this.heading) +
+        (this.lastChoice === null ? 0 : COST.change * angle(h, this.lastChoice)) +
+        (COST.blocked * (length - free)) / length +
+        (COST.tight * Math.max(0, COMFORT - clear)) / COMFORT
+      );
+    };
+    let best: number | null = null;
+    let bestCost = Infinity;
+    for (const off of CANDIDATES) {
+      const cost = costOf(toTarget + off);
+      if (cost < bestCost) {
+        bestCost = cost;
+        best = toTarget + off;
+      }
+    }
+    if (best !== null) {
+      this.lastChoice = best;
+      return best;
+    }
     // Encurralado (a frente toda fechada): manobra para qualquer lado livre, o que exige virar menos.
-    const around = Array.from({ length: 16 }, (_, i) => (i / 16) * Math.PI * 2).sort((a, b) => turn(a) - turn(b));
-    return around.find((h) => this.pathFree(h, 2, crew)) ?? null;
+    const around = Array.from({ length: 16 }, (_, i) => (i / 16) * Math.PI * 2).sort((a, b) => angle(a, this.heading) - angle(b, this.heading));
+    const escape = around.find((h) => this.profile(h, 2, crew).free >= 2) ?? null;
+    this.lastChoice = escape;
+    return escape;
   }
+
 
   private animateTools(studying: boolean, dt: number, time: number): void {
     // Rover .glb: ao parar para estudar, o mastro escaneia e a broca desce; ao voltar a andar, para tudo.
@@ -480,7 +553,7 @@ export class Rover {
     // Antes de entrar, vira parado de frente para a rampa.
     if (this.phase === 'dockIn' && this.dockS === 0) {
       const diff = Math.atan2(Math.sin(ROVER_DOCK.heading - this.heading), Math.cos(ROVER_DOCK.heading - this.heading));
-      // Chegou perto do ponto de aproximação (até ~0,6 m): termina de chegar enquanto vira, sem pulo.
+      // Chegou perto do ponto de aproximação (até ~2 m): termina de chegar enquanto vira, sem pulo.
       const a = ROVER_DOCK.approach;
       const gap = Math.hypot(a.x - p.x, a.z - p.z);
       if (Math.abs(diff) > 0.02 || gap > 0.01) {
@@ -513,6 +586,7 @@ export class Rover {
     } else if (this.phase === 'dockOut' && this.dockS <= 0) {
       this.phase = 'drive';
       this.target = null;
+      this.planned = null;
     }
   }
 
@@ -573,12 +647,18 @@ export class Rover {
 
     // Vira aos poucos para a direção escolhida e anda mais devagar nas curvas fechadas. Se o nariz ainda
     // aponta para algo (a curva não terminou), gira parado em vez de avançar: nunca entra em prédio ou pedra.
-    const diff = Math.atan2(Math.sin(heading - this.heading), Math.cos(heading - this.heading));
+    // A direção planejada acompanha a escolha aos poucos (sem zigue-zague); o nariz segue a planejada.
+    if (this.planned === null) this.planned = this.heading;
+    this.planned += Math.atan2(Math.sin(heading - this.planned), Math.cos(heading - this.planned)) * Math.min(1, PLAN_SMOOTH * dt);
+    const diff = Math.atan2(Math.sin(this.planned - this.heading), Math.cos(this.planned - this.heading));
     this.heading += THREE.MathUtils.clamp(diff, -TURN_RATE * dt, TURN_RATE * dt);
     // Perto do destino, olha só até o ponto de parada (senão a própria pedra de estudo "fecharia" a frente).
     const remain = Math.hypot(t.x - p.x, t.z - p.z) - t.stop;
     const noseFree = this.pathFree(this.heading, Math.min(NOSE_CHECK, Math.max(0.3, remain + 0.3)), crew);
-    const speed = noseFree ? DRIVE_SPEED * Math.max(0.35, Math.cos(diff)) : 0;
+    // Freia nas curvas fechadas e quando passa perto de algo (folga menor que a confortável nos próximos 3 m).
+    const near = this.profile(this.heading, 3, crew).clear;
+    const caution = THREE.MathUtils.clamp(0.65 + (0.35 * near) / COMFORT, 0.65, 1);
+    const speed = noseFree ? DRIVE_SPEED * Math.max(0.35, Math.cos(diff)) * caution : 0;
     const step = speed * dt;
     const x = p.x + Math.cos(this.heading) * step;
     const z = p.z - Math.sin(this.heading) * step;
