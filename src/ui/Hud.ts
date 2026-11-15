@@ -48,7 +48,6 @@ export interface HudCallbacks {
   onEndDay(): void;
   onSelect(role: RoleId): void;
   onPlanChange(plan: EnergyPlan): void;
-  onNasaData(): void;
   onToggleLang(): void;
   onHowTo(): void;
   /** Fecha ou abre o casco das cápsulas (só visual). */
@@ -600,13 +599,12 @@ export function flareBadge(f: Flare): HTMLElement {
   if (!f.real) return h('span', {}, h('span', { class: 'badge sim' }, t('flare.simulated')));
   return h('span', {},
     h('span', { class: 'badge real' }, t(f.source === 'cme' ? 'flare.real.cme' : 'flare.real', { date: formatDate(f.time!) })),
-    f.link ? h('a', { href: f.link, target: '_blank', rel: 'noopener noreferrer' }, t('flare.link')) : null,
   );
 }
 
 /** Texto do aviso: erupção (classe) ou nuvem de plasma de missão histórica (força e velocidade). */
 function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
-  // Força em palavra (fraca, média, forte): a classe real (M, X, R…) fica no selo e no link do DONKI ("modo cientista").
+  // Força em palavra (fraca, média, forte): a classe real (M, X, R…) não aparece para a criança; a fonte fica em docs/fontes-nasa.md.
   const strength = t(`storm.strength.${f.cls}` as StringKey);
   if (f.source !== 'cme') {
     return when === 'alert' ? t('msg.stormAlert', { strength, sol: sol ?? 0 }) : t('msg.stormToday', { strength });
@@ -617,7 +615,7 @@ function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
 
 /**
  * "O Sol ultimamente": erupções fortes reais nos últimos 30 dias e a dica da proteção (2 frases, padrão ~400L). A mais
- * recente, com a classe (ex.: M6.4), é detalhe do "modo cientista": fica na dica do mouse e no link do DONKI.
+ * recente, com a classe (ex.: M6.4), é detalhe para adultos: fica só na dica do mouse.
  */
 function recentSunEl(r: RecentSun): HTMLElement {
   const latest = r.latest;
@@ -627,8 +625,7 @@ function recentSunEl(r: RecentSun): HTMLElement {
     r.count > 0 ? t('msg.sunRecent.active', { n: r.count, days: r.days }) : t('msg.sunRecent.calm', { days: r.days }), ' ',
     t('msg.sunRecent.tip'),
     h('span', { class: 'meta' },
-      h('span', { class: 'badge real' }, t('data.badge.snapshot', { date: formatDate(r.fetchedAt) })), ' ',
-      latest?.link ? h('a', { href: latest.link, target: '_blank', rel: 'noopener noreferrer' }, t('flare.link')) : null),
+      h('span', { class: 'badge real' }, t('data.badge.snapshot', { date: formatDate(r.fetchedAt) }))),
   );
 }
 

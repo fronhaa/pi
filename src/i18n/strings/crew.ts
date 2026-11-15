@@ -42,7 +42,6 @@ export const pt = {
   'eva.return': 'Voltar para dentro',
   'eva.fact.title': '🚀 EVA (caminhada lá fora)',
   'eva.fact': 'Cada astronauta fica lá fora no máximo um dia por semana. O resto do tempo, fica dentro da base.',
-  'eva.fact.source': 'Fonte: NASA, relatório sobre EVA (2021)',
   'crew.commander': 'Comandante',
   'crew.engineer': 'Engenheiro de voo',
   'crew.medic': 'Oficial médico',
@@ -61,7 +60,6 @@ export const pt = {
   'crew.hint.touch': 'Toque num astronauta e depois no chão para ele andar',
   'crew.fact.gravity.title': '🦘 Pulo gigante!',
   'crew.fact.gravity': 'Em Marte, você pesa menos do que na Terra. O mesmo pulo vai mais de 2 vezes mais alto!',
-  'crew.fact.source': 'Fonte: NASA/JPL',
 } as const;
 
 export const en: Record<keyof typeof pt, string> = {
@@ -103,7 +101,6 @@ export const en: Record<keyof typeof pt, string> = {
   'eva.return': 'Go back inside',
   'eva.fact.title': '🚀 EVA (spacewalk)',
   'eva.fact': 'Each astronaut spends at most one day a week outside. The rest of the time, they stay inside the base.',
-  'eva.fact.source': 'Source: NASA, EVA report (2021)',
   'crew.commander': 'Commander',
   'crew.engineer': 'Flight engineer',
   'crew.medic': 'Medical officer',
@@ -122,5 +119,4 @@ export const en: Record<keyof typeof pt, string> = {
   'crew.hint.touch': 'Tap an astronaut, then the ground, to make them walk',
   'crew.fact.gravity.title': '🦘 Giant jump!',
   'crew.fact.gravity': 'On Mars, you weigh less than on Earth. The same jump goes more than 2 times higher!',
-  'crew.fact.source': 'Source: NASA/JPL',
 };

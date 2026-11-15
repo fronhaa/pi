@@ -43,13 +43,13 @@ Guia completo, com as 6 regras de ouro, exemplos e o modo cientista: [linguagem-
 | `help.battery`, `help.life` | 22 |
 
 **Atualização (15/11/2026):** todo texto do jogo tem **no máximo 2 frases de até 12 palavras**, em Marte e na Lua,
-nos dois idiomas (`src/i18n/strings/` e `src/i18n/moon.ts`; a tela "Dados da NASA", `data.*`, é o "modo cientista" e
-pode ter mais detalhe). Exceção: `crew.hint.keys`, que é uma lista de teclas. Números difíceis saíram da visão padrão
+nos dois idiomas (`src/i18n/strings/` e `src/i18n/moon.ts`). O jogo não mostra fontes nem links: ficam em
+[fontes-nasa.md](fontes-nasa.md) ([ADR 0013](decisoes/0013-fontes-da-nasa-so-na-documentacao.md)). Exceção: `crew.hint.keys`, que é uma lista de teclas. Números difíceis saíram da visão padrão
 (ex.: "M6.4" no aviso do Sol ficou na dica do mouse; "km/s" saiu do aviso de tempestade; "38%", "168 h" saíram dos
 balões). **Ícone + 2 ou 3 palavras em negrito** em todos os avisos da Terra ("🌩️ Tempestade solar amanhã!", "✅ Tudo
 calmo"…), nos avisos rápidos de problema e de EVA ("⚠️ Novo problema!", "🚫 Ninguém sai hoje"), nos balões e no guia
-do treino. A força da tempestade aparece em palavra (fraca, média, forte); a classe real (M, X, R) fica no selo e no
-link do DONKI. Ainda falta: os avisos do modo em grupo (`coop.*`).
+do treino. A força da tempestade aparece em palavra (fraca, média, forte); a classe real (M, X, R) fica só na dica do
+mouse. Ainda falta: os avisos do modo em grupo (`coop.*`).
 
 Exemplo de como encurtar sem perder o conteúdo:
 
@@ -128,7 +128,7 @@ Para quem implementa (inicialmente o Marcelo). **Corrigir** = problema encontrad
 | 9 | Decidir | **Diversidade da tripulação** ([seção 4](#4-representatividade)) na Art Bible e nos modelos | Toda criança se ver no jogo | CHR-001 a 004 definidos com diversidade de gênero e tom de pele |
 | 10 | Decidir | **Guia para professor** ([seção 5](#guia-para-professor-1-página)) | Alcance em escola | Página publicada junto com o jogo |
 | 11 | Corrigir | **🔊 Ler para mim** (Web Speech API, `pt-BR`/`en-US`, `rate: 0.95`) nas caixas de texto | Reforço auditivo para quem lê devagar (7 anos) | Toda caixa de texto do jogo tem o botão e lê no idioma atual |
-| 12 | Decidir | **Modo cientista**: unidade real (kPa, mSv, kW, τ) no *tooltip* e em "Dados da NASA"; na tela, só barras e números inteiros | Low Floor, High Ceiling: 7 anos veem o simples, 10–12 e juízes veem o dado real | Cada recurso tem a unidade real no modo cientista, sem converter a escala do jogo em unidade real |
+| 12 | Decidir | **Modo cientista**: unidade real (kPa, mSv, kW, τ) só no *tooltip*; na tela, só barras e números inteiros | Low Floor, High Ceiling: 7 anos veem o simples, 10–12 e juízes veem o dado real | Cada recurso tem a unidade real no modo cientista, sem converter a escala do jogo em unidade real |
 
 ## 7. Checklist de revisão (todo PR que mexe em texto, interface ou mecânica)
 

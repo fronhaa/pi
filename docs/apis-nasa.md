@@ -44,9 +44,9 @@ NASA_API_KEY=sua-chave-aqui
 
 1. **Chave da NASA:** só o `api.nasa.gov` exige chave (DONKI). O projeto já tem uma chave pessoal configurada no arquivo `.env` da raiz, na variável `NASA_API_KEY` (ver [Configurar a chave](#configurar-a-chave-da-nasa)). Em scripts Node, leia `process.env.NASA_API_KEY`. Sem chave, use `DEMO_KEY`, que tem limite baixo e quase sempre está esgotada.
 2. **Sempre checar vazio e nulo.** Telemetria vem com falhas: o DONKI devolve `[]` quando não houve evento, e o MEDA devolve `"--"` em temperaturas sem leitura.
-3. **Ordem de carregamento** para todo dado: ao vivo, depois arquivo baixado, depois simulado. O jogo mostra um selo honesto em cada caso: "ao vivo", "dados reais baixados em AAAA-MM-DD" ou "simulado". Dado baixado **nunca** aparece como ao vivo (o desafio exige isso).
+3. **Ordem de carregamento** para todo dado: ao vivo, depois arquivo baixado, depois simulado. Onde o jogo mostra o estado, ele é honesto: "dados reais baixados em AAAA-MM-DD" ou "simulado". Dado baixado **nunca** aparece como ao vivo (o desafio exige isso).
 4. **Não usar** a API antiga `api.nasa.gov/mars-photos/api/v1/...`, que foi aposentada. Para fotos, use os feeds diretos do JPL listados aqui.
-5. **Fonte citada no jogo:** todo dado real aparece com nome da fonte e link na tela "Dados da NASA".
+5. **Fonte citada na documentação, não no jogo:** todo dado real entra em [fontes-nasa.md](fontes-nasa.md), com nome, link e onde aparece ([ADR 0013](decisoes/0013-fontes-da-nasa-so-na-documentacao.md)).
 
 ## APIs recomendadas
 

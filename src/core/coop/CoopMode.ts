@@ -341,7 +341,7 @@ export class CoopMode {
 
     if (s.mars?.historical && view.sol === 1 && !this.historyToastShown) {
       this.historyToastShown = true;
-      h.hud.toast(t('mission.start', { id: s.mars.historical.id, date: formatDate(s.mars.historical.startUtc) }), t('mission.source'));
+      h.hud.toast(t('mission.start', { date: formatDate(s.mars.historical.startUtc) }), undefined, t('mission.title'));
     }
 
     // Dia em tempo real: o relógio é do servidor; cada jogador de Marte conserta com os astronautas.

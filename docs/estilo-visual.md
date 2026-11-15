@@ -191,8 +191,8 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 - O destino é "trapaça de cinema": fica sempre à frente e atrás do foguete e cresce. Exceção à regra "planeta gigante
   no céu" abaixo, que vale para a cena da base.
 - **Fotos reais na trajetória:** 2 cartões de foto da NASA (a Terra e o destino) presos à câmera passam ao lado do
-  foguete, fora do meio da tela. Papel claro com contorno escuro, selo "FOTO REAL", legenda e crédito desenhados num
-  canvas. Fontes: F34 a F36 em `docs/ciencia-marte.md`.
+  foguete, fora do meio da tela. Papel claro com contorno escuro, selo "FOTO REAL" e legenda desenhados num
+  canvas. O crédito fica em `docs/fontes-nasa.md` (ADR 0013); fontes: F34 a F36 em `docs/ciencia-marte.md`.
 - "Reduzir movimento" no sistema: a cena fica parada perto da chegada.
 
 ## O que não usar
