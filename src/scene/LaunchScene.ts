@@ -261,11 +261,12 @@ export class LaunchScene {
     }
     // Ganhar velocidade: com o motor ligado (T_BURN a T_LEAVE), o foguete acelera em volta da Terra até o ponto
     // em que a órbita (sentido horário, tangente = (cos θ, −sen θ)) aponta para o destino, dando pelo menos meia
-    // volta; dali sai em linha reta, sempre se afastando da Terra, com a velocidade que ganhou.
+    // volta (a Lua é perto: um quarto basta, e ele sai mais devagar); dali sai em linha reta, sempre se afastando da
+    // Terra, com a velocidade que ganhou.
     const burnAt = this.thetaStart + OMEGA * T_BURN;
     const depart = Math.atan2(-this.dir.y, this.dir.x);
     let sweep = (((depart - burnAt) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-    if (sweep < Math.PI) sweep += 2 * Math.PI;
+    if (sweep < (place === 'moon' ? Math.PI / 2 : Math.PI)) sweep += 2 * Math.PI;
     this.thetaSweep = sweep;
     const spin = T_LEAVE - T_BURN;
     this.vLeave = ORBIT_R * (OMEGA + (2 * (sweep - OMEGA * spin)) / spin);
@@ -415,7 +416,7 @@ export class LaunchScene {
     this.camera.lookAt(this.tmpA);
     this.stars.position.copy(this.camera.position);
 
-    if (this.isMap) this.layoutMap(idle, chase);
+    if (this.isMap) this.layoutMap(idle, t);
     else this.layoutPicker(idle ? 1 : 1 - smooth((t - T_LEAVE) / 0.5));
     this.placeCards(t);
   }
@@ -467,11 +468,12 @@ export class LaunchScene {
   }
 
   /**
-   * Mapa da escolha: os planetas giram devagar e crescem um pouco sob o dedo ou o mouse. Some quando a câmera desce
-   * até o foguete (lá as distâncias do mapa não valem mais).
+   * Mapa da escolha: os planetas giram devagar e crescem um pouco sob o dedo ou o mouse. Some quando o foguete sai
+   * da órbita (dali em diante as distâncias do mapa não valem mais).
    */
-  private layoutMap(idle: boolean, chase: number): void {
-    this.map.visible = idle || chase < 0.45;
+  private layoutMap(idle: boolean, t: number): void {
+    // Some na hora em que o foguete sai: ele anda rápido e "passaria" pela Lua desenhada (que fica perto da Terra).
+    this.map.visible = idle || t < T_LEAVE;
     if (!this.map.visible) return;
     const time = (performance.now() - this.created) / 1000;
     for (const place of ['mars', 'moon'] as const) {
