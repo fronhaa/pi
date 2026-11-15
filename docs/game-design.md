@@ -232,9 +232,13 @@ Qualquer mudança nos números deve manter essa forma: as duas estratégias extr
 
 ## Níveis de dificuldade
 
-Depois do lugar (Marte ou Lua), a criança escolhe o nível na tela "🎯 Escolha a missão". É uma decisão por tela
-(`docs/publico-e-impacto.md`). Fica marcado o último nível jogado; na primeira partida, a Primeira missão. Os números
-ficam em `src/sim/config.ts` (`DIFFICULTY`) e a escolha em `src/core/Game.ts` (`choosePlaceAndLevel`).
+No jogo solo, o nível é escolhido na mesma tela do lugar ("Para onde vamos?", planetas 3D): com o mouse em cima de
+Marte ou da Lua (ou com o foco do teclado), os 3 níveis aparecem embaixo do planeta; no celular, o primeiro toque no
+planeta abre os níveis. Tocar num nível escolhe o lugar e o nível juntos (`src/ui/PlaceChoice.ts`). Fica marcado o
+último nível jogado; na primeira partida, a Primeira missão. A dica de cada nível aparece ao parar o mouse no botão.
+Os números ficam em `src/sim/config.ts` (`DIFFICULTY`) e a escolha em `src/core/Game.ts` (`choosePlaceAndLevel`).
+No modo em grupo, o dono da sala escolhe no saguão e, ao jogar de novo, na janela "🎯 Escolha a missão"
+(`showLevelChoice`).
 
 **Regra de ouro: dado real da NASA nunca muda com o nível.** Nos 3 níveis são iguais a força de cada tempestade solar
 (classe da erupção do DONKI), os sóis das tempestades, o atraso real das mensagens, as datas das missões históricas,

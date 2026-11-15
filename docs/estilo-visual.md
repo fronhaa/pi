@@ -181,6 +181,8 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   profundidade: a Lua grande, perto da Terra; Marte pequeno, no alto do outro lado e lá no fundo (`PICK_PORTRAIT`,
   `PICK_LANDSCAPE`). A criança toca no planeta: botões de verdade
   (`src/ui/PlaceChoice.ts`) do tamanho do planeta, com nome e dica curta; o planeta cresce sob o dedo ou o mouse.
+  Com o mouse em cima (ou foco do teclado, ou o primeiro toque no celular), os 3 níveis da missão aparecem embaixo
+  do planeta, em botões empilhados; o botão do planeta não sai da tela (16 px de margem).
 - **Viagem (~7 s, só visual):** ao escolher, os planetas da escolha somem, o motor liga ("Motor ligado!") e o foguete
   sai da órbita pela tangente, de onde estiver. A câmera vai para trás dele (o "para cima" da tela vira a direção da
   viagem), aparecem linhas de velocidade e o destino crescendo, e ele entra no planeta.

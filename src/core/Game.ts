@@ -21,7 +21,7 @@ import type { CrewMotion } from '@/scene/crewMotion';
 import { Hud } from '@/ui/Hud';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CrewBubble } from '@/ui/CrewBubble';
-import { showCard, showEnd, showLevelChoice, showMissionStart, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
+import { showCard, showEnd, showMissionStart, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
 import { preferredLevel, saveLevel } from '@/data/level';
 import { playLaunchIntro, prefersReducedMotion } from '@/ui/LaunchIntro';
 import { LaunchScene } from '@/scene/LaunchScene';
@@ -283,19 +283,18 @@ export class Game {
   }
 
   /**
-   * Lugar (planetas 3D), depois nível (uma decisão por tela), e a viagem até a base. Usado ao começar e ao jogar de
-   * novo. A missão é criada com o nível antes da viagem; ela começa quando o foguete chega.
+   * Lugar e nível na mesma tela (planetas 3D com os níveis embaixo), e a viagem até a base. Usado ao começar e ao
+   * jogar de novo. A missão é criada com o nível antes da viagem; ela começa quando o foguete chega.
    */
   private choosePlaceAndLevel(): void {
-    showPlaceChoice3D(this.showLaunchPad(), (place) => {
+    // Os níveis aparecem embaixo de cada planeta (mouse em cima, foco ou toque): um toque escolhe lugar e nível.
+    showPlaceChoice3D(this.showLaunchPad(), preferredLevel(), (place, level) => {
       this.setLocation(place);
-      showLevelChoice(preferredLevel(), (level) => {
-        this.difficulty = level;
-        saveLevel(level);
-        this.newMission();
-        // Viagem da Terra até a base (só visual, dá para pular); a missão começa quando o foguete chega.
-        this.playLaunch(place);
-      });
+      this.difficulty = level;
+      saveLevel(level);
+      this.newMission();
+      // Viagem da Terra até a base (só visual, dá para pular); a missão começa quando o foguete chega.
+      this.playLaunch(place);
     });
   }
 
