@@ -67,8 +67,11 @@ São três recursos centrais (energia, suporte de vida e blindagem), seguindo o 
 | Suporte de vida (ar, água, comida) | 70 | Precisa de 3 blocos para ficar estável; cada bloco a mais ou a menos muda 6 | Em 0, a missão termina |
 | Blindagem | 40 | Perde 4 por desgaste; ganha 8 por bloco | Máximo 100 |
 | Dose de radiação | 0 | +1 por sol, mesmo sem tempestade | Em 100, a tripulação volta para a Terra |
-| Ciência | 0 | +3 por bloco; metade disso no sol de tempestade | Meta: 100 |
+| Ciência | 0 | +3 por bloco; metade disso no sol de tempestade; metade também quando acabam os tubos de amostra | Meta: 100 |
+| Tubos de amostra | 38 | Todo sol com energia na ciência, o rover faz uma expedição e enche 3 tubos (não importa quantos blocos). Com o rover atolado, não sai e não gasta tubos | Os 38 são da missão inteira. Sem tubos, o rover só mede, sem guardar amostras, e a ciência do dia vale a metade |
 | Poeira nos painéis | 0% | Cai 6 pontos percentuais por sol com vento | Máximo 80%; reduz os blocos gerados na mesma proporção |
+
+**Tubos de amostra.** O rover Perseverance levou 43 tubos para Marte: 38 para amostras e 5 "tubos-testemunha" ([F14](ciencia-marte.md#f14-o-perseverance-tem-poucos-tubos-de-amostra)). No jogo, os 38 são da missão inteira e cada expedição enche 3 (`CONFIG.samples`, INTERPRETADO: o número 38 é real; 3 por expedição e a ciência pela metade sem tubos são regras do jogo). A lição: os tubos são poucos, então vale escolher bem quando mandar o rover. Espalhar 1 bloco de ciência por dia gasta 3 tubos para +3 de ciência; concentrar a ciência rende mais por tubo. O painel mostra "Tubos de amostra: 35 de 38", o relatório conta quantos o rover encheu e quantos restam, e o primeiro relatório com expedição traz o fato do Perseverance (só em Marte). Na cena, cada expedição do rover tem 3 paradas de estudo, uma por tubo, e ele volta à garagem para entregar as amostras.
 
 **Tempestade solar.** Um evento solar real do DONKI dispara a tempestade e define a intensidade dela no jogo. Nas [missões históricas](#calendário-da-missão-janelas-históricas-reais) (o modo padrão), o evento é uma ejeção de massa coronal (CME), e a força vem do tipo de velocidade: S e C = fraca, O = média, R e ER = forte. Sem as missões, o evento é uma erupção sorteada, e a força vem da classe: C = fraca, M = média, X = forte. As duas usam a mesma escala: fraca (10), média (25), forte (45). A dose recebida é calculada assim:
 
@@ -197,6 +200,8 @@ Medição de 2026-11-14 (`npm run balance`, 2.000 partidas por estratégia). Com
 mais difícil, porque o DONKI só registra erupções a partir de M5.0 (não há classe C, a "fraca"). A forma se mantém.
 
 Qualquer mudança nos números deve manter essa forma: as duas estratégias extremas falham e a estratégia atenta vence.
+
+**Com os tubos de amostra** (38 tubos, 3 por expedição; 2026-11-14, 1.000 partidas por estratégia, erupções reais, simuladas, Lua e as 6 missões, comparado com a versão sem tubos): **igual em todos os cenários**, menos a missão histórica 1, em que a estratégia atenta passa de 5% para 6% de 1 estrela. Com 15 sóis, 38 tubos dão 12 expedições completas e uma com 2 tubos; quem manda o rover todo sol só fica sem tubos nos 2 últimos sóis. A regra pesa para quem espalha pouca ciência por muitos dias, não para as estratégias do teste.
 
 **Com as cartas do rover** (MOXIE e "Caminho do rover", 2026-11-14, 1.000 partidas por estratégia, erupções reais, simuladas e as 6 missões): a forma se mantém em todos os cenários. As estratégias extremas continuam falhando sempre, "ignora a blindagem" não mudou, e a estratégia atenta (que pega o atalho e resgata o rover) termina com 1 estrela um pouco menos vezes (ex.: erupções reais, de 9% para 5%).
 
@@ -924,7 +929,7 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 | Área | Conteúdo |
 | --- | --- |
 | Barra superior | Nome da missão e local, "Sol N de 15", botões "Dados da NASA" e idioma |
-| Recursos (esquerda) | Bateria, suporte de vida, blindagem, dose (com marcas em 50 e 70) e ciência (com a meta), cada um com barra e botão "?" |
+| Recursos (esquerda) | Bateria, suporte de vida, blindagem, dose (com marcas em 50 e 70), ciência (com a meta) e tubos de amostra (de 38), cada um com barra e botão "?" |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |
 | Janelas | Tutorial (3 passos), cartas, relatório do sol, fim da missão e dados da NASA |

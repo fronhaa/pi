@@ -42,6 +42,17 @@ var JezeroSim = (function(exports) {
 			stormFactor: .5,
 			goal: 100
 		},
+		/**
+		* Tubos de amostra do rover (GDD, "Tubos de amostra"). O total é REAL: o Perseverance levou 43 tubos,
+		* 38 para amostras (docs/ciencia-marte.md, F14). O resto é regra do jogo (INTERPRETADO): todo sol com
+		* energia na ciência, o rover faz uma expedição e enche `perExpedition` tubos; sem tubos, ele só mede
+		* com os instrumentos e a ciência do dia vale `noTubeFactor`.
+		*/
+		samples: {
+			tubes: 38,
+			perExpedition: 3,
+			noTubeFactor: .5
+		},
 		dust: {
 			windCleanPerSol: 6,
 			max: 80,
@@ -447,8 +458,12 @@ var JezeroSim = (function(exports) {
 		const shieldDelta = plan.shield * CONFIG.shield.perBlock - CONFIG.shield.decay;
 		r.shield = clamp(r.shield + shieldDelta, 0, CONFIG.shield.max);
 		const roverStuck = failed.includes("roverStuck");
-		const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (stormClass ? CONFIG.science.stormFactor : 1);
+		const expedition = plan.science > 0 && !roverStuck;
+		const tubesUsed = expedition ? Math.min(CONFIG.samples.perExpedition, r.tubes) : 0;
+		const noTubes = expedition && tubesUsed === 0;
+		const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (stormClass ? CONFIG.science.stormFactor : 1) * (noTubes ? CONFIG.samples.noTubeFactor : 1);
 		r.science += sciGain;
+		r.tubes -= tubesUsed;
 		r.battery = Math.min(CONFIG.battery.max, r.battery + leftover * CONFIG.battery.perLeftoverBlock);
 		const nightCost = (_input$nightCost = input.nightCost) !== null && _input$nightCost !== void 0 ? _input$nightCost : CONFIG.battery.nightCost;
 		r.battery -= nightCost;
@@ -480,6 +495,9 @@ var JezeroSim = (function(exports) {
 			shieldDelta,
 			sciGain,
 			roverStuck,
+			expedition,
+			tubesUsed,
+			noTubes,
 			missing,
 			lifeLost,
 			stormDose: sd,
@@ -582,7 +600,8 @@ var JezeroSim = (function(exports) {
 					shield: CONFIG.shield.start,
 					dose: CONFIG.dose.start,
 					science: 0,
-					dust: 0
+					dust: 0,
+					tubes: CONFIG.samples.tubes
 				},
 				blocks: CONFIG.energy.panelBlocks,
 				storms,
@@ -898,6 +917,19 @@ var JezeroSim = (function(exports) {
 				},
 				tone: "good"
 			});
+			if (day.tubesUsed > 0) lines.push({
+				key: "report.tubes",
+				params: {
+					n: day.tubesUsed,
+					left: r.tubes,
+					total: CONFIG.samples.tubes
+				},
+				tone: r.tubes <= CONFIG.samples.perExpedition * 2 ? "bad" : "neutral"
+			});
+			else if (day.noTubes) lines.push({
+				key: "report.tubes.none",
+				tone: "bad"
+			});
 			if (day.leftover > 0) lines.push({
 				key: "report.battery.saved",
 				params: {
@@ -1002,6 +1034,7 @@ var JezeroSim = (function(exports) {
 				if (s.sol === 1) lines.push(...this.factOnce("fact.battery"));
 				if (s.sol === s.dustStormSol) lines.push(...this.factOnce("fact.opportunity"));
 				if (roverStuckToday) lines.push(...this.factOnce("fact.spirit"));
+				if (day.tubesUsed > 0) lines.push(...this.factOnce("fact.tubes"));
 			}
 			const report = {
 				sol: s.sol,

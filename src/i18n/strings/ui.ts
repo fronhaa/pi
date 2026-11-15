@@ -16,6 +16,7 @@ export const pt = {
   'res.shield': 'Blindagem',
   'res.dose': 'Dose de radiação',
   'res.science': 'Ciência',
+  'res.tubes': 'Tubos de amostra',
   'res.dust': 'Poeira nos painéis',
   'res.goal': 'meta {n}',
 
@@ -24,6 +25,7 @@ export const pt = {
   'help.shield': 'A blindagem é a proteção da base contra a radiação do Sol, feita com sacos de regolito (a terra de Marte). Ela se desgasta um pouco todo sol.',
   'help.dose': 'Dose é quanta radiação a tripulação já recebeu. Ela sobe um pouco todo sol e muito nas tempestades solares. Em 100, a tripulação precisa voltar para a Terra. Este número é uma escala do jogo, não uma medição real.',
   'help.science': 'Descobertas da missão. A missão existe para fazer ciência: a meta é 100.',
+  'help.tubes': 'Todo dia com energia na ciência, o rover sai e enche 3 tubos com pedras. São só 38 para a missão inteira. Sem tubos, a ciência vale a metade.',
   'help.sol': 'Sol é o dia de Marte. Ele dura 24 horas e 39 minutos, um pouco mais que um dia na Terra.',
   'help.dust': 'Poeira cobre os painéis solares e diminui a energia. O vento limpa um pouco a cada sol.',
 
@@ -132,6 +134,7 @@ export const en: Record<keyof typeof pt, string> = {
   'res.shield': 'Shielding',
   'res.dose': 'Radiation dose',
   'res.science': 'Science',
+  'res.tubes': 'Sample tubes',
   'res.dust': 'Dust on panels',
   'res.goal': 'goal {n}',
 
@@ -140,6 +143,7 @@ export const en: Record<keyof typeof pt, string> = {
   'help.shield': 'Shielding protects the base from the Sun’s radiation, made with bags of regolith (Martian soil). It wears down a little every sol.',
   'help.dose': 'Dose is how much radiation the crew has received. It goes up a little every sol and a lot during solar storms. At 100, the crew must go back to Earth. This number is a game scale, not a real measurement.',
   'help.science': 'The mission’s discoveries. The mission exists to do science: the goal is 100.',
+  'help.tubes': 'Every day with energy for science, the rover goes out and fills 3 tubes with rocks. There are only 38 for the whole mission. Without tubes, science is worth half.',
   'help.sol': 'A sol is a day on Mars. It lasts 24 hours and 39 minutes, a little longer than a day on Earth.',
   'help.dust': 'Dust covers the solar panels and lowers the energy. The wind cleans a little every sol.',
 

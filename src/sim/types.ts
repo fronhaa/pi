@@ -39,6 +39,8 @@ export interface Resources {
   science: number;
   /** Poeira nos painéis, em % (0–80). */
   dust: number;
+  /** Tubos de amostra vazios que o rover ainda tem (começa com CONFIG.samples.tubes). */
+  tubes: number;
 }
 
 export interface EnergyPlan {

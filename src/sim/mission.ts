@@ -71,6 +71,7 @@ export class Mission {
         dose: CONFIG.dose.start,
         science: 0,
         dust: 0,
+        tubes: CONFIG.samples.tubes,
       },
       blocks: CONFIG.energy.panelBlocks,
       storms,
@@ -363,6 +364,12 @@ export class Mission {
     } else if (plan.science > 0) {
       lines.push({ key: storm ? 'report.science.storm' : 'report.science', params: { blocks: plan.science, gain: day.sciGain }, tone: 'good' });
     }
+    // Tubos de amostra (CONFIG.samples): quantos o rover encheu, ou o aviso de que acabaram.
+    if (day.tubesUsed > 0) {
+      lines.push({ key: 'report.tubes', params: { n: day.tubesUsed, left: r.tubes, total: CONFIG.samples.tubes }, tone: r.tubes <= CONFIG.samples.perExpedition * 2 ? 'bad' : 'neutral' });
+    } else if (day.noTubes) {
+      lines.push({ key: 'report.tubes.none', tone: 'bad' });
+    }
     if (day.leftover > 0) lines.push({ key: 'report.battery.saved', params: { blocks: day.leftover, gain: day.leftover * CONFIG.battery.perLeftoverBlock } });
     if (day.missing > 0) lines.push({ key: 'report.night.short', params: { missing: day.missing, lifeLost: day.lifeLost }, tone: 'bad' });
     else if (s.location === 'moon' && this.shadowLeft() > 0) lines.push({ key: 'report.night.shadow', params: { cost: day.nightCost } });
@@ -413,6 +420,7 @@ export class Mission {
       if (s.sol === 1) lines.push(...this.factOnce('fact.battery'));
       if (s.sol === s.dustStormSol) lines.push(...this.factOnce('fact.opportunity'));
       if (roverStuckToday) lines.push(...this.factOnce('fact.spirit'));
+      if (day.tubesUsed > 0) lines.push(...this.factOnce('fact.tubes'));
     }
 
     const report: SolReport = { sol: s.sol, plan: { ...plan }, before, after: { ...r }, storm: stormResult, lines };

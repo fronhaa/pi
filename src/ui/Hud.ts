@@ -220,6 +220,8 @@ export class Hud {
       resource('res.shield', 'help.shield', r.shield, CONFIG.shield.max, level(r.shield)),
       resource('res.dose', 'help.dose', r.dose, CONFIG.dose.max, r.dose >= doseBad ? 'bad' : r.dose >= doseWarn ? 'warn' : 'good', [doseWarn, doseBad]),
       resource('res.science', 'help.science', r.science, CONFIG.science.goal, 'sci', [], t('res.goal', { n: CONFIG.science.goal })),
+      // Tubos de amostra (regra em src/sim/day.ts): ficam amarelos/vermelhos quando faltam poucas expedições.
+      resource('res.tubes', 'help.tubes', r.tubes ?? CONFIG.samples.tubes, CONFIG.samples.tubes, level(((r.tubes ?? CONFIG.samples.tubes) / CONFIG.samples.tubes) * 100)),
     ]);
   }
 

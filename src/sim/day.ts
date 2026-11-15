@@ -30,6 +30,11 @@ export interface DayResult {
   shieldDelta: number;
   sciGain: number;
   roverStuck: boolean;
+  /** Expedição do rover hoje (energia na ciência e rover livre) e quantos tubos ela encheu. */
+  expedition: boolean;
+  tubesUsed: number;
+  /** Saiu sem tubos: só mediu, e a ciência valeu menos (CONFIG.samples.noTubeFactor). */
+  noTubes: boolean;
   /** Energia que faltou à noite (0 = a bateria aguentou) e quanto de vida isso custou. */
   missing: number;
   lifeLost: number;
@@ -55,9 +60,17 @@ export function simulateDay(input: DayInput): DayResult {
   r.shield = clamp(r.shield + shieldDelta, 0, CONFIG.shield.max);
 
   // Ciência: metade no sol de tempestade; zero com o rover atolado.
+  // Tubos de amostra: com energia na ciência, o rover sai em expedição e enche até 3 tubos (os tubos são da
+  // missão inteira). Sem tubos, ele só mede com os instrumentos e a ciência do dia vale menos.
   const roverStuck = failed.includes('roverStuck');
-  const sciGain = roverStuck ? 0 : plan.science * CONFIG.science.perBlock * (stormClass ? CONFIG.science.stormFactor : 1);
+  const expedition = plan.science > 0 && !roverStuck;
+  const tubesUsed = expedition ? Math.min(CONFIG.samples.perExpedition, r.tubes) : 0;
+  const noTubes = expedition && tubesUsed === 0;
+  const sciGain = roverStuck
+    ? 0
+    : plan.science * CONFIG.science.perBlock * (stormClass ? CONFIG.science.stormFactor : 1) * (noTubes ? CONFIG.samples.noTubeFactor : 1);
   r.science += sciGain;
+  r.tubes -= tubesUsed;
 
   // Bateria: guarda o que sobrou, a noite cobra; se faltar, o suporte de vida sofre.
   r.battery = Math.min(CONFIG.battery.max, r.battery + leftover * CONFIG.battery.perLeftoverBlock);
@@ -92,7 +105,7 @@ export function simulateDay(input: DayInput): DayResult {
 
   r.life = round1(r.life);
   r.dose = round1(r.dose);
-  return { after: r, leftover, lifeDelta, shieldDelta, sciGain, roverStuck, missing, lifeLost, stormDose: sd, nightCost };
+  return { after: r, leftover, lifeDelta, shieldDelta, sciGain, roverStuck, expedition, tubesUsed, noTubes, missing, lifeLost, stormDose: sd, nightCost };
 }
 
 /**

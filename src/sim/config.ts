@@ -18,6 +18,14 @@ export const CONFIG = {
 
   science: { perBlock: 3, stormFactor: 0.5, goal: 100 },
 
+  /**
+   * Tubos de amostra do rover (GDD, "Tubos de amostra"). O total é REAL: o Perseverance levou 43 tubos,
+   * 38 para amostras (docs/ciencia-marte.md, F14). O resto é regra do jogo (INTERPRETADO): todo sol com
+   * energia na ciência, o rover faz uma expedição e enche `perExpedition` tubos; sem tubos, ele só mede
+   * com os instrumentos e a ciência do dia vale `noTubeFactor`.
+   */
+  samples: { tubes: 38, perExpedition: 3, noTubeFactor: 0.5 },
+
   dust: { windCleanPerSol: 6, max: 80, stormAdd: 40, stormHoldSols: 3 },
 
   solarStorms: {
