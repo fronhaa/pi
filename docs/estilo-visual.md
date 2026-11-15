@@ -169,3 +169,13 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 ## Limitações conhecidas
 
 - O inverted hull falha em quinas agudas e malhas abertas. Alternativa futura: detecção de bordas em pós-processamento (via ADR).
+
+## Desempenho no celular
+
+Perfil de qualidade em [`src/render/quality.ts`](../src/render/quality.ts) (`QUALITY`): no celular (toque como ponteiro
+principal ou sistema móvel; `?quality=high|low` força), densidade de pixels até 1,5 com **resolução dinâmica** (baixa um
+degrau se o quadro passa de 22 ms, sobe se sobra folga), sem antialiasing, sombra de 1024 recalculada ~10 vezes por
+segundo, sem luzes pontuais e focos (cabines, fibra óptica, LED) e peças pequenas sem sombra e sem contorno
+(`applyQuality`, chamada depois de carregar os `.glb`; a tripulação mantém o contorno). Medido num iPhone simulado:
+chamadas de desenho de 3.288 para ~1.540 e triângulos de 1,36 milhão para ~730 mil. No computador nada muda.
+

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { QUALITY, applyQuality } from '@/render/quality';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import '@/ui/style.css';
 import { Mission } from '@/sim/mission';
@@ -58,6 +59,12 @@ export class Game {
   private readonly timer = new THREE.Timer();
   private readonly base: BaseScene;
   private readonly crew = new Crew();
+  /** Desempenho (src/render/quality.ts): densidade máxima, média dos quadros e relógio da sombra. */
+  private readonly maxPixelRatio: number;
+  private perfTime = 0;
+  private perfFrames = 0;
+  private perfCooldown = 3;
+  private shadowTimer = 0;
   private readonly routine: CrewRoutine;
   private readonly hud: Hud;
   /** Treino dos sóis 1 a 3 (só solo). */
@@ -105,10 +112,14 @@ export class Game {
     private readonly flares: FlareSource,
     private readonly missions: MissionSource,
   ) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Perfil de qualidade (src/render/quality.ts): no celular, menos pixels, sem antialiasing e sombra mais leve.
+    this.renderer = new THREE.WebGLRenderer({ antialias: QUALITY.antialias, powerPreference: 'high-performance' });
+    this.maxPixelRatio = Math.min(window.devicePixelRatio, QUALITY.maxPixelRatio);
+    this.renderer.setPixelRatio(this.maxPixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    // Sombra recalculada só de tempos em tempos (o Sol anda devagar); no computador, todo quadro.
+    this.renderer.shadowMap.autoUpdate = QUALITY.shadowInterval === 0;
     this.renderer.localClippingEnabled = true;
     container.appendChild(this.renderer.domElement);
 
@@ -122,9 +133,12 @@ export class Game {
     this.controls.maxPolarAngle = 1.38;
 
     this.base = new BaseScene(this.scene);
-    void this.base.loadModels();
+    // Depois de cada carga de modelos, aplica o perfil de qualidade (luzes extras, sombra e contorno das peças pequenas).
+    const optimize = () => applyQuality(this.scene, [this.crew.root]);
+    void this.base.loadModels().then(optimize, optimize);
     this.scene.add(this.crew.root);
-    void this.crew.loadChibi();
+    void this.crew.loadChibi().then(optimize, optimize);
+    optimize();
     // A tripulação fica dentro da base por padrão; só aparece lá fora numa EVA (GDD).
     this.crew.setSheltered(true);
     this.routine = new CrewRoutine(this.crew);
@@ -713,6 +727,37 @@ export class Game {
 
   // ---------- render ----------
 
+  /**
+   * Desempenho a cada quadro: sombra recalculada no intervalo do perfil e **resolução dinâmica** (como nos
+   * consoles): se a média do quadro passa de `slowFrameMs`, baixa a densidade de pixels um degrau; se sobra
+   * folga, sobe devagar. Espera 2 s depois de cada troca, para não ficar oscilando.
+   */
+  private updatePerformance(rawDt: number): void {
+    if (QUALITY.shadowInterval > 0) {
+      this.shadowTimer += rawDt;
+      if (this.shadowTimer >= QUALITY.shadowInterval) {
+        this.shadowTimer = 0;
+        this.renderer.shadowMap.needsUpdate = true;
+      }
+    }
+    this.perfTime += rawDt;
+    this.perfFrames++;
+    this.perfCooldown -= rawDt;
+    if (this.perfTime < 1) return;
+    const avgMs = (this.perfTime / this.perfFrames) * 1000;
+    this.perfTime = 0;
+    this.perfFrames = 0;
+    if (this.perfCooldown > 0 || document.hidden) return;
+    const pr = this.renderer.getPixelRatio();
+    let next = pr;
+    if (avgMs > QUALITY.slowFrameMs && pr > QUALITY.minPixelRatio) next = Math.max(QUALITY.minPixelRatio, pr - 0.25);
+    else if (avgMs < QUALITY.fastFrameMs && pr < this.maxPixelRatio) next = Math.min(this.maxPixelRatio, pr + 0.125);
+    if (next === pr) return;
+    this.renderer.setPixelRatio(next);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.perfCooldown = 2;
+  }
+
   private resize(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -773,6 +818,7 @@ export class Game {
     } else this.crew.update(dt);
     const marker = this.targetMarker.material as THREE.MeshBasicMaterial;
     marker.opacity = Math.max(0, marker.opacity - dt * 0.8);
+    this.updatePerformance(rawDt);
     this.renderer.render(this.scene, this.camera);
   }
 }
