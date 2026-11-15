@@ -257,20 +257,14 @@ export class LaunchScene {
     if (this.started !== null) return;
     this.thetaStart = this.idleTheta();
     this.chosen = place;
-    // Destino: no mapa, onde a Lua ou Marte estão hoje.
-    if (this.isMap) this.dir.copy(this.bodies[place].pos).sub(this.bodies.earth.pos).setZ(0).normalize();
-    else {
-      // Clássica (celular): os planetas ficam presos à câmera em profundidades diferentes, então a direção no espaço
-      // engana (a Lua, perto da câmera, ficaria "para cima" como Marte). Vale a direção NA TELA, da Terra até o
-      // planeta: é o que a criança vê. Câmera olhando para −Z com "para cima" = +Y: x e y da tela viram x e y do mundo.
-      const p = this.planets[place].getWorldPosition(this.tmpA).project(this.camera);
-      const e = this.tmpB.copy(this.bodies.earth.pos).project(this.camera);
-      this.dir.set((p.x - e.x) * this.aspect, p.y - e.y, 0).normalize();
-    }
+    // Alvo no plano da Terra (z = 0): no mapa, onde a Lua ou Marte estão hoje.
+    const target = this.isMap ? this.tmpC.copy(this.bodies[place].pos) : this.screenTargetOnPlane(place, this.tmpC);
     // Ganhar velocidade: da escolha até T_LEAVE (o motor acende em T_BURN), o foguete acelera em volta da Terra
-    // até o ponto em que a órbita (sentido horário, tangente = (cos θ, −sen θ)) aponta para o destino; dali sai em
-    // linha reta, sempre se afastando da Terra. Ponto de saída muito perto: dá mais uma volta (senão teria que frear).
-    const depart = Math.atan2(-this.dir.y, this.dir.x);
+    // até o ponto de saída e dali vai em linha reta. O ponto de saída é onde a reta TANGENTE à órbita passa pelo
+    // alvo: assim o foguete sai apontando para o planeta (sair na direção Terra → planeta erraria por um raio de
+    // órbita, e a Lua fica perto). Ponto de saída muito perto: dá mais uma volta (senão teria que frear).
+    const depart = this.tangentDeparture(target);
+    this.dir.copy(target).sub(this.orbitPoint(depart, this.tmpA)).setZ(0).normalize();
     let sweep = (((depart - this.thetaStart) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
     if (sweep < OMEGA * T_LEAVE * 1.6) sweep += 2 * Math.PI;
     this.thetaSweep = sweep;
@@ -322,6 +316,41 @@ export class LaunchScene {
   /** Ângulo do foguete na órbita enquanto a criança escolhe (começa no alto, à esquerda). */
   private idleTheta(): number {
     return -0.6 + ((performance.now() - this.created) / 1000) * OMEGA;
+  }
+
+  /**
+   * Clássica (celular): os planetas ficam presos à câmera em profundidades diferentes, então a posição no espaço
+   * engana (a Lua, perto da câmera, ficaria "para cima" como Marte). Vale onde o planeta aparece NA TELA, levado para
+   * o plano da Terra (z = 0) pela câmera da escolha (olhando para −Z, "para cima" = +Y).
+   */
+  private screenTargetOnPlane(place: Place, out: THREE.Vector3): THREE.Vector3 {
+    const ndc = this.planets[place].getWorldPosition(out).project(this.camera);
+    const cam = this.camera.position;
+    const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    return out.set(cam.x + ndc.x * tan * this.aspect * cam.z, cam.y + ndc.y * tan * cam.z, 0);
+  }
+
+  /**
+   * Ângulo θ do ponto da órbita (sentido horário) de onde a reta tangente vai direto ao alvo. Das duas tangentes por
+   * um ponto de fora, fica a que o foguete percorre andando para a frente. Alvo dentro da órbita (não acontece com as
+   * medidas do desenho): sai na direção Terra → alvo.
+   */
+  private tangentDeparture(target: THREE.Vector3): number {
+    const c = this.bodies.earth.pos;
+    const dx = target.x - c.x;
+    const dy = target.y - c.y;
+    const d = Math.hypot(dx, dy);
+    const phi = Math.atan2(dy, dx);
+    if (d <= ORBIT_R * 1.01) return Math.atan2(-dy / d, dx / d);
+    const alpha = Math.acos(ORBIT_R / d);
+    for (const psi of [phi + alpha, phi - alpha]) {
+      // Raio no ângulo ψ (padrão) = órbita no ângulo θ = π/2 − ψ (posição (sen θ, cos θ)); tangente horária (cos θ, −sen θ).
+      const theta = Math.PI / 2 - psi;
+      const px = c.x + Math.sin(theta) * ORBIT_R;
+      const py = c.y + Math.cos(theta) * ORBIT_R;
+      if ((target.x - px) * Math.cos(theta) + (target.y - py) * -Math.sin(theta) > 0) return theta;
+    }
+    return Math.PI / 2 - phi;
   }
 
   /** Ponto da órbita de espera no ângulo θ. */
