@@ -16,6 +16,8 @@ const RADIUS = 0.32;
 const CENTER_Y = HALF + RADIUS; // centro da cápsula acima dos pés
 const WALK_SPEED = 2.4; // m/s
 const JUMP_SPEED = 2.2; // m/s: ~0,25 m na Terra, ~0,65 m em Marte
+/** Velocidade vertical (m/s) abaixo da qual o corpo não conta como no ar (parado no chão, mesmo com o raio errando). */
+const AIRBORNE_VY = 0.15;
 const ARRIVE = 0.35;
 const BOUNDS = 30; // a tripulação não se afasta mais que isso do centro da base
 
@@ -373,6 +375,9 @@ export class CrewMotion {
       const t = this.bodies[role].translation();
       const v = this.bodies[role].linvel();
       a.root.position.set(t.x, t.y - CENTER_Y, t.z);
+      // No ar? O pulo segura a pose do topo até tocar o chão (na Lua o pulo dura bem mais que o clipe).
+      // Só conta como no ar sem chão embaixo E subindo ou caindo: num declive o raio curto pode errar o chão.
+      a.setAirborne(Math.abs(v.y) > AIRBORNE_VY && !this.isGrounded(this.bodies[role]));
       a.setMotion(Math.hypot(v.x, v.z), Math.atan2(-v.x, -v.z), dt);
     }
   }
