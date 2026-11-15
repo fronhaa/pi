@@ -8,8 +8,9 @@ export const MARS: Scenario = {
   gravity: MARS_G,
   terrain: { soil: PALETTE.soil, rock: PALETTE.rock, lit: PALETTE.lit, dust: PALETTE.dust },
   sky: { day: 0xe8b98c, dust: 0xc99a6e, alert: 0xd9866a, night: 0x1c1724 },
-  // Nasce atrás da câmera, passa alto pelo lado dela ao meio-dia (frente iluminada) e se põe atrás da base, à vista.
-  sun: { color: 0xfff0dc, intensity: 2.2, path: { azimuth: [0.25 * Math.PI, 1.22 * Math.PI], elevation: [0, 0.95] }, sets: true },
+  // Nasce à frente e à direita, passa pelo lado direito e se põe atrás da base, à vista. Com o Sol do lado oposto
+  // à câmera, a sombra dos prédios vem para a frente e varre o chão (atrás da câmera ela ficava escondida).
+  sun: { color: 0xfff0dc, intensity: 2.2, path: { azimuth: [0.1 * Math.PI, -0.7 * Math.PI], elevation: [0.1, 0.8] }, sets: true },
   hemiIntensity: 1.3,
   mesaHeight: 1,
   airless: false,
