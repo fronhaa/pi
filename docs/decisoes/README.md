@@ -39,5 +39,5 @@ adiciona a linha na tabela abaixo. Preencha, abra PR e discuta lá.
 | [0006](0006-servidor-roda-as-regras-do-typescript-goja.md) | Servidor roda as regras do TypeScript (goja) | Proposto |
 | [0007](0007-base-lunar-como-segundo-lugar-location-na-simulacao-e-textos.md) | Base lunar como segundo lugar: location na simulação e textos por lugar | Proposto |
 | [0008](0008-projeto-dividido-por-areas-cenarios-personagens-e-interacoes.md) | Projeto dividido por áreas: cenários, personagens e interações como dados | Proposto |
-| [0009](0009-modulos-da-base-em-100-de-escala-com-medidas-da-nasa.md) | Módulos da base em 100% de escala, com medidas da NASA | Proposto |
+| [0009](0009-modulos-da-base-em-100-de-escala-com-medidas-da-nasa.md) | Módulos da base em 100% de escala, com medidas da NASA | Aceito |
 <!-- adr-index:fim (não remova, usado pelo scripts/new-adr.mjs) -->

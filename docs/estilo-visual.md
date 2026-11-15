@@ -108,7 +108,7 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de descompressão, somem.
 - O abrigo de regolito fica em `SHELTER_CENTER`, à frente e à esquerda do alojamento.
 - Base de comunicação (`comm-base.glb`, ver [base-comunicacao-e-bateria.md](base-comunicacao-e-bateria.md)): acoplada na
-  port_b do laboratório, na ponta leste da estrela (`COMM_POSITION`), em `HABITAT_SCALE`, sem a torre de acesso.
+  port_b do laboratório, na ponta leste da estrela (`COMM_POSITION`), em `HABITAT_SCALE` (100%), sem a torre de acesso.
   Substitui a torre de antena antiga (que fica de reserva se o `.glb` falhar): a luz de alerta (`alarm`) pisca na
   tempestade e a ponta da antena (`antenna_tip`) com mensagem da Terra. O conserto da antena (`PROBLEM_SPOTS.antenna`) e
   o posto do comandante ficam ao lado dela. Código: `BaseStructures.useCommBase` (`src/scene/base/structures.ts`).
@@ -123,13 +123,17 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   (`GREENHOUSE_STAIRS`: norte a leste, sul a oeste, degraus de ~17 cm) desce até o chão da estufa
   (`GREENHOUSE_FLOOR_Y`); os canteiros deixam livre o espaço embaixo da passarela e na frente das escadas. A colheita
   (🌱) acontece ao pé da escada do sul, e o conserto do vazamento ao pé da do norte.
-- Túneis: raio `TUBE_RADIUS` (0,85 m): sobra ~1,7 m e o astronauta (1,87 m) passa **abaixado** (corpo curvado para a
-  frente a partir dos pés, `Astronaut.fitHeadroom`). Os beliches ficam em `BUNK_Z`, um pouco mais para o meio do casco
-  que a bancada, para quem deita na cama de cima não sair pelo casco; colchão de `BED_DEPTH` (0,7 m) e cama de baixo
-  em 0,25 m, para o capacete deitado (0,67 m) caber entre as duas camas. Deitar: de pé na frente da cama, de frente para
-  os pés dela, deita para trás girando em volta do quadril (`Astronaut.lieBlend`).
-- Os módulos do habitat ficam em 80% (`HABITAT_SCALE`), para o astronauta caber justo na cabine; a torre do airlock e o
-  armário continuam em 100% (a porta segue mais alta que o astronauta). As janelas acendem à noite. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
+- **Tamanho dos módulos: 100%** (`HABITAT_SCALE = 1`, [ADR 0009](decisoes/0009-modulos-da-base-em-100-de-escala-com-medidas-da-nasa.md)),
+  o tamanho em que o `research-base.glb` foi feito, seguindo as medidas da NASA ([ciencia-marte.md](ciencia-marte.md),
+  F15 a F19): casco de ~3,3 m de diâmetro, piso em `HABITAT_FLOOR_Y` (1,56 m) com ~2,7 m de altura livre (a NASA
+  recomenda 2,4 m) e ~37 m³ por tripulante nos três módulos de moradia (mínimo da NASA: 29 m³ habitáveis). As janelas
+  acendem à noite.
+- Túneis: raio `TUBE_RADIUS` (1,2 m), com ~2,1 m livres acima do piso: o astronauta (1,87 m) passa **em pé**. A cúpula
+  tem 6 m de raio para a passarela ter altura até a boca dos túneis. Se um teto ficar baixo, ele se curva sozinho
+  (`Astronaut.fitHeadroom`, altura em `headroomAt`).
+- Beliche: **1 m livre acima de cada colchão** (`BUNK_LEVELS`, como a NASA recomenda para sentar na cama), camas em
+  `BUNK_Z`, colchão de `BED_DEPTH` (0,7 m). O boneco deitado fica em tamanho normal (`LYING_SCALE = 1`). Deitar: de pé
+  na frente da cama, de frente para os pés dela, deita para trás girando em volta do quadril (`Astronaut.lieBlend`).
 - Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
   (GDD, "Atividades dentro da base", B): quem está dentro sem ordem há 8 s vai à esteira ou à bicicleta (`GYM_STATIONS`,
   `walk` no lugar na esteira; sentado pedalando na bicicleta, com o clipe `pedal`), descansa deitado no beliche e volta ao posto. Na primeira vez aparece o fato F9.

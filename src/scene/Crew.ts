@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { PALETTE, toonMesh } from '@/render/toon';
 import { ROLES, type Role } from '@/sim/crew';
-import { POSTS } from './base/layout';
+import { LYING_SCALE, POSTS } from './base/layout';
 import type { ChibiAction, ChibiAstronautInstance } from '@/render/chibiAstronaut';
 
 /** Velocidade em que o `walk` do chibi não escorrega (docs/astronauta-chibi.md). */
@@ -17,8 +17,6 @@ const TURN_RATE = Math.PI;
 const LOOK_MIN = 4;
 const LOOK_SPREAD = 4;
 const LOOK_AROUND = 0.6;
-/** Tamanho do boneco deitado no beliche (ver BUNK_SPOTS em src/scene/base/layout.ts). */
-const LYING_SCALE = 0.8;
 /**
  * Deitar no beliche: em pé de frente para os pés da cama (+X), ele deita para trás girando em volta do quadril
  * (deitado = em pé girado 90° em Z, ver LIE_BASIS). Altura do quadril no boneco em pé (m).

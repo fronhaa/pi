@@ -38,13 +38,13 @@ const LIE_DOWN_SECONDS = 1.5;
 const GET_UP_SECONDS = 1.3;
 /**
  * Como deita em cada cama (fração do tempo): até quando inclina para trás, quando começa a entrar e o arco do quadril.
- * Cama de baixo: sem arco (o capacete bateria na cama de cima). Medido com o corpo do chibi nas 4 camas, deitando e
- * levantando: nenhuma parte entra no casco, no chão ou num colchão. Entrar mais cedo (menos tempo quase deitado)
- * faz o corpo atravessar 5 a 9 cm: entre as camas sobram 0,69 m e o capacete deitado tem 0,67 m.
+ * Medido com o corpo do chibi em tamanho normal nas 4 camas (módulos em 100%, 1 m livre acima de cada colchão),
+ * deitando e levantando: nada entra no chão nem num colchão, e no casco no máximo ~0,5 cm. Entrar mais cedo faz o
+ * calcanhar tocar o colchão (até 9 cm).
  */
 export const BED_MOVE = {
-  lower: { leanEnd: 0.65, intoStart: 0.3, arc: 0 },
-  upper: { leanEnd: 0.75, intoStart: 0.4, arc: 0.22 },
+  lower: { leanEnd: 0.7, intoStart: 0.45, arc: 0.15 },
+  upper: { leanEnd: 0.75, intoStart: 0.45, arc: 0.3 },
 };
 /** Corredor central: todos os módulos, os túneis e a passarela da cúpula ficam nesta linha (z) e neste piso (y). */
 const CORRIDOR_Z = DOME_CENTER.z;

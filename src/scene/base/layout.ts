@@ -25,15 +25,38 @@ import type { ProblemKind } from '@/sim/types';
  * dentro (camas, academia, postos) acompanham, porque são medidos a partir daqui.
  */
 
+/**
+ * Escala dos módulos do habitat (cascos, pernas, teto): **100%**, o tamanho em que o research-base.glb foi feito
+ * (ADR 0009). Assim a base segue as medidas da NASA (docs/ciencia-marte.md, F15 a F19): ~2,7 m de altura livre
+ * (a NASA recomenda 2,4 m), 1 m acima de cada cama e ~37 m³ por tripulante (mínimo da NASA: 29 m³ habitáveis).
+ */
+export const HABITAT_SCALE = 1;
+/** Piso dentro do casco (o modelo não tem piso; o jogo põe um). Em 100% o casco vai de y = 1,0 a 4,3. */
+export const HABITAT_FLOOR_Y = 1.5625 * HABITAT_SCALE;
+/** Raio do casco dos módulos e a altura do eixo dele (medidos no research-base.glb). */
+const HULL_RADIUS = 1.65 * HABITAT_SCALE;
+const HULL_AXIS_Y = 2.65 * HABITAT_SCALE;
+/** Largura do piso dentro do casco. */
+export const MODULE_FLOOR_WIDTH = 2.375 * HABITAT_SCALE;
+
 /** Cúpula com a estufa: o núcleo da base. */
 export const DOME_CENTER = new THREE.Vector3(0, 0, -1);
-/** Raio da cúpula (m). Maior que os módulos: a estufa é o núcleo e o maior espaço da base. */
-export const DOME_RADIUS = 5;
 /**
- * Até onde o túnel entra na cúpula: ali a cúpula ainda tem a altura do túnel (o casco fica a ~2,1 m do chão).
+ * Raio da cúpula (m). Maior que os módulos: a estufa é o núcleo e o maior espaço da base. Com 6 m, a passarela
+ * (no piso dos módulos) tem altura para andar em pé até a boca dos túneis.
+ */
+export const DOME_RADIUS = 6;
+/**
+ * Túneis da cúpula até cada módulo: centro do túnel a esta altura do chão e raio. Por dentro sobram ~2,1 m acima
+ * do piso: o astronauta (1,87 m) passa em pé (a NASA pede passagem sem restrição, F18).
+ */
+export const TUBE_Y = HABITAT_FLOOR_Y + 0.94;
+export const TUBE_RADIUS = 1.2;
+/**
+ * Até onde o túnel entra na cúpula: ali a cúpula ainda tem a altura do centro do túnel.
  * O túnel vai daqui até a porta de acoplamento do módulo.
  */
-const TUBE_START = Math.sqrt(DOME_RADIUS ** 2 - 2.1 ** 2) - 0.05;
+const TUBE_START = Math.sqrt(DOME_RADIUS ** 2 - TUBE_Y ** 2) - 0.05;
 const TUBE_LENGTH = 1.8;
 /** Porta de acoplamento de cada módulo: ±3,25 m do centro no modelo (em escala). */
 const PORT = 3.25;
@@ -42,18 +65,12 @@ const PORT = 3.25;
  * Laboratório, com a torre do airlock (a porta) virada para +Z, para o lado da câmera (research-base.glb,
  * docs/rover-e-base-de-pesquisa.md). O casco corre em X. Origem do modelo no chão.
  */
-export const HABITAT_POSITION = new THREE.Vector3(DOME_CENTER.x + TUBE_START + TUBE_LENGTH + PORT * 0.8, 0, DOME_CENTER.z);
+export const HABITAT_POSITION = new THREE.Vector3(DOME_CENTER.x + TUBE_START + TUBE_LENGTH + PORT * HABITAT_SCALE, 0, DOME_CENTER.z);
 /** Porta do airlock no referencial do modelo: o astronauta anda até ela e some (doc do modelo). */
 export const HABITAT_DOOR_LOCAL_Z = 4.1;
 /** Abrigo de regolito (tempestade solar): à frente e à esquerda da base, longe do caminho do rover. */
 export const SHELTER_CENTER = new THREE.Vector3(-13.5, 0, 8.5);
 
-/**
- * Escala dos módulos do habitat (cascos, pernas, teto). Em 100% o casco tem 3,3 m de diâmetro e o astronauta
- * fica pequeno lá dentro; em 80% a cabine fica mais justa, como uma nave. A torre do airlock continua em 100%,
- * para a porta seguir mais alta que o astronauta.
- */
-export const HABITAT_SCALE = 0.8;
 /** Comprimento útil do piso em cada módulo (entre as portas de acoplamento, ±3,25 m no modelo). */
 export const MODULE_FLOOR_LENGTH = 6.5 * HABITAT_SCALE;
 /**
@@ -104,7 +121,7 @@ export const POSTS: Record<Role, THREE.Vector3> = {
 
 /**
  * Garagem do rover: o mesmo módulo, no raio sul (virado para a câmera), com o casco correndo em Z.
- * Em 100% de escala (os outros estão em 80%): o rover (~2,7 m de altura) precisa caber dentro.
+ * Em 100% de escala, como os outros módulos: o rover (~2,7 m de altura) cabe dentro.
  * Depois de uma expedição o rover sobe a rampa, entrega as amostras e fica em revisão (src/scene/base/Rover.ts).
  */
 export const GARAGE_SCALE = 1;
@@ -132,10 +149,6 @@ export const ROVER_DOCK = {
   heading: Math.PI / 2,
 } as const;
 
-/** Túneis da cúpula até cada módulo (centro do casco a esta altura do chão). */
-export const TUBE_Y = 2.1;
-/** Raio do túnel (m). Por dentro sobra ~1,7 m acima do piso: o astronauta (1,87 m) passa abaixado. */
-export const TUBE_RADIUS = 0.85;
 export const TUBES: readonly { from: THREE.Vector3; to: THREE.Vector3 }[] = [
   // Leste: laboratório.
   { from: new THREE.Vector3(DOME_CENTER.x + TUBE_START, TUBE_Y, DOME_CENTER.z), to: new THREE.Vector3(DOME_CENTER.x + TUBE_START + TUBE_LENGTH, TUBE_Y, DOME_CENTER.z) },
@@ -144,32 +157,29 @@ export const TUBES: readonly { from: THREE.Vector3; to: THREE.Vector3 }[] = [
   // Sul: garagem.
   { from: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START), to: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START + TUBE_LENGTH) },
 ];
-/** Altura das duas camas de cada beliche, acima do piso. */
-export const BUNK_LEVELS = [0.25, 1.12] as const;
 /**
- * Medidas da cama e do boneco deitado (80%): colchão de 0,7 m de fundo e 0,18 m de altura; entre as duas camas
- * sobram ~0,69 m e o capacete deitado tem ~0,67 m. A origem do boneco deitado fica BUNK_BODY_Y acima do centro da cama.
+ * Altura (centro) das duas camas de cada beliche, acima do piso: **1 m livre acima de cada colchão**, como a NASA
+ * recomenda para quem dorme conseguir sentar (F18). Acima da cama de cima, o casco deixa ~1,1 m.
+ */
+export const BUNK_LEVELS = [0.31, 1.49] as const;
+/** O boneco deitado fica em tamanho normal (antes, em 80%, era encolhido para caber entre as camas). */
+export const LYING_SCALE = 1;
+/**
+ * Medidas da cama: colchão de 0,7 m de fundo e 0,18 m de altura. A origem do boneco deitado (no meio da espessura
+ * dele) fica BUNK_BODY_Y acima do centro da cama; o capacete deitado tem ~0,84 m.
  */
 export const BED_DEPTH = 0.7;
 export const BED_THICKNESS = 0.18;
-const BUNK_BODY_Y = BED_THICKNESS / 2 + 0.34;
+const BUNK_BODY_Y = BED_THICKNESS / 2 + 0.43 * LYING_SCALE;
 /** Fundo dos módulos, onde ficam a bancada e os aparelhos (z relativo ao centro do casco). */
 export const BACK_Z = -0.55;
-/**
- * Beliches um pouco mais para o meio do casco que a bancada: o casco é redondo, e deitado na cama de cima o
- * ombro saía pelo casco (raio 1,3 m em volta de y = 2,1) com a cama no fundo (BACK_Z).
- */
+/** Beliches um pouco mais para o meio do casco que a bancada: o casco é redondo e a cama de cima fica perto dele. */
 export const BUNK_Z = -0.42;
 /**
  * Faixa por onde se anda dentro do alojamento: mais à frente que o eixo do casco, para as pernas não passarem
  * pela borda das camas de baixo (relativa ao centro do casco).
  */
 export const QUARTERS_LANE_Z = 0.45;
-/** Piso dentro do casco (em 80% o casco vai de y = 0,8 a 3,4; neste piso sobra ~2,1 m de altura). */
-export const HABITAT_FLOOR_Y = 1.25;
-/** Raio do casco dos módulos em 80% e a altura do eixo dele. */
-const HULL_RADIUS = 1.3;
-const HULL_AXIS_Y = 2.1;
 
 /** Chão da estufa, dentro da cúpula (em cima da base da cúpula), onde ficam os canteiros. */
 export const GREENHOUSE_FLOOR_Y = 0.4;
@@ -185,7 +195,7 @@ export const WALKWAY = {
   south: new THREE.Vector3(DOME_CENTER.x, HABITAT_FLOOR_Y, TUBES[2].from.z),
 } as const;
 /** Escada da passarela até o chão da estufa: degraus de ~17 cm, como numa casa. */
-export const STAIR_STEPS = 5;
+export const STAIR_STEPS = Math.round((HABITAT_FLOOR_Y - GREENHOUSE_FLOOR_Y) / 0.17);
 export const STAIR_RUN = 0.3;
 export const STAIR_WIDTH = 0.8;
 /**
@@ -210,7 +220,7 @@ export const GREENHOUSE_HARVEST_SPOTS = GREENHOUSE_STAIRS.map((s) => s.harvest);
 
 /**
  * Quanto sobra de altura acima do piso dos módulos neste ponto (m). Nos túneis (e na boca deles, onde a cúpula
- * é baixa) sobra ~1,7 m: o astronauta passa abaixado. No resto da passarela e nos módulos, cabe em pé.
+ * é baixa) sobram ~2,1 m: o astronauta passa em pé. Se um dia o teto ficar baixo, ele se abaixa sozinho.
  */
 export function headroomAt(x: number, z: number): number {
   let ceiling = Infinity;
@@ -250,8 +260,8 @@ export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
 
 /** Centro de cada beliche em relação ao centro do alojamento. */
 export const BUNK_DX = 1.25;
-/** Comprimento do boneco deitado (deitado ele fica em 80%, para caber entre as duas camas do beliche). */
-const LYING_LENGTH = 1.85 * 0.8;
+/** Comprimento do boneco deitado. */
+const LYING_LENGTH = 1.85 * LYING_SCALE;
 
 /** Cama de cada papel no alojamento (beliche, cabeça no travesseiro em −X): onde dorme à noite e descansa. */
 export const BUNK_SPOTS: Record<Role, THREE.Vector3> = {
