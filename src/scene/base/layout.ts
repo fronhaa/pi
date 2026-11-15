@@ -274,14 +274,22 @@ function bunkSpot(dx: number, level: 0 | 1): THREE.Vector3 {
  * Aparelhos da academia que um astronauta usa (F9: esteira e bicicleta, como na Estação Espacial).
  * `heading` segue a convenção do andar: 0 olha para −Z; aqui todos olham para a frente (+Z), para a câmera.
  */
-export const GYM_DX = 1.8;
+/**
+ * Posição (x, relativa ao centro da academia) de cada aparelho. A academia é o módulo da ponta: à esquerda
+ * fica a parede (anel da porta de acoplamento), então a esteira fica perto do meio, com folga para os braços
+ * de quem corre; a bicicleta vem logo depois e o aparelho de força (só decoração) vai para a outra ponta.
+ */
+export const TREADMILL_DX = -1.15;
+export const BIKE_DX = 0.45;
+export const GYM_DX = 1.9;
 /** Onde fica o quadril de quem pedala, em Z, em relação ao centro do módulo (a bicicleta é montada em volta). */
 export const BIKE_Z = -0.3;
 export const GYM_STATIONS = [
   // Esteira: clipe `walk`; `speed` em m/s.
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X - GYM_DX, HABITAT_FLOOR_Y + 0.14, HABITAT_POSITION.z), heading: Math.PI, clip: 'walk', speed: 1.8 },
+  // Esteira mais baixa, para a cabeça de quem corre não chegar no teto.
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + TREADMILL_DX, HABITAT_FLOOR_Y + 0.08, HABITAT_POSITION.z), heading: Math.PI, clip: 'walk', speed: 1.8 },
   // Bicicleta: sentado, clipe `pedal` (src/render/chibiPedal.ts); `speed` é a velocidade do clipe (1 = uma volta por segundo).
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X, HABITAT_FLOOR_Y, HABITAT_POSITION.z + BIKE_Z), heading: Math.PI, clip: 'pedal', speed: 0.9 },
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + BIKE_DX, HABITAT_FLOOR_Y, HABITAT_POSITION.z + BIKE_Z), heading: Math.PI, clip: 'pedal', speed: 0.9 },
 ] as const;
 
 /**
@@ -300,6 +308,16 @@ export const HABITAT_LOOK: Record<Role, THREE.Vector3> = {
  * escada do lado norte (GREENHOUSE_STAIRS[0]).
  */
 export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(DOME_CENTER.x + DOME_RADIUS * 0.45, GREENHOUSE_FLOOR_Y, DOME_CENTER.z - DOME_RADIUS * 0.45);
+/**
+ * Nos canteiros do lado sul: onde fica quem colhe (tarefa opcional). Ele desce pela escada do sul
+ * (GREENHOUSE_STAIRS[1]); o conserto usa a do norte, então a estufa tem acesso pelos dois lados.
+ */
+export const HARVEST_STAIR = 1;
+export const HARVEST_WORK_SPOT = GREENHOUSE_STAIRS[HARVEST_STAIR].harvest.clone();
+/** Na bancada do laboratório: onde fica quem analisa amostras (tarefa opcional). */
+export const LAB_WORK_SPOT = new THREE.Vector3(HABITAT_POSITION.x, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.15);
+/** Para onde olha quem analisa: a bancada do fundo do laboratório. */
+export const LAB_BENCH_LOOK = new THREE.Vector3(HABITAT_POSITION.x, HABITAT_FLOOR_Y + 1, HABITAT_POSITION.z + BACK_Z);
 
 /**
  * Onde a tripulação entra à noite (ponto no chão, em frente à porta): no habitat para dormir,
@@ -322,6 +340,10 @@ export const PROBLEM_SPOTS: Record<ProblemKind, THREE.Vector3> = {
   antenna: new THREE.Vector3(COMM_POSITION.x + 2.54, 0, COMM_POSITION.z - 2.4),
   roverStuck: new THREE.Vector3(22, 0, 13),
   tornBag: new THREE.Vector3(SHELTER_CENTER.x, 0, SHELTER_CENTER.z + 3.9),
+  // Tarefas opcionais de dentro (marcador 🌱 / 🔬): no meio das plantas da cúpula e na bancada do laboratório.
+  // Nas plantas, logo à frente de quem colhe (ao pé da escada do sul).
+  harvest: new THREE.Vector3(HARVEST_WORK_SPOT.x, 0, HARVEST_WORK_SPOT.z + 0.9),
+  analysis: new THREE.Vector3(HABITAT_POSITION.x, 0, HABITAT_POSITION.z),
 };
 
 /**

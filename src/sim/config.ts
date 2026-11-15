@@ -63,6 +63,18 @@ export const CONFIG = {
   },
 
   /**
+   * Tarefas dentro da base (GDD, "Atividades dentro da base", A): opcionais, uma vez por dia, sem dose.
+   * Colher na estufa (comida: suporte de vida) e analisar amostras (ciência). Valores de jogo (INTERPRETADO).
+   * Cada uma gasta bateria (luz das plantas, instrumentos do laboratório): nenhuma escolha é de graça.
+   * Câmbio do jogo: 1 bloco = 10 de bateria = 6 de vida = 3 de ciência. Colher troca meio bloco por meio bloco;
+   * analisar dá um pouco mais que um bloco de ciência, mas sem gastar tubos do rover.
+   */
+  indoorTasks: {
+    harvest: { seconds: 15, life: 3, battery: 5 },
+    analysis: { seconds: 20, science: 4, battery: 10 },
+  },
+
+  /**
    * EVA (saída da base com traje). A tripulação fica dentro por padrão; problema de fora exige EVA.
    * Regras de jogo (INTERPRETADO), inspiradas no planejamento da NASA (GDD, "EVA: sair da base").
    */

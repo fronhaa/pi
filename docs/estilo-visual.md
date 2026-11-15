@@ -121,7 +121,8 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 - Passarela da cúpula (`WALKWAY`, na altura do piso dos módulos) em **T**: leste-oeste (laboratório ↔ alojamento) e um
   braço para o sul até o túnel da garagem, com corrimão laranja aberto nas entradas. Uma **escada** de cada lado
   (`GREENHOUSE_STAIRS`: norte a leste, sul a oeste, degraus de ~17 cm) desce até o chão da estufa
-  (`GREENHOUSE_FLOOR_Y`); os canteiros deixam livre o espaço embaixo da passarela e na frente das escadas.
+  (`GREENHOUSE_FLOOR_Y`); os canteiros deixam livre o espaço embaixo da passarela e na frente das escadas. A colheita
+  (🌱) acontece ao pé da escada do sul, e o conserto do vazamento ao pé da do norte.
 - Túneis: raio `TUBE_RADIUS` (0,85 m): sobra ~1,7 m e o astronauta (1,87 m) passa **abaixado** (corpo curvado para a
   frente a partir dos pés, `Astronaut.fitHeadroom`). Os beliches ficam em `BUNK_Z`, um pouco mais para o meio do casco
   que a bancada, para quem deita na cama de cima não sair pelo casco; colchão de `BED_DEPTH` (0,7 m) e cama de baixo

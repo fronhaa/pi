@@ -1,6 +1,6 @@
 import { CONFIG } from '@/sim/config';
 import type { EnergyPlan, Flare, GameState, ProblemKind, Resources } from '@/sim/types';
-import { PROBLEMS } from '@/sim/problems';
+import { PROBLEMS, taskBattery } from '@/sim/problems';
 import type { Mission } from '@/sim/mission';
 import { CONFIG as SIM, doseFor3 } from '@/sim/config';
 
@@ -77,7 +77,7 @@ export class Hud {
   /** Durante a noite, mostra o resultado do dia ainda com o número do sol que acabou. */
   private nightView: { res: Resources; sol: number } | null = null;
 
-  private readonly top = h('header', { class: 'top panel' });
+  private readonly top = h('header', { class: 'top' });
   private readonly resources = h('section', { class: 'resources panel', 'aria-labelledby': 'res-title' });
   private readonly messages = h('section', { class: 'messages panel', 'aria-live': 'polite', 'aria-labelledby': 'msg-title' });
   private readonly planEl = h('section', { class: 'plan panel', 'aria-labelledby': 'plan-title' });
@@ -195,13 +195,25 @@ export class Hud {
 
   private renderTop(): void {
     const s = this.state && this.nightView ? { ...this.state, sol: this.nightView.sol } : this.state;
+    const sol = s?.sol ?? 1;
+    const solText = t('top.sol', { sol, total: CONFIG.sols });
+    const pct = Math.min(100, (sol / CONFIG.sols) * 100);
     patchChildren(this.top, [
-      h('div', { class: 'title' }, t('game.title'), h('small', {}, t('game.subtitle'))),
-      h('span', { class: 'sol' }, t('top.sol', { sol: s?.sol ?? 1, total: CONFIG.sols })),
-      helpButton('help.sol', t('top.sol', { sol: s?.sol ?? 1, total: CONFIG.sols })),
-      h('button', { class: 'btn', type: 'button', onclick: () => this.cb.onHowTo() }, t('top.help')),
-      h('button', { class: 'btn', type: 'button', onclick: () => this.cb.onNasaData() }, t('top.nasaData')),
-      h('button', { class: 'btn', type: 'button', onclick: () => this.cb.onToggleLang(), lang: t('top.lang') === 'English' ? 'en' : 'pt-BR' }, t('top.lang')),
+      h('div', { class: 'title top-chip' }, t('game.title')),
+      // A pílula do Sol inteira é o "?": tocar explica o que é um sol.
+      h('button', {
+        class: 'sol top-chip', type: 'button', 'aria-label': t('a11y.helpFor', { name: solText }),
+        onclick: () => openHelp('help.sol', solText),
+      },
+        h('span', {}, solText),
+        h('span', { class: 'sol-track', 'aria-hidden': 'true' }, h('i', { style: `width:${pct}%` })),
+        h('span', { class: 'help', 'aria-hidden': 'true' }, '?'),
+      ),
+      h('div', { class: 'top-actions' },
+        topButton('📖', t('top.help'), () => this.cb.onHowTo()),
+        topButton('🛰️', t('top.nasaData'), () => this.cb.onNasaData()),
+        langSwitch(getLang(), () => this.cb.onToggleLang()),
+      ),
     ]);
   }
 
@@ -265,7 +277,7 @@ export class Hud {
   private renderDay(v: DayView): void {
     const name = (role?: string) => (role ? t(`crew.${role}` as StringKey) : '');
     const focusedLabel = (document.activeElement as HTMLElement | null)?.getAttribute?.('aria-label');
-    const items = v.problems.map((p) => {
+    const item = (p: DayView['problems'][number]): HTMLElement => {
       const def = PROBLEMS[p.kind];
       const problem = t(`problem.${p.kind}` as StringKey);
       const status =
@@ -278,20 +290,27 @@ export class Hud {
       let action: HTMLElement | null = null;
       if (p.status === 'open' && !p.worker) {
         const banned = def.outside && v.evaBanned;
-        const label = banned ? t('eva.bannedShort') : def.outside ? t('eva.send') : t('day.fixInside');
-        const aria = def.outside ? t('eva.sendAria', { problem }) : t('day.fixInsideAria', { problem });
-        action = h('button', { class: 'btn', type: 'button', 'aria-label': aria, disabled: v.paused || banned, onclick: () => this.cb.onSendProblem(p.uid) }, label);
+        const noPower = def.optional && (this.state?.res.battery ?? 0) < taskBattery(p.kind);
+        const label = banned ? t('eva.bannedShort') : noPower ? t('day.noPower') : def.outside ? t('eva.send') : def.optional ? t('day.sendTask') : t('day.fixInside');
+        const aria = def.outside ? t('eva.sendAria', { problem }) : def.optional ? t('day.sendTaskAria', { problem }) : t('day.fixInsideAria', { problem });
+        action = h('button', { class: 'btn', type: 'button', 'aria-label': aria, disabled: v.paused || banned || noPower, onclick: () => this.cb.onSendProblem(p.uid) }, label);
       }
-      return h('div', { class: `problem ${p.status === 'done' ? 'done' : ''}` },
+      const icon = p.status === 'done' ? '✅' : p.kind === 'harvest' ? '🌱' : p.kind === 'analysis' ? '🔬' : '⚠️';
+      return h('div', { class: `problem ${p.status === 'done' ? 'done' : ''} ${def.optional ? 'optional' : ''}` },
         h('div', { class: 'name' },
-          `${p.status === 'done' ? '✅' : '⚠️'} ${problem}`,
+          `${icon} ${problem}`,
           h('small', {}, `${t(`problem.${p.kind}.where` as StringKey)} · ${def.outside ? t('problem.outside') : t('problem.inside')}`),
+          def.optional ? h('small', { class: 'task-cost' }, t(`day.taskGain.${p.kind}` as StringKey, { battery: taskBattery(p.kind), gain: p.kind === 'harvest' ? CONFIG.indoorTasks.harvest.life : CONFIG.indoorTasks.analysis.science })) : null,
           h('small', { class: 'status' }, status),
           p.progress > 0 && p.status !== 'done' ? h('div', { class: 'bar good' }, h('i', { style: `width:${Math.round(p.progress * 100)}%` })) : null,
         ),
         action,
       );
-    });
+    };
+    // Problemas primeiro; as tarefas opcionais (colher, analisar) numa subseção "Se sobrar tempo:".
+    const problems = v.problems.filter((p) => !PROBLEMS[p.kind].optional).map(item);
+    const optional = v.problems.filter((p) => PROBLEMS[p.kind].optional).map(item);
+    const items = [...problems, ...(optional.length ? [h('p', { class: 'day-optional' }, t('day.optional')), ...optional] : [])];
     const placeIcon = { inside: '🏠', airlock: '🚪', outside: '👩‍🚀' } as const;
     const crewRow = h('div', { class: 'crew-row', role: 'group', 'aria-label': t('eva.crewTitle') },
       h('span', { class: 'crew-row-title' }, 'EVA', helpButton('help.eva', 'EVA')),
@@ -461,11 +480,22 @@ export class Hud {
   }
 }
 
+function openHelp(textKey: StringKey, name: string): void {
+  openDialog({ title: name, body: [h('p', {}, t(textKey))], actions: [{ label: t('a11y.close'), onClick: () => {} }], dismissible: true });
+}
+
 function helpButton(textKey: StringKey, name: string): HTMLButtonElement {
   return h('button', {
-    class: 'help', type: 'button', 'aria-label': t('a11y.helpFor', { name }),
-    onclick: () => openDialog({ title: name, body: [h('p', {}, t(textKey))], actions: [{ label: t('a11y.close'), onClick: () => {} }], dismissible: true }),
+    class: 'help', type: 'button', 'aria-label': t('a11y.helpFor', { name }), onclick: () => openHelp(textKey, name),
   }, '?');
+}
+
+/** Botão do topo: ícone + texto (no celular só o ícone; o texto vira o nome lido pelo leitor de tela). */
+function topButton(icon: string, label: string, onClick: () => void): HTMLButtonElement {
+  return h('button', { class: 'top-btn top-chip', type: 'button', 'aria-label': label, title: label, onclick: onClick },
+    h('span', { 'aria-hidden': 'true' }, icon),
+    h('span', { class: 'label', 'aria-hidden': 'true' }, label),
+  );
 }
 
 function resource(nameKey: StringKey, helpKey: StringKey, value: number, max: number, cls: string, marks: number[] = [], extra?: string) {
@@ -529,4 +559,15 @@ function messageEl(m: MarsMessage): HTMLElement {
     case 'shadowNow':
       return h('div', { class: 'msg dust' }, m.left > 1 ? t('msg.shadowNow', { n: m.left }) : t('msg.shadowNow.last'));
   }
+}
+
+/** Seletor de idioma "PT | EN": o ativo fica destacado; tocar no outro troca. */
+function langSwitch(current: 'pt' | 'en', toggle: () => void): HTMLElement {
+  const opt = (code: 'pt' | 'en', label: string, lang: string) =>
+    h('button', {
+      type: 'button', lang, 'aria-pressed': String(current === code),
+      onclick: () => { if (current !== code) toggle(); },
+    }, label);
+  return h('div', { class: 'lang-switch top-chip', role: 'group', 'aria-label': t('top.lang') },
+    opt('pt', 'PT', 'pt-BR'), opt('en', 'EN', 'en'));
 }

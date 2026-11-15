@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ROLES, type Role } from '@/sim/crew';
+import type { ProblemKind } from '@/sim/types';
 import { Astronaut, FACING_BED_FEET, type Crew } from './Crew';
 import {
   BUNK_LEVELS,
@@ -12,6 +13,10 @@ import {
   HABITAT_LOOK,
   HABITAT_POSITION,
   HABITAT_SPOTS,
+  HARVEST_STAIR,
+  HARVEST_WORK_SPOT,
+  LAB_BENCH_LOOK,
+  LAB_WORK_SPOT,
   MODULE_FLOOR_LENGTH,
   PROBLEM_SPOTS,
   QUARTERS_LANE_Z,
@@ -79,9 +84,13 @@ export interface RoutineFrame {
   inHabitat(role: Role): boolean;
   /** Está consertando um problema de dentro (a estufa)? */
   onInsideTask(role: Role): boolean;
+  /** Qual tarefa de dentro: vazamento, colheita ou análise (cada uma tem o seu lugar). */
+  insideTaskKind(role: Role): ProblemKind | undefined;
 }
 
-type Activity = 'post' | 'gym' | 'bed' | 'task' | 'sleep';
+/** `task` = conserto da estufa; `harvest` e `analysis` = tarefas opcionais (colher, analisar). */
+type Activity = 'post' | 'gym' | 'bed' | 'task' | 'harvest' | 'analysis' | 'sleep';
+const WORK: Activity[] = ['task', 'harvest', 'analysis'];
 
 /**
  * Um passo do caminho: andar até um ponto, virar para os pés da cama (`face`), deitar na cama (`lie`, de pé ao lado
@@ -139,12 +148,14 @@ export class CrewRoutine {
   /** Já chegou à estufa para consertar (andando por dentro)? O CrewTasks espera isso para começar o trabalho. */
   arrivedAtTask(r: Role): boolean {
     const w = this.walkers[r];
-    return w.wasInside && w.going === 'task' && w.path.length === 0;
+    return w.wasInside && w.going !== null && WORK.includes(w.going) && w.path.length === 0;
   }
 
   /** Onde fica cada atividade (para onde ele anda). */
   private spotOf(r: Role, activity: Activity, station: number): THREE.Vector3 {
     if (activity === 'task') return GREENHOUSE_WORK_SPOT;
+    if (activity === 'harvest') return HARVEST_WORK_SPOT;
+    if (activity === 'analysis') return LAB_WORK_SPOT;
     if (activity === 'gym') return GYM_STATIONS[station].pos;
     if (activity === 'bed' || activity === 'sleep') return BUNK_SPOTS[r];
     return HABITAT_SPOTS[r];
@@ -206,16 +217,16 @@ export class CrewRoutine {
    * lugar (subindo no beliche, deitado; ou descendo a escada da estufa). Sempre pelos pontos certos, nunca
    * atravessando cama, casco ou canteiro.
    */
-  private route(r: Role, from: THREE.Vector3, to: THREE.Vector3, fromBed: boolean, toBed: boolean, toGreenhouse: boolean): Step[] {
+  private route(r: Role, from: THREE.Vector3, to: THREE.Vector3, fromBed: boolean, toBed: boolean, stairIndex: number | null): Step[] {
     const stand = (p: THREE.Vector3): Step => ({ kind: 'walk', to: p.clone() });
     const side = this.besideBed(r);
     const steps: Step[] = [];
     if (fromBed) steps.push({ kind: 'rise', to: side.clone() });
-    // Escada da estufa do lado do vazamento (norte): o conserto fica lá embaixo.
-    const stair = GREENHOUSE_STAIRS[0];
-    const corridorX = toGreenhouse ? stair.top.x : to.x;
+    // Descendo para a estufa: pela escada daquela tarefa (conserto: norte; colheita: sul).
+    const stair = stairIndex === null ? null : GREENHOUSE_STAIRS[stairIndex];
+    const corridorX = stair ? stair.top.x : to.x;
     steps.push(...this.corridor(from.x, corridorX).map(stand));
-    if (toGreenhouse) steps.push(stand(stair.top), stand(stair.bottom));
+    if (stair) steps.push(stand(stair.top), stand(stair.bottom));
     if (toBed) steps.push(stand(side), { kind: 'face', to: side.clone() }, { kind: 'lie', to: to.clone() });
     else steps.push(stand(to));
     // Tira pontos repetidos (já está no corredor, ou o destino fica no corredor). Virar, deitar e levantar ficam.
@@ -240,10 +251,10 @@ export class CrewRoutine {
     return best;
   }
 
-  /** Saindo da estufa (escada acima) antes de ir ao corredor. */
+  /** Saindo da estufa (sobe pela escada mais perto) antes de ir ao corredor. */
   private leaveGreenhouse(from: THREE.Vector3): Step[] {
     if (from.y > FLOOR_Y - 0.3) return [];
-    const stair = GREENHOUSE_STAIRS[0];
+    const stair = GREENHOUSE_STAIRS.reduce((a, b) => (a.bottom.distanceTo(from) <= b.bottom.distanceTo(from) ? a : b));
     return [
       { kind: 'walk', to: stair.bottom.clone() },
       { kind: 'walk', to: stair.top.clone() },
@@ -323,7 +334,12 @@ export class CrewRoutine {
           w.rested = true;
         }
       }
-      const activity: Activity = f.sleeping ? 'sleep' : f.onInsideTask(r) ? 'task' : w.at;
+      const kind = f.insideTaskKind(r);
+      const activity: Activity = f.sleeping ? 'sleep'
+        : kind === 'harvest' ? 'harvest'
+        : kind === 'analysis' ? 'analysis'
+        : kind ? 'task'
+        : w.at;
 
       // Mudou de atividade: calcula o caminho até o novo lugar.
       // No meio de deitar ou levantar, termina o movimento antes de mudar de ideia (não pula de pose).
@@ -336,7 +352,7 @@ export class CrewRoutine {
         const goingToBed = (w.going === 'bed' || w.going === 'sleep') && w.path.length > 0;
         w.going = activity;
         if (!((inBed || goingToBed) && toBed)) {
-          w.path = [...this.leaveGreenhouse(w.pos), ...this.route(r, w.pos, this.spotOf(r, activity, w.station), inBed, toBed, activity === 'task')];
+          w.path = [...this.leaveGreenhouse(w.pos), ...this.route(r, w.pos, this.spotOf(r, activity, w.station), inBed, toBed, activity === 'task' ? 0 : activity === 'harvest' ? HARVEST_STAIR : null)];
           w.stepTime = 0;
         }
       }
@@ -408,11 +424,11 @@ export class CrewRoutine {
         a.root.position.copy(st.pos);
         a.faceHeading(st.heading, dt);
         a.exercise(st.clip, st.speed, dt);
-      } else if (activity === 'task') {
-        // Consertando a estufa: de frente para o vazamento, nunca para a câmera.
+      } else if (WORK.includes(activity)) {
+        // Trabalhando: de frente para o trabalho (vazamento, plantas ou bancada), nunca para a câmera.
         a.setLying(false);
         a.root.position.copy(w.pos);
-        a.faceToward(PROBLEM_SPOTS.greenhouseLeak, dt);
+        a.faceToward(activity === 'harvest' ? PROBLEM_SPOTS.harvest : activity === 'analysis' ? LAB_BENCH_LOOK : PROBLEM_SPOTS.greenhouseLeak, dt);
         a.idle(dt);
       } else {
         // Posto: olha a estação do módulo e, às vezes, um colega perto (ninguém encara a câmera).

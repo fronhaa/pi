@@ -13,19 +13,34 @@ export interface ProblemDef {
   taskSeconds: number;
   /** Fora da base: exige EVA (dupla, câmara de descompressão) e soma dose ao terminar. */
   outside: boolean;
+  /**
+   * Tarefa opcional de dentro (colher, analisar): não fazer não cobra nada à noite, só perde o bônus.
+   * Fica fora do sorteio dos problemas e é acrescentada todo dia em tempo real (GDD, "Atividades dentro da base").
+   */
+  optional: boolean;
 }
 
 export const PROBLEMS: Record<ProblemKind, ProblemDef> = {
-  dustyPanels: { kind: 'dustyPanels', taskSeconds: 15, outside: true },
-  greenhouseLeak: { kind: 'greenhouseLeak', taskSeconds: 10, outside: false },
-  antenna: { kind: 'antenna', taskSeconds: 15, outside: true },
-  roverStuck: { kind: 'roverStuck', taskSeconds: 20, outside: true },
-  tornBag: { kind: 'tornBag', taskSeconds: 10, outside: true },
+  dustyPanels: { kind: 'dustyPanels', taskSeconds: 15, outside: true, optional: false },
+  greenhouseLeak: { kind: 'greenhouseLeak', taskSeconds: 10, outside: false, optional: false },
+  antenna: { kind: 'antenna', taskSeconds: 15, outside: true, optional: false },
+  roverStuck: { kind: 'roverStuck', taskSeconds: 20, outside: true, optional: false },
+  tornBag: { kind: 'tornBag', taskSeconds: 10, outside: true, optional: false },
+  harvest: { kind: 'harvest', taskSeconds: CONFIG.indoorTasks.harvest.seconds, outside: false, optional: true },
+  analysis: { kind: 'analysis', taskSeconds: CONFIG.indoorTasks.analysis.seconds, outside: false, optional: true },
 };
 
-export const PROBLEM_KINDS = Object.keys(PROBLEMS) as ProblemKind[];
+/** Só os problemas de verdade (os opcionais não entram no sorteio, senão todas as partidas mudariam). */
+export const PROBLEM_KINDS = (Object.keys(PROBLEMS) as ProblemKind[]).filter((k) => !PROBLEMS[k].optional);
+/** Tarefas opcionais de dentro, na ordem em que aparecem na lista do dia. */
+export const OPTIONAL_KINDS = (Object.keys(PROBLEMS) as ProblemKind[]).filter((k) => PROBLEMS[k].optional);
 
 /** Segundos de trabalho no local. A câmara de descompressão é contada à parte, na saída da EVA. */
+/** Bateria que uma tarefa opcional gasta ao terminar (0 para os problemas). */
+export function taskBattery(kind: ProblemKind): number {
+  return kind === 'harvest' || kind === 'analysis' ? CONFIG.indoorTasks[kind].battery : 0;
+}
+
 export function taskTime(kind: ProblemKind): number {
   return PROBLEMS[kind].taskSeconds;
 }
@@ -38,7 +53,7 @@ export function scheduleProblems(sol: number, rng: Rng, nextUid: () => number, e
   const c = CONFIG.problems;
   if (sol < c.firstSol) return [];
   const count = rng.int(c.minPerDay, c.maxPerDay);
-  return rng
+  const problems = rng
     .shuffle(PROBLEM_KINDS.filter((k) => !exclude.includes(k)))
     .slice(0, count)
     .map((kind) => ({
@@ -49,4 +64,7 @@ export function scheduleProblems(sol: number, rng: Rng, nextUid: () => number, e
       progress: 0,
     }))
     .sort((a, b) => a.spawnAt - b.spawnAt);
+  // Tarefas opcionais: disponíveis desde o começo do dia, sem usar o gerador (não muda o sorteio do resto).
+  const tasks = OPTIONAL_KINDS.map((kind) => ({ uid: nextUid(), kind, spawnAt: 0, status: 'pending' as const, progress: 0 }));
+  return [...problems, ...tasks];
 }

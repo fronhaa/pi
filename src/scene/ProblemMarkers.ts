@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { ProblemKind } from '@/sim/types';
+import { PROBLEMS } from '@/sim/problems';
 import { PROBLEM_SPOTS } from './base/layout';
 
 /**
@@ -15,12 +16,20 @@ interface Marker {
 }
 
 const WARN = 0xffb020;
+/** Tarefas opcionais (colher, analisar): anel azul-claro, para não parecerem problemas. */
+const OPTIONAL = 0x7fc8e6;
 const WORKING = 0x5cc16b;
 
 export class ProblemMarkers {
   readonly root = new THREE.Group();
   private readonly markers = new Map<number, Marker>();
-  private readonly iconTexture = makeIconTexture();
+  private readonly iconTexture = makeIconTexture('!', '#ffb020');
+  /** Ícone por tarefa opcional: 🌱 colher na estufa, 🔬 analisar no laboratório. */
+  private readonly taskIcons: Partial<Record<ProblemKind, THREE.Texture>> = {
+    harvest: makeIconTexture('🌱', '#cfeccf'),
+    analysis: makeIconTexture('🔬', '#d6ecf7'),
+  };
+  private readonly baseColor = new Map<number, number>();
 
   add(uid: number, kind: ProblemKind): void {
     if (this.markers.has(uid)) return;
@@ -31,13 +40,14 @@ export class ProblemMarkers {
 
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(0.7, 0.95, 32),
-      new THREE.MeshBasicMaterial({ color: WARN, transparent: true, opacity: 0.85, depthWrite: false }),
+      new THREE.MeshBasicMaterial({ color: PROBLEMS[kind].optional ? OPTIONAL : WARN, transparent: true, opacity: 0.85, depthWrite: false }),
     );
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.04;
     group.add(ring);
 
-    const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.iconTexture, depthTest: false }));
+    this.baseColor.set(uid, PROBLEMS[kind].optional ? OPTIONAL : WARN);
+    const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.taskIcons[kind] ?? this.iconTexture, depthTest: false }));
     icon.scale.set(1.1, 1.1, 1);
     icon.position.y = 2.6;
     icon.renderOrder = 5;
@@ -82,7 +92,7 @@ export class ProblemMarkers {
     const k = Math.max(0.001, Math.min(1, progress));
     m.fill.scale.x = k;
     m.fill.position.x = -0.75 * (1 - k);
-    m.ring.material.color.setHex(working ? WORKING : WARN);
+    m.ring.material.color.setHex(working ? WORKING : (this.baseColor.get(uid) ?? WARN));
   }
 
   update(time: number, camera: THREE.Camera): void {
@@ -100,11 +110,11 @@ export class ProblemMarkers {
   }
 }
 
-function makeIconTexture(): THREE.Texture {
+function makeIconTexture(symbol: string, fill: string): THREE.Texture {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#ffb020';
+  g.fillStyle = fill;
   g.strokeStyle = '#473c3a';
   g.lineWidth = 10;
   g.beginPath();
@@ -112,10 +122,10 @@ function makeIconTexture(): THREE.Texture {
   g.fill();
   g.stroke();
   g.fillStyle = '#473c3a';
-  g.font = 'bold 84px system-ui, sans-serif';
+  g.font = symbol === '!' ? 'bold 84px system-ui, sans-serif' : '64px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.fillText('!', 64, 70);
+  g.fillText(symbol, 64, symbol === '!' ? 70 : 68);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;

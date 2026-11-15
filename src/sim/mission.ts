@@ -1,10 +1,10 @@
 import { CONFIG, doseFor3, type FlareClass, type Location } from './config.ts';
 import { CARDS, CARD_IDS, MARS_ONLY_CARDS, applyCardOption, clamp, onCardDrawn } from './cards.ts';
 import { createRng, type Rng } from './rng.ts';
-import { PROBLEMS, scheduleProblems } from './problems.ts';
+import { PROBLEMS, scheduleProblems, taskBattery } from './problems.ts';
 import { simulateDay, stormDose, type DayResult } from './day.ts';
 import { isEvaBanned } from './eva.ts';
-import type { EnergyPlan, Flare, GameState, HistoricalMission, Message, Problem, ReportLine, Resources, ScheduledStorm, SolReport } from './types.ts';
+import type { EnergyPlan, Flare, GameState, HistoricalMission, Message, Problem, ProblemKind, ReportLine, Resources, ScheduledStorm, SolReport } from './types.ts';
 
 /** Cartas substituídas pelos problemas da tripulação (GDD: "Eles substituem as cartas..."). */
 const CARD_POOL = CARD_IDS.filter((id) => id !== 'dustyPanels' && id !== 'greenhouseLeak');
@@ -296,6 +296,10 @@ export class Mission {
     if (p.status === 'done') return;
     p.status = 'done';
     p.progress = 1;
+    if (PROBLEMS[p.kind].optional) {
+      this.finishTask(p.kind);
+      return;
+    }
     const outside = PROBLEMS[p.kind].outside;
     if (outside) this.state.res.dose = round1(this.state.res.dose + CONFIG.problems.outsideDose);
     // Na Lua não há vento: limpar os painéis à mão é o único jeito de tirar a poeira que já estava lá.
@@ -308,6 +312,22 @@ export class Mission {
       params: { problem: `problem.${p.kind}`, dose: CONFIG.problems.outsideDose },
       tone: 'good',
     });
+    this.checkLoss();
+  }
+
+  /** Tarefa opcional de dentro terminada: aplica o bônus, sem dose (GDD, "Atividades dentro da base", A). */
+  private finishTask(kind: ProblemKind): void {
+    const r = this.state.res;
+    const t = CONFIG.indoorTasks;
+    const battery = taskBattery(kind);
+    r.battery = Math.max(0, r.battery - battery);
+    if (kind === 'harvest') {
+      r.life = Math.min(CONFIG.life.max, r.life + t.harvest.life);
+      this.cardLines.push({ key: 'report.task.harvest', params: { life: t.harvest.life, battery }, tone: 'good' });
+    } else if (kind === 'analysis') {
+      r.science += t.analysis.science;
+      this.cardLines.push({ key: 'report.task.analysis', params: { science: t.analysis.science, battery }, tone: 'good' });
+    }
     this.checkLoss();
   }
 
@@ -329,7 +349,8 @@ export class Mission {
 
     // Problemas: em noite de tempestade, trabalho pela metade continua amanhã (GDD); o resto cobra a conta hoje.
     // Com a EVA proibida, os problemas de fora também ficam para amanhã: ninguém podia sair.
-    const unresolved = s.problems.filter((p) => p.status !== 'done');
+    // Tarefas opcionais não feitas não cobram nada e não continuam amanhã.
+    const unresolved = s.problems.filter((p) => p.status !== 'done' && !PROBLEMS[p.kind].optional);
     const evaBanned = this.evaBanned;
     const waitedEva = evaBanned ? unresolved.filter((p) => PROBLEMS[p.kind].outside) : [];
     const carried = [...waitedEva, ...(storm ? unresolved.filter((p) => p.progress > 0 && !waitedEva.includes(p)) : [])];

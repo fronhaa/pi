@@ -404,6 +404,7 @@ export class Game {
     if (r === 'storm') this.hud.toast(t('eva.banned'));
     else if (r === 'full') this.hud.toast(t('eva.full'));
     else if (r === 'nobody') this.hud.toast(t('eva.nobody'));
+    else if (r === 'noPower') this.hud.toast(t('day.noPowerToast'));
   }
 
   /** Solo: todos os astronautas. Em grupo: ver CoopMode.canControl. */
@@ -737,6 +738,7 @@ export class Game {
         isOutside: (r) => !motion.isInside(r),
         inHabitat: (r) => this.tasks.placeOf(r) === 'inside',
         onInsideTask: (r) => this.tasks.onInsideTask(r),
+        insideTaskKind: (r) => this.tasks.insideTaskKind(r),
       });
     } else this.crew.update(dt);
     const marker = this.targetMarker.material as THREE.MeshBasicMaterial;
