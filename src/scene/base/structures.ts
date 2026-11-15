@@ -38,7 +38,7 @@ const LED_COLOR = 0xe08cff;
 const LED_HEIGHT = 2.7;
 /**
  * Luminárias da fibra óptica lá dentro (relativas ao centro da estufa) e a força do foco com o Sol pleno. Ficam sobre
- * os canteiros: longe da passarela (leste-oeste e o braço da garagem) e das escadas, onde não há plantas.
+ * os canteiros: longe da passarela (leste-oeste e o braço dos quartos) e das escadas, onde não há plantas.
  */
 const FIBER_LAMPS: readonly [number, number][] = [[-0.6, -3.3], [-3.7, 2.1]];
 const FIBER_LAMP_HEIGHT = 3.5;
@@ -325,7 +325,7 @@ export class BaseStructures {
       const d = Math.sqrt(rng()) * (r - 1.2);
       const px = Math.cos(a) * d;
       const pz = Math.sin(a) * d;
-      // Livre: embaixo da passarela (leste-oeste e o braço da garagem, ao sul) e na frente das escadas.
+      // Livre: embaixo da passarela (leste-oeste e o braço dos quartos, ao sul) e na frente das escadas.
       if (Math.abs(pz) < WALKWAY_WIDTH / 2 + 0.5) continue;
       if (pz > 0 && Math.abs(px) < WALKWAY_WIDTH / 2 + 0.5) continue;
       if (GREENHOUSE_STAIRS.some((st) => Math.abs(center.x + px - st.top.x) < STAIR_WIDTH / 2 + 0.5 && (pz - (st.top.z - center.z)) * st.side > -0.2 && (pz - (st.harvest.z - center.z)) * st.side < 0.6)) continue;

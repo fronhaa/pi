@@ -94,13 +94,12 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   [`src/scene/base/layout.ts`](../src/scene/base/layout.ts): a **cúpula** da estufa é o núcleo (`DOME_CENTER`), e túneis
   (`TUBES`, cilindros claros com anel laranja na ponta) a ligam a quatro módulos do mesmo `research-base.glb`, sem mudar o
   design: **laboratório** a leste (com o airlock virado para a câmera, a bancada e o observatório), **alojamento** a oeste
-  (`QUARTERS_MODULES`, dois módulos com quartos individuais, uma cama por astronauta) com a **academia** acoplada na ponta, e a **garagem do
-  rover** ao sul (`GARAGE_POSITION`, casco correndo em Z, em 100% de escala para o rover caber, com piso e uma **rampa**
-  com faixas e corrimãos laranja até o chão: `GARAGE_RAMP`). Base de comunicação acoplada na ponta do laboratório, painéis à direita (`PANELS_ORIGIN`) e bateria na frente da base de comunicação.
+  com a **academia** a oeste e os **dois módulos de quartos** ao sul (`QUARTERS_CENTERS`, casco correndo em Z,
+  `QUARTERS_YAW`; ADR 0011). O rover de ciência não tem garagem (F23 a F25). Base de comunicação acoplada na ponta do laboratório, painéis à direita (`PANELS_ORIGIN`) e bateria na frente da base de comunicação.
   As janelas acendem à noite.
 - Dentro do habitat: cabines **transparentes**. Todas as peças do casco (casco, faixas, janelas e portas de acoplamento)
   ficam translúcidas para a câmera (`glassMaterial`, sem contorno), para nada opaco cortar a tripulação. Para o sol o casco
-  continua metal: faz sombra pelos dois lados (`shadowSide = DoubleSide`), o sol não entra, e cada cabine (e a garagem)
+  continua metal: faz sombra pelos dois lados (`shadowSide = DoubleSide`), o sol não entra, e cada cabine
   tem uma luminária no teto (`PointLight` sem sombra). Cada peça tem ordem de desenho fixa
   (`GLASS_ORDER`): sem ela, as faixas e portas que se cruzam piscavam ao girar a câmera. Testamos uma vista
   em corte, mas o time preferiu ver através do casco. Cada módulo tem seu piso. Comandante e cientista
@@ -131,7 +130,7 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   facho, mais forte à noite. Assim dá para ver que as plantas, na sombra do casco, recebem luz de fontes de dentro. A estufa real ficaria enterrada; aqui ela fica à vista
   e translúcida pela mesma convenção dos módulos.
 - Passarela da cúpula (`WALKWAY`, na altura do piso dos módulos) em **T**: leste-oeste (laboratório ↔ alojamento) e um
-  braço para o sul até o túnel da garagem, com corrimão laranja aberto nas entradas. Uma **escada** de cada lado
+  braço para o sul até o túnel dos quartos, com corrimão laranja aberto nas entradas. Uma **escada** de cada lado
   (`GREENHOUSE_STAIRS`: norte a leste, sul a oeste, degraus de ~17 cm) desce até o chão da estufa
   (`GREENHOUSE_FLOOR_Y`); os canteiros deixam livre o espaço embaixo da passarela e na frente das escadas. A colheita
   (🌱) acontece ao pé da escada do sul, e o conserto do vazamento ao pé da do norte.
@@ -147,14 +146,14 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   tem 6 m de raio para a passarela ter altura até a boca dos túneis. Se um teto ficar baixo, ele se curva sozinho
   (`Astronaut.fitHeadroom`, altura em `headroomAt`).
 - **Quartos individuais** ([ADR 0010](decisoes/0010-quartos-individuais-em-vez-de-beliche.md)): dois módulos de quartos
-  (`QUARTERS_MODULES`), cada um com dois quartos separados por uma divisória translúcida, do fundo até perto da faixa do
+  no raio sul (`QUARTERS_CENTERS`, girados com `QUARTERS_YAW`; o interior é montado no referencial do módulo, `quartersPoint`), cada um com dois quartos separados por uma divisória translúcida, do fundo até perto da faixa do
   corredor. Em cada quarto, uma **cama baixa** (`BED_LEVEL`, estrado de quatro pés, aberto embaixo) encostada no fundo
   (`BED_Z`, colchão de `BED_DEPTH` = 0,85 m) e um armário ao lado da divisória. Tudo fica atrás de
   `ROOM_FURNITURE_FRONT_Z` (43 cm do eixo): o corredor do meio fica livre e quem passa anda reto, sem desviar. Engenheiro e médico no primeiro módulo,
   comandante e cientista no segundo (`BED_SPOTS`). O boneco deitado fica em tamanho normal (`LYING_SCALE = 1`).
   Deitar: de pé de costas para a cama, **senta na beirada** (pose `sit`, montada por código em `src/render/chibiSit.ts`)
   e deita girando em volta do quadril, pondo as pernas na cama (`Astronaut.bedBlend`); levantar é o mesmo ao contrário.
-- Academia: módulo da ponta (`GYM_OFFSET_X`, depois dos dois módulos de quartos), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
+- Academia: o módulo do raio oeste (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
   (GDD, "Atividades dentro da base", B): quem está dentro sem ordem há 8 s vai à esteira ou à bicicleta (`GYM_STATIONS`,
   `walk` no lugar na esteira; sentado pedalando na bicicleta, com o clipe `pedal`), descansa deitado no seu quarto e volta ao posto. Na primeira vez aparece o fato F9.
 - À noite (sem tempestade) cada astronauta dorme deitado na cama do seu quarto (`BED_SPOTS`); na noite de tempestade, está no abrigo.
