@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { MOON_PALETTE, PALETTE, toonMaterial, toonMesh } from '@/render/toon';
+import { BIKE_FIT } from '@/render/chibiPedal';
 import { CONFIG, type Location } from '@/sim/config';
 import type { Resources } from '@/sim/types';
 
@@ -100,6 +101,29 @@ function glassMaterial<M extends THREE.Material>(mat: M, opacity: number): M {
 /** Força da luminária de cada cabine (PointLight, sem sombra). */
 const CABIN_LIGHT_INTENSITY = 6;
 
+/**
+ * Ordem fixa de desenho das peças translúcidas do casco. Faixas, colar e anel da porta de acoplamento se
+ * cruzam (e encostam no módulo vizinho) sem gravar profundidade: sem ordem fixa, o Three.js reordena pela
+ * distância do centro de cada peça e, ao girar a câmera, a ordem troca e o preto/laranja das pontas pisca.
+ * Fica abaixo de 5 para os marcadores de problema (ProblemMarkers) continuarem por cima.
+ */
+const GLASS_ORDER: [RegExp, number][] = [
+  [/^hull_shell/, 1],
+  [/^hull_band_dark/, 1.1],
+  [/^hull_band_orange/, 1.2],
+  [/^port_collar/, 1.3],
+  [/^port_ring/, 1.4],
+  [/^port_hatch(?!_ring)/, 1.5],
+  [/^port_/, 1.6],
+  [/_frame/, 1.7],
+  [/_pane/, 1.8],
+  [/_shine/, 1.9],
+];
+
+function glassRenderOrder(name: string): number {
+  return GLASS_ORDER.find(([re]) => re.test(name))?.[1] ?? 1.65;
+}
+
 /** Centro de cada beliche em relação ao centro do alojamento. */
 const BUNK_DX = 1.25;
 /** Comprimento do boneco deitado (deitado ele fica em 80%, para caber entre as duas camas do beliche). */
@@ -140,15 +164,18 @@ export const HABITAT_LOOK: Record<Role, THREE.Vector3> = {
 /**
  * Posição (x, relativa ao centro da academia) de cada aparelho. A academia é o último módulo: na ponta da
  * esquerda fica a parede (anel da porta de acoplamento), então a esteira fica perto do meio, com folga para
- * os braços de quem corre; o aparelho de força (só decoração) vai para a outra ponta.
+ * os braços de quem corre; a bicicleta vem logo depois e o aparelho de força (só decoração) vai para a outra ponta.
  */
 const TREADMILL_DX = -1.15;
 const BIKE_DX = 0.45;
 const GYM_DX = 1.9;
+/** Onde fica o quadril de quem pedala, em Z, em relação ao centro do módulo (a bicicleta é montada em volta). */
+const BIKE_Z = -0.3;
 export const GYM_STATIONS = [
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + TREADMILL_DX, HABITAT_FLOOR_Y + 0.08, HABITAT_POSITION.z), heading: Math.PI, speed: 1.8 },
-  // Na bicicleta, pedalando em pé atrás do guidão (o boneco não tem pose sentada).
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + BIKE_DX, HABITAT_FLOOR_Y + 0.05, HABITAT_POSITION.z - 0.35), heading: Math.PI, speed: 0.9 },
+  // Esteira: clipe `walk`; `speed` em m/s. Mais baixa, para a cabeça de quem corre não chegar no teto.
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + TREADMILL_DX, HABITAT_FLOOR_Y + 0.08, HABITAT_POSITION.z), heading: Math.PI, clip: 'walk', speed: 1.8 },
+  // Bicicleta: sentado, clipe `pedal` (chibiPedal.ts); `speed` é a velocidade do clipe (1 = uma volta por segundo).
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + BIKE_DX, HABITAT_FLOOR_Y, HABITAT_POSITION.z + BIKE_Z), heading: Math.PI, clip: 'pedal', speed: 0.9 },
 ] as const;
 
 /** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
@@ -598,18 +625,30 @@ export class MarsBase {
     panel.position.set(g + TREADMILL_DX, y + 1.1, 0.75);
     inside.add(panel);
 
-    const bikeFrame = toonMesh(new THREE.BoxGeometry(0.3, 0.25, 1.1), PALETTE.light, 0.04);
-    bikeFrame.position.set(g + BIKE_DX, y + 0.13, 0);
-    inside.add(bikeFrame);
-    const wheel = toonMesh(new THREE.CylinderGeometry(0.28, 0.28, 0.12, 16).rotateZ(Math.PI / 2), PALETTE.accent, 0.04);
-    wheel.position.set(g + BIKE_DX, y + 0.4, 0.45);
+    // Bicicleta montada a partir de BIKE_FIT, para banco, pedal e guidão baterem com o clipe `pedal`.
+    const hipY = y + BIKE_FIT.seatedHipHeight;
+    const bike = (w: number, h: number, d: number, color: number, bx: number, by: number, bz: number, outline = 0.04) => {
+      const mesh = toonMesh(new THREE.BoxGeometry(w, h, d), color, outline);
+      mesh.position.set(g + BIKE_DX + bx, by, BIKE_Z + bz);
+      inside.add(mesh);
+    };
+    const front = BIKE_FIT.bars.z + 0.2; // coluna do guidão à frente do volante
+    bike(0.3, 0.1, front + 0.35, PALETTE.light, 0, y + 0.05, (front - 0.35) / 2); // base no piso
+    bike(0.06, hipY - 0.12 - y, 0.06, PALETTE.tech, 0, (y + hipY - 0.12) / 2, -0.05, 0); // canote
+    bike(0.32, 0.07, 0.3, PALETTE.shadow, 0, hipY - 0.12, -0.02, 0.03); // banco
+    const barsY = hipY + BIKE_FIT.bars.y;
+    bike(0.06, barsY - y, 0.06, PALETTE.tech, 0, (y + barsY) / 2, front, 0); // coluna do guidão
+    bike(0.75, 0.05, 0.05, PALETTE.tech, 0, barsY, BIKE_FIT.bars.z, 0); // guidão
+    bike(0.06, 0.04, front - BIKE_FIT.bars.z + 0.03, PALETTE.tech, 0, barsY, (front + BIKE_FIT.bars.z) / 2, 0);
+    const crankY = hipY + BIKE_FIT.crank.y;
+    const hub = toonMesh(new THREE.CylinderGeometry(0.07, 0.07, 0.1, 14).rotateZ(Math.PI / 2), PALETTE.tech, 0.03);
+    hub.position.set(g + BIKE_DX, crankY, BIKE_Z + BIKE_FIT.crank.z);
+    inside.add(hub);
+    bike(0.05, crankY - y, 0.05, PALETTE.tech, 0, (y + crankY) / 2, BIKE_FIT.crank.z, 0); // suporte do eixo
+    // Volante (a "roda" da bicicleta ergométrica), entre o pedal e o guidão.
+    const wheel = toonMesh(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 18).rotateZ(Math.PI / 2), PALETTE.accent, 0.04);
+    wheel.position.set(g + BIKE_DX, y + 0.25, BIKE_Z + 0.4);
     inside.add(wheel);
-    const bars = toonMesh(new THREE.BoxGeometry(0.6, 0.05, 0.05), PALETTE.tech, 0);
-    bars.position.set(g + BIKE_DX, y + 1.0, 0.55);
-    inside.add(bars);
-    const stem = toonMesh(new THREE.BoxGeometry(0.05, 0.75, 0.05), PALETTE.tech, 0);
-    stem.position.set(g + BIKE_DX, y + 0.62, 0.55);
-    inside.add(stem);
 
     const rack = toonMesh(new THREE.BoxGeometry(1.3, 1.6, 0.12), PALETTE.tech, 0.03);
     rack.position.set(g + GYM_DX, y + 0.8, BACK_Z - 0.2);
@@ -691,6 +730,7 @@ export class MarsBase {
         }
         mesh.material = mat;
         // Transparente só para a câmera: para o sol o casco é metal e faz sombra lá dentro.
+        mesh.renderOrder = glassRenderOrder(mesh.name);
         mesh.castShadow = true;
         mesh.receiveShadow = false;
         for (const c of [...mesh.children]) if (c.userData.isOutline) mesh.remove(c);

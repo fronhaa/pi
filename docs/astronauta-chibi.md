@@ -48,6 +48,7 @@ astro.update(dt);
 | `walk` | 0,9 s | Loop. O passo fica sem escorregar a ~1,15 m/s; para andar mais rápido, aumente o `timeScale` da ação. |
 | `jump` | 1,35 s | Uma vez: agacha (0,28 s), impulsiona (0,42 s), topo (0,62 s), toca o chão (0,92 s) e amortece. |
 | `interact` | 3,2 s | Uma vez, parando no fim: puxa o tablet do bolso do cinto e o segura com as duas mãos, na frente do corpo. |
+| `pedal` | 1 s | Loop. **Não vem no `.glb`:** é montado por código ao carregar (`src/render/chibiPedal.ts`). Sentado, pés no círculo do pedal (IK de duas juntas) e mãos no guidão. A bicicleta da academia é montada com as mesmas medidas (`BIKE_FIT`); mudou a pose, mude as medidas. |
 
 O tablet some fora da `interact` com escala ~0 (glTF não anima visibilidade).
 

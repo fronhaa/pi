@@ -92,7 +92,8 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
   **alojamento** acoplado pela porta de acoplamento da esquerda (`QUARTERS_OFFSET_X`, sem airlock nem placa "LAB"), com
   dois beliches, uma cama por astronauta. As janelas acendem à noite.
 - Dentro do habitat: cabines **transparentes**. Todas as peças do casco (casco, faixas, janelas e portas de acoplamento)
-  ficam translúcidas (`glassMaterial`), sem contorno e sem sombra, para nada opaco cortar a tripulação. Testamos uma vista
+  ficam translúcidas (`glassMaterial`), sem contorno e sem sombra, para nada opaco cortar a tripulação. Cada peça tem ordem de desenho fixa
+  (`GLASS_ORDER`): sem ela, as faixas e portas que se cruzam piscavam ao girar a câmera. Testamos uma vista
   em corte, mas o time preferiu ver através do casco. Cada módulo tem seu piso. Comandante e cientista
   ficam no laboratório e engenheiro e médico no alojamento (`HABITAT_SPOTS`); quem conserta o vazamento vai para a estufa
   (`GREENHOUSE_WORK_SPOT`). À noite e na câmara de descompressão, somem.
@@ -109,7 +110,7 @@ A tabela completa está no GDD. No código, tudo passa por `MarsBase.setState()`
   armário continuam em 100% (a porta segue mais alta que o astronauta). As janelas acendem à noite. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
 - Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual
   (GDD, "Atividades dentro da base", B): quem está dentro sem ordem há 8 s vai à esteira ou à bicicleta (`GYM_STATIONS`,
-  animação de andar no lugar), descansa deitado no beliche e volta ao posto. Na primeira vez aparece o fato F9.
+  `walk` no lugar na esteira; sentado pedalando na bicicleta, com o clipe `pedal`), descansa deitado no beliche e volta ao posto. Na primeira vez aparece o fato F9.
 - À noite (sem tempestade) cada astronauta dorme deitado na sua cama (`BUNK_SPOTS`); na noite de tempestade, está no abrigo.
 - O resto é feito com primitivas (leve). Modelos `.glb` novos: exportar do Blender em glTF Binary,
   eixo Y para cima, em metros, com cores sólidas; ao carregar, trocar os materiais por `toonMaterial(cor)`.

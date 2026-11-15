@@ -153,10 +153,13 @@ export class Astronaut {
     this.model.scale.setScalar(on ? LYING_SCALE : 1);
   }
 
-  /** Exercício (esteira, bicicleta): anima o andar sem sair do lugar. */
-  exercise(speed: number, dt: number): void {
-    if (this.chibi) this.animateChibi(speed, dt);
-    else this.idle(dt);
+  /** Exercício sem sair do lugar: `walk` na esteira (speed em m/s), `pedal` na bicicleta (speed = ritmo do clipe). */
+  exercise(clip: 'walk' | 'pedal', speed: number, dt: number): void {
+    if (!this.chibi) return this.idle(dt);
+    if (clip === 'walk') return this.animateChibi(speed, dt);
+    this.playChibi('pedal');
+    if (this.current) this.current.timeScale = speed;
+    this.chibi.update(dt);
   }
 
   // ---------- olhar (GDD, "Para onde o astronauta olha") ----------

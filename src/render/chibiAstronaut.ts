@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { addOutline, toonMaterial } from '@/render/toon';
+import { buildPedalClip } from '@/render/chibiPedal';
 
 /**
  * Astronauta chibi (CHR-001): modelo .glb com cores sólidas e três animações (walk, jump, interact).
@@ -12,12 +13,13 @@ import { addOutline, toonMaterial } from '@/render/toon';
  */
 export const CHIBI_ASTRONAUT_URL = `${import.meta.env.BASE_URL}assets/models/astronaut-chibi.glb`;
 
-export type ChibiAction = 'walk' | 'jump' | 'interact';
+/** `pedal` não vem no .glb: é montado por código (chibiPedal.ts) para a bicicleta da academia. */
+export type ChibiAction = 'walk' | 'jump' | 'interact' | 'pedal';
 
 export interface ChibiAstronautInstance {
   root: THREE.Group;
   mixer: THREE.AnimationMixer;
-  /** Troca para a animação (com transição suave). interact e jump tocam uma vez por padrão; walk em loop. */
+  /** Troca para a animação (com transição suave). interact e jump tocam uma vez por padrão; walk e pedal em loop. */
   play(name: ChibiAction, opts?: { once?: boolean; fade?: number }): THREE.AnimationAction;
   /** Volta à pose parada. O tablet some sozinho (a escala dele só existe na animação interact). */
   stop(fade?: number): void;
@@ -82,6 +84,7 @@ export async function loadChibiAstronaut(
 
   const mixer = new THREE.AnimationMixer(root);
   const clips = new Map(gltf.animations.map((c) => [c.name, c]));
+  clips.set('pedal', buildPedalClip(root));
   let current: THREE.AnimationAction | null = null;
 
   return {
@@ -91,7 +94,7 @@ export async function loadChibiAstronaut(
       const clip = clips.get(name);
       if (!clip) throw new Error(`Animação "${name}" não está no .glb`);
       const action = mixer.clipAction(clip);
-      const once = opts.once ?? name !== 'walk';
+      const once = opts.once ?? (name !== 'walk' && name !== 'pedal');
       action.reset();
       action.timeScale = 1;
       action.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
