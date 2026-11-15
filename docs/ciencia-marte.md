@@ -45,6 +45,8 @@
 | F27 | Tempestades de poeira duram semanas ou meses | Todo ano há tempestades grandes que duram semanas; as maiores, "semanas a meses"; a global de 2007 durou dois meses. Menos luz do Sol, menos energia nos painéis | [NASA: The Fact and Fiction of Martian Dust Storms (2015)](https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/) e [NASA: fim da missão Opportunity (2019)](https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/) | Treino da poeira no sol 3 (introdução) | 1. Energia e noite |
 | F28 | Abrigo contra tempestade solar: mais massa, e máquinas cavam o regolito | No aviso, a tripulação monta um abrigo pondo massa entre ela e o Sol (no Orion, sacos de estiva, em até 1 hora); na superfície, regolito sobre o abrigo. Uma escavadeira da NASA (RASSOR 2.0) cava o regolito com energia elétrica (4 W por kg/h) e pode usá-lo como blindagem | [NASA (2016)](https://www.nasa.gov/missions/artemis/orion/scientists-and-engineers-evaluate-orion-radiation-protection-plan/), [NASA Science (2019)](https://science.nasa.gov/science-research/heliophysics/how-nasa-will-protect-astronauts-from-space-radiation-at-the-moon/), [NASA KSC: RASSOR 2.0 (Mueller et al., 2016)](https://ntrs.nasa.gov/api/citations/20210011366/downloads/ASCE%202016%20RASSOR%202%20Final%20%206_8_2016.pdf), p. 1 | Blindagem (blocos de energia viram sacos de regolito), ajuda "?" e treino do sol 3 | 2. Proteção custa caro |
 | F29 | Camundongos no espaço perderam músculo e osso | Camundongos que passaram 33 dias na Estação Espacial perderam massa muscular e óssea | [OSDR: OSD-342 (missão RR-19)](https://osdr.nasa.gov/bio/repo/data/studies/OSD-342) | Tela de fontes (Data sources), item do OSDR | Contexto (saúde) |
+| F30 | A viagem até Marte leva meses | O Perseverance pousou depois de uma viagem de 203 dias e 472 milhões de km | [NASA (2021)](https://www.nasa.gov/news-release/touchdown-nasas-mars-perseverance-rover-safely-lands-on-red-planet/) | Intro da viagem (Marte) | Contexto (distância) |
+| F31 | A viagem até a Lua leva dias | A Apollo 11 saiu da Terra em 16/07/1969 e pisou na Lua em 20/07/1969 | [NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/) | Intro da viagem (Lua) | Contexto (distância) |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -260,6 +262,22 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Criança (EN):** "Mice on the Space Station lost muscle and bone in 33 days."
 - **No jogo:** na tela de fontes ("Data sources"), no item do OSDR. Saiu do balão do exercício (F9) em 15/11/2026: o balão tem no máximo 2 frases curtas (padrão ~400L, [linguagem-e-ui-criancas.md](linguagem-e-ui-criancas.md)), e o estudo é detalhe do "modo cientista".
 - **Atenção:** o estudo é com **camundongos**, não com pessoas; não diga que astronautas perdem o mesmo tanto. Não fale do tratamento com crianças (é remédio experimental). Conferido na descrição oficial do estudo pela API de busca do OSDR (`osdr.nasa.gov/osdr/data/search`) em 15/11/2026.
+
+### F30. A viagem até Marte leva meses
+
+- **Fato:** o Perseverance **"touched down on Mars Thursday, after a 203-day journey traversing 293 million miles (472 million kilometers)"** (pousou em Marte depois de uma viagem de 203 dias e 472 milhões de km). A missão foi lançada em 30/07/2020 e pousou em 18/02/2021. ([NASA, 2021](https://www.nasa.gov/news-release/touchdown-nasas-mars-perseverance-rover-safely-lands-on-red-planet/))
+- **Criança (PT):** "O Perseverance levou 203 dias para chegar a Marte. Quase 7 meses!"
+- **Criança (EN):** "Perseverance took 203 days to reach Mars. Almost 7 months!"
+- **No jogo:** intro da viagem, depois de escolher Marte (`src/ui/LaunchIntro.ts`).
+- **Atenção:** 203 dias é a viagem DESSE rover; o tempo muda com a posição dos planetas no lançamento. Não diga que toda viagem leva 203 dias.
+
+### F31. A viagem até a Lua leva dias
+
+- **Fato:** **"Apollo 11 launched from Cape Kennedy on July 16, 1969"**; Armstrong deu o primeiro passo na Lua **"on July 20, 1969"**: cerca de 4 dias. ([NASA: Apollo 11 Mission Overview](https://www.nasa.gov/history/apollo-11-mission-overview/))
+- **Criança (PT):** "A Apollo 11 levou só 4 dias para chegar à Lua."
+- **Criança (EN):** "Apollo 11 took only 4 days to reach the Moon."
+- **No jogo:** intro da viagem, depois de escolher a Lua (`src/ui/LaunchIntro.ts`).
+- **Atenção:** "4 dias" é do lançamento até o passo na Lua (16 a 20 de julho), não só o voo até a órbita. Conferido em 15/11/2026.
 
 ## Ligação com os objetivos de aprendizagem
 

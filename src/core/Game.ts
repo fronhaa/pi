@@ -22,6 +22,7 @@ import { Hud } from '@/ui/Hud';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CrewBubble } from '@/ui/CrewBubble';
 import { showCard, showEnd, showMissionStart, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
+import { playLaunchIntro } from '@/ui/LaunchIntro';
 import { IntroGuide } from '@/ui/IntroGuide';
 import { IntroDirector } from './intro';
 import { showModeChoice } from '@/ui/coop';
@@ -274,7 +275,8 @@ export class Game {
     showPlaceChoice((place) => {
       this.setLocation(place);
       this.newMission();
-      this.startMission();
+      // Viagem da Terra até a base (só visual, dá para pular); a missão começa quando o foguete chega.
+      playLaunchIntro(place, () => this.startMission());
     });
   }
 
@@ -734,7 +736,7 @@ export class Game {
       showPlaceChoice((place) => {
         this.setLocation(place);
         this.newMission();
-        this.startMission();
+        playLaunchIntro(place, () => this.startMission());
       }),
     );
   }
