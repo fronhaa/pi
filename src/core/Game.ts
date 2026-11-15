@@ -1168,7 +1168,7 @@ export class Game {
         a.setLying(false);
         a.root.position.copy(st.pos);
         a.faceHeading(st.heading, dt);
-        a.exercise(st.speed, dt);
+        a.exercise(st.clip, st.speed, dt);
       } else {
         a.setLying(false);
         if (this.tasks.onInsideTask(r)) {
