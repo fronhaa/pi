@@ -115,6 +115,25 @@ var JezeroSim = (function(exports) {
 			}
 		},
 		/**
+		* Tarefas dentro da base (GDD, "Atividades dentro da base", A): opcionais, uma vez por dia, sem dose.
+		* Colher na estufa (comida: suporte de vida) e analisar amostras (ciência). Valores de jogo (INTERPRETADO).
+		* Cada uma gasta bateria (luz das plantas, instrumentos do laboratório): nenhuma escolha é de graça.
+		* Câmbio do jogo: 1 bloco = 10 de bateria = 6 de vida = 3 de ciência. Colher troca meio bloco por meio bloco;
+		* analisar dá um pouco mais que um bloco de ciência, mas sem gastar tubos do rover.
+		*/
+		indoorTasks: {
+			harvest: {
+				seconds: 15,
+				life: 3,
+				battery: 5
+			},
+			analysis: {
+				seconds: 20,
+				science: 4,
+				battery: 10
+			}
+		},
+		/**
 		* EVA (saída da base com traje). A tripulação fica dentro por padrão; problema de fora exige EVA.
 		* Regras de jogo (INTERPRETADO), inspiradas no planejamento da NASA (GDD, "EVA: sair da base").
 		*/
@@ -349,30 +368,55 @@ var JezeroSim = (function(exports) {
 		dustyPanels: {
 			kind: "dustyPanels",
 			taskSeconds: 15,
-			outside: true
+			outside: true,
+			optional: false
 		},
 		greenhouseLeak: {
 			kind: "greenhouseLeak",
 			taskSeconds: 10,
-			outside: false
+			outside: false,
+			optional: false
 		},
 		antenna: {
 			kind: "antenna",
 			taskSeconds: 15,
-			outside: true
+			outside: true,
+			optional: false
 		},
 		roverStuck: {
 			kind: "roverStuck",
 			taskSeconds: 20,
-			outside: true
+			outside: true,
+			optional: false
 		},
 		tornBag: {
 			kind: "tornBag",
 			taskSeconds: 10,
-			outside: true
+			outside: true,
+			optional: false
+		},
+		harvest: {
+			kind: "harvest",
+			taskSeconds: CONFIG.indoorTasks.harvest.seconds,
+			outside: false,
+			optional: true
+		},
+		analysis: {
+			kind: "analysis",
+			taskSeconds: CONFIG.indoorTasks.analysis.seconds,
+			outside: false,
+			optional: true
 		}
 	};
-	var PROBLEM_KINDS = Object.keys(PROBLEMS);
+	/** Só os problemas de verdade (os opcionais não entram no sorteio, senão todas as partidas mudariam). */
+	var PROBLEM_KINDS = Object.keys(PROBLEMS).filter((k) => !PROBLEMS[k].optional);
+	/** Tarefas opcionais de dentro, na ordem em que aparecem na lista do dia. */
+	var OPTIONAL_KINDS = Object.keys(PROBLEMS).filter((k) => PROBLEMS[k].optional);
+	/** Segundos de trabalho no local. A câmara de descompressão é contada à parte, na saída da EVA. */
+	/** Bateria que uma tarefa opcional gasta ao terminar (0 para os problemas). */
+	function taskBattery(kind) {
+		return kind === "harvest" || kind === "analysis" ? CONFIG.indoorTasks[kind].battery : 0;
+	}
 	/**
 	* Sorteia os problemas do dia: só a partir do sol 3, 1 ou 2 por dia, tipos diferentes.
 	* `exclude`: tipos que já continuam de ontem (não aparecem duas vezes no mesmo lugar).
@@ -381,13 +425,21 @@ var JezeroSim = (function(exports) {
 		const c = CONFIG.problems;
 		if (sol < c.firstSol) return [];
 		const count = rng.int(c.minPerDay, c.maxPerDay);
-		return rng.shuffle(PROBLEM_KINDS.filter((k) => !exclude.includes(k))).slice(0, count).map((kind) => ({
+		const problems = rng.shuffle(PROBLEM_KINDS.filter((k) => !exclude.includes(k))).slice(0, count).map((kind) => ({
 			uid: nextUid(),
 			kind,
 			spawnAt: rng.int(c.spawnWindow.min, c.spawnWindow.max),
 			status: "pending",
 			progress: 0
 		})).sort((a, b) => a.spawnAt - b.spawnAt);
+		const tasks = OPTIONAL_KINDS.map((kind) => ({
+			uid: nextUid(),
+			kind,
+			spawnAt: 0,
+			status: "pending",
+			progress: 0
+		}));
+		return [...problems, ...tasks];
 	}
 	// \0@oxc-project+runtime@0.156.0/helpers/esm/typeof.js
 	function _typeof(o) {
@@ -839,6 +891,10 @@ var JezeroSim = (function(exports) {
 			if (p.status === "done") return;
 			p.status = "done";
 			p.progress = 1;
+			if (PROBLEMS[p.kind].optional) {
+				this.finishTask(p.kind);
+				return;
+			}
 			const outside = PROBLEMS[p.kind].outside;
 			if (outside) this.state.res.dose = round1(this.state.res.dose + CONFIG.problems.outsideDose);
 			if (p.kind === "dustyPanels" && this.state.location === "moon" && this.state.res.dust > 0) {
@@ -853,6 +909,35 @@ var JezeroSim = (function(exports) {
 				},
 				tone: "good"
 			});
+			this.checkLoss();
+		}
+		/** Tarefa opcional de dentro terminada: aplica o bônus, sem dose (GDD, "Atividades dentro da base", A). */
+		finishTask(kind) {
+			const r = this.state.res;
+			const t = CONFIG.indoorTasks;
+			const battery = taskBattery(kind);
+			r.battery = Math.max(0, r.battery - battery);
+			if (kind === "harvest") {
+				r.life = Math.min(CONFIG.life.max, r.life + t.harvest.life);
+				this.cardLines.push({
+					key: "report.task.harvest",
+					params: {
+						life: t.harvest.life,
+						battery
+					},
+					tone: "good"
+				});
+			} else if (kind === "analysis") {
+				r.science += t.analysis.science;
+				this.cardLines.push({
+					key: "report.task.analysis",
+					params: {
+						science: t.analysis.science,
+						battery
+					},
+					tone: "good"
+				});
+			}
 			this.checkLoss();
 		}
 		isPlanValid(plan) {
@@ -872,7 +957,7 @@ var JezeroSim = (function(exports) {
 			const before = _objectSpread2({}, s.res);
 			const lines = [...this.cardLines];
 			const storm = this.stormToday;
-			const unresolved = s.problems.filter((p) => p.status !== "done");
+			const unresolved = s.problems.filter((p) => p.status !== "done" && !PROBLEMS[p.kind].optional);
 			const waitedEva = this.evaBanned ? unresolved.filter((p) => PROBLEMS[p.kind].outside) : [];
 			const carried = [...waitedEva, ...storm ? unresolved.filter((p) => p.progress > 0 && !waitedEva.includes(p)) : []];
 			const failed = unresolved.filter((p) => !carried.includes(p));

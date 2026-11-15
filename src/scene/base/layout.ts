@@ -216,6 +216,12 @@ export const HABITAT_LOOK: Record<Role, THREE.Vector3> = {
 };
 
 /** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
+/** Na cúpula, entre as plantas: onde fica quem colhe (tarefa opcional). */
+export const HARVEST_WORK_SPOT = new THREE.Vector3(DOME_CENTER.x - DOME_RADIUS * 0.2, 0.4, DOME_CENTER.z - DOME_RADIUS * 0.2);
+/** Na bancada do laboratório: onde fica quem analisa amostras (tarefa opcional). */
+export const LAB_WORK_SPOT = new THREE.Vector3(HABITAT_POSITION.x, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.15);
+/** Para onde olha quem analisa: a bancada do fundo do laboratório. */
+export const LAB_BENCH_LOOK = new THREE.Vector3(HABITAT_POSITION.x, HABITAT_FLOOR_Y + 1, HABITAT_POSITION.z + BACK_Z);
 export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(DOME_CENTER.x + DOME_RADIUS * 0.45, 0.4, DOME_CENTER.z - DOME_RADIUS * 0.45);
 
 /**
@@ -239,6 +245,9 @@ export const PROBLEM_SPOTS: Record<ProblemKind, THREE.Vector3> = {
   antenna: new THREE.Vector3(COMM_POSITION.x + 2.54, 0, COMM_POSITION.z - 2.4),
   roverStuck: new THREE.Vector3(22, 0, 13),
   tornBag: new THREE.Vector3(SHELTER_CENTER.x, 0, SHELTER_CENTER.z + 3.9),
+  // Tarefas opcionais de dentro (marcador 🌱 / 🔬): no meio das plantas da cúpula e na bancada do laboratório.
+  harvest: new THREE.Vector3(DOME_CENTER.x - DOME_RADIUS * 0.35, 0, DOME_CENTER.z - DOME_RADIUS * 0.35),
+  analysis: new THREE.Vector3(HABITAT_POSITION.x, 0, HABITAT_POSITION.z),
 };
 
 /**

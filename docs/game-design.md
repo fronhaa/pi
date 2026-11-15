@@ -554,6 +554,8 @@ Junto vem a **faixa da tripulação** no HUD, para a criança ver o que cada ast
 
 ### A. Tarefas dentro da base: estufa e laboratório
 
+> **Implementado:** `CONFIG.indoorTasks`, `ProblemDef.optional` e `OPTIONAL_KINDS` (`src/sim/problems.ts`, fora do sorteio), bônus em `Mission.finishTask` sem dose, opcionais fora de `failed`/`carried`. **Cada tarefa gasta bateria** (colher −5, analisar −10; `taskBattery`), para não virar a "opção segura sem custo" que o desafio pede para evitar: câmbio do jogo 1 bloco = 10 de bateria = 6 de vida = 3 de ciência. Sem bateria, o botão fica apagado ("Sem bateria"). Na cena, `PROBLEM_SPOTS.harvest`/`analysis` com marcadores 🌱/🔬 e a tripulação andando até a cúpula ou a bancada do laboratório (`crewRoutine`). Testes em `tests/sim/indoorTasks.test.ts`. `npm run balance`: a estratégia atenta passa de 5% para 0% de 1★; as estratégias ruins não mudam.
+
 | Tarefa | Onde | Tempo | Efeito ao terminar | Limite | Dose |
 | --- | --- | --- | --- | --- | --- |
 | 🌱 **Colher na estufa** | Dentro da cúpula da estufa | 15 s | Suporte de vida **+3** | 1 vez por dia | Nenhuma (dentro) |
