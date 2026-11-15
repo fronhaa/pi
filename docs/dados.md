@@ -21,7 +21,7 @@ Regras:
 
 ### Clima espacial atual no jogo
 
-A primeira tempestade de cada missão sai das 5 erupções mais recentes do arquivo (`recentPool`), e o sol 1 mostra "O Sol ultimamente" (erupções fortes nos 30 dias antes de `fetchedAt`). Por isso vale rodar `npm run fetch-data` perto da apresentação: o jogo passa a usar o Sol daquela semana. Última atualização: 15/11/2026 (nenhuma erupção M ou X depois de 10/10/2026).
+A primeira tempestade de cada missão sai das 5 erupções mais recentes do arquivo (`recentPool`), e o sol 1 mostra "☀️ O Sol antes da viagem" (erupções fortes nos 30 dias antes de `fetchedAt`). Por isso vale rodar `npm run fetch-data` perto da apresentação: o jogo passa a usar o Sol daquela semana. Última atualização: 15/11/2026 (nenhuma erupção M ou X depois de 10/10/2026).
 
 ### Como atualizar
 

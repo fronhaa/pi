@@ -23,7 +23,8 @@ datas reais de 2023 a 2025. Energia, suporte de vida, blindagem e dose são **n�
 
 **Regras de honestidade que continuam valendo dentro do jogo:**
 
-- Dado baixado nunca é chamado de "ao vivo". A mensagem "O Sol ultimamente" mostra "dados reais baixados em {data}".
+- Dado baixado nunca é chamado de "ao vivo". A mensagem do sol 1 se chama "☀️ O Sol antes da viagem": fala das erupções
+  fortes nos 30 dias antes do download, sem dizer "agora" nem "últimos dias". A data do download fica em `public/data/`.
 - Cada alerta diz se a tempestade é **real** (com a data) ou **simulada** (quando falta o arquivo de dados).
 - A dose nunca é dita em mSv para a criança.
 

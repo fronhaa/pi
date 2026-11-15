@@ -234,7 +234,7 @@ Formato (campos principais):
 ```jsonc
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-14T…Z",        // data do selo "dados reais baixados"
+  "generatedAt": "2026-11-14T…Z",        // data do download (vai para a documentação, não para a tela)
   "solSeconds": 88775.244,
   "sources": [{ "name": "…", "url": "…" }],
   "missions": [{

@@ -33,7 +33,7 @@ export async function loadFlares(): Promise<FlareSource> {
   }
 }
 
-/** "O Sol ultimamente": resumo das erupções reais recentes, contado a partir do dia do download (não é ao vivo). */
+/** "O Sol antes da viagem": resumo das erupções reais recentes, contado a partir do dia do download (não é ao vivo). */
 export interface RecentSun {
   fetchedAt: string;
   /** Erupções fortes (M e X) nos últimos `days` dias antes do download. */

@@ -56,7 +56,7 @@ export interface HudCallbacks {
   hullsOpen(): boolean;
   /** Bateria que a base gasta até amanhã (Marte: a noite; Lua: descanso ou noite fria da sombra). */
   nightCost?(): number;
-  /** Erupções reais recentes (DONKI, do download), para a mensagem "O Sol ultimamente" do sol 1. */
+  /** Erupções reais recentes (DONKI, do download), para a mensagem "O Sol antes da viagem" do sol 1. */
   recentSun?(): RecentSun | null;
 }
 
@@ -614,7 +614,8 @@ function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
 }
 
 /**
- * "O Sol ultimamente": erupções fortes reais nos últimos 30 dias e a dica da proteção (2 frases, padrão ~400L). A mais
+ * "O Sol antes da viagem": erupções fortes reais nos 30 dias antes do download e a dica da proteção (2 frases, padrão
+ * ~400L). Sem selo de data na tela: o texto diz "antes da viagem", então o dado baixado não parece ao vivo. A mais
  * recente, com a classe (ex.: M6.4), é detalhe para adultos: fica só na dica do mouse.
  */
 function recentSunEl(r: RecentSun): HTMLElement {
@@ -624,8 +625,6 @@ function recentSunEl(r: RecentSun): HTMLElement {
     h('strong', {}, t('msg.sunRecent.title')), ' ',
     r.count > 0 ? t('msg.sunRecent.active', { n: r.count, days: r.days }) : t('msg.sunRecent.calm', { days: r.days }), ' ',
     t('msg.sunRecent.tip'),
-    h('span', { class: 'meta' },
-      h('span', { class: 'badge real' }, t('data.badge.snapshot', { date: formatDate(r.fetchedAt) }))),
   );
 }
 
