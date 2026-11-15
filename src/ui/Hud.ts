@@ -626,9 +626,8 @@ function recentSunEl(r: RecentSun): HTMLElement {
     h('strong', {}, t('msg.sunRecent.title')), ' ',
     r.count > 0 ? t('msg.sunRecent.active', { n: r.count, days: r.days }) : t('msg.sunRecent.calm', { days: r.days }), ' ',
     t('msg.sunRecent.tip'),
-    h('span', { class: 'meta' },
-      h('span', { class: 'badge real' }, t('data.badge.snapshot', { date: formatDate(r.fetchedAt) })), ' ',
-      latest?.link ? h('a', { href: latest.link, target: '_blank', rel: 'noopener noreferrer' }, t('flare.link')) : null),
+    // Sem a data de download aqui (não faz sentido no jogo); ela continua na tela "Dados da NASA".
+    latest?.link ? h('span', { class: 'meta' }, h('a', { href: latest.link, target: '_blank', rel: 'noopener noreferrer' }, t('flare.link'))) : null,
   );
 }
 

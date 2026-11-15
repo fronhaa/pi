@@ -66,6 +66,8 @@ const BEDTIME_DAY_FRACTION = 0.7;
  */
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
+  /** Modelos 3D da base e da tripulação (carregados no construtor; `prepare` espera). */
+  private readonly modelsReady: Promise<unknown>;
   /** Tela de escolha ou intro da viagem: o quadro desenha só ela (a base fica parada por trás). */
   private launch: LaunchScene | null = null;
   private readonly scene = new THREE.Scene();
@@ -152,9 +154,11 @@ export class Game {
     this.base = new BaseScene(this.scene);
     // Depois de cada carga de modelos, aplica o perfil de qualidade (luzes extras, sombra e contorno das peças pequenas).
     const optimize = () => applyQuality(this.scene, [this.crew.root]);
-    void this.base.loadModels().then(optimize, optimize);
     this.scene.add(this.crew.root);
-    void this.crew.loadChibi().then(optimize, optimize);
+    this.modelsReady = Promise.allSettled([
+      this.base.loadModels().then(optimize, optimize),
+      this.crew.loadChibi().then(optimize, optimize),
+    ]);
     optimize();
     // A tripulação fica dentro da base por padrão; só aparece lá fora numa EVA (GDD).
     this.crew.setSheltered(true);
@@ -256,10 +260,22 @@ export class Game {
     return game;
   }
 
+  /**
+   * Ainda na tela de carregamento: espera os modelos 3D e a física e prepara o desenho da base. Antes, isso terminava
+   * no meio da tela de escolha ou da viagem e travava a animação no celular.
+   */
+  async prepare(): Promise<void> {
+    await this.modelsReady;
+    await this.loadMotion();
+    // Prepara de uma vez os shaders da base (no celular, preparar na primeira vez que aparece trava o quadro).
+    await this.renderer.compileAsync(this.scene, this.camera);
+    // Solo (sem servidor de grupo): a tela de escolha 3D e a viagem também já ficam montadas e preparadas aqui.
+    if (!coopServerUrl()) await this.ensureLaunchScene().warmUp(this.renderer);
+  }
+
   start(): void {
     this.renderer.setAnimationLoop((t) => this.frame(t));
     this.chooseMode();
-    void this.loadMotion();
   }
 
   /** A missão vista agora: a local (solo) ou a do servidor (grupo). */
@@ -288,15 +304,20 @@ export class Game {
   private playLaunch(place: Location): void {
     const launch = this.showLaunchPad();
     const reduced = prefersReducedMotion();
-    launch.begin(place, reduced);
-    // O foguete já está em órbita: o motor liga na hora e o texto ("Motor ligado!", fato, "Pular") entra junto.
-    playLaunchIntro(place, () => {
-      launch.dispose();
-      if (this.launch === launch) this.launch = null;
-      // A nave chegou: só agora aparecem o HUD e o resto da interface do jogo.
-      document.body.classList.remove('pre-mission');
-      this.startMission();
-    });
+    // O foguete já está em órbita: o motor liga na hora e ele acelera até o ponto de saída. O texto entra já no toque
+    // ("Motor ligado!"); o fato vem depois da saída (tempos em src/ui/style.css, com --go).
+    const toDeparture = launch.begin(place, reduced);
+    playLaunchIntro(
+      place,
+      () => {
+        launch.dispose();
+        if (this.launch === launch) this.launch = null;
+        // A nave chegou: só agora aparecem o HUD e o resto da interface do jogo.
+        document.body.classList.remove('pre-mission');
+        this.startMission();
+      },
+      toDeparture,
+    );
   }
 
   /**
@@ -305,6 +326,10 @@ export class Game {
    */
   private showLaunchPad(): LaunchScene {
     document.body.classList.add('pre-mission');
+    return this.ensureLaunchScene();
+  }
+
+  private ensureLaunchScene(): LaunchScene {
     if (!this.launch) {
       this.launch = new LaunchScene();
       this.launch.resize(window.innerWidth, window.innerHeight);

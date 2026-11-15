@@ -13,6 +13,9 @@ async function boot(): Promise<void> {
 
     loading.setStatus('Starting the physics…');
     const game = await Game.create(document.body);
+    // Modelos 3D e física prontos ainda aqui: a escolha e a viagem não travam no celular.
+    loading.setStatus('Building the base…');
+    await game.prepare();
 
     game.start();
     loading.hide();

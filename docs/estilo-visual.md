@@ -181,9 +181,15 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   profundidade: a Lua grande, perto da Terra; Marte pequeno, no alto do outro lado e lá no fundo (`PICK_PORTRAIT`,
   `PICK_LANDSCAPE`). A criança toca no planeta: botões de verdade
   (`src/ui/PlaceChoice.ts`) do tamanho do planeta, com nome e dica curta; o planeta cresce sob o dedo ou o mouse.
-- **Viagem (~7 s, só visual):** ao escolher, os planetas da escolha somem, o motor liga ("Motor ligado!") e o foguete
-  sai da órbita pela tangente, de onde estiver. A câmera vai para trás dele (o "para cima" da tela vira a direção da
-  viagem), aparecem linhas de velocidade e o destino crescendo, e ele entra no planeta.
+- **Viagem (~13 a 15 s, só visual, devagar para a criança ler):** ao escolher, os planetas da escolha somem, o motor liga e o foguete acelera em
+  volta da Terra até o ponto de saída (sempre o mais à esquerda, onde a tangente aponta para cima). Ali aparece
+  "Motor ligado!" e ele sai da órbita para cima; a câmera vai para trás dele SEM girar (girar de ponta-cabeça ficava
+  ruim no celular), aparecem linhas de velocidade e o destino crescendo, e ele entra no planeta.
+- **Sem engasgo no toque (celular):** tudo fica pronto na tela de carregamento (`Game.prepare`): modelos 3D da base
+  e da tripulação, física, shaders da base (`compileAsync`) e a cena da escolha e da viagem montada e preparada
+  (`LaunchScene.warmUp`: mostra por um instante o que fica escondido, espera os shaders e desenha uma vez). Na tela de
+  escolha, chama, linhas de velocidade e cartões continuam desenhados (invisíveis/minúsculos). Preparar um shader na
+  primeira vez que ele aparece travava a viagem por quase 1 s no celular.
 - **Sem HUD até a nave chegar:** a classe `pre-mission` no `body` esconde o HUD (`#ui`), balões, setas, guia e avisos
   na tela de escolha e na viagem. Sai quando o foguete chega (`Game.playLaunch`).
 - Usa o renderizador do jogo: enquanto passa, o quadro desenha só esta cena (a base não é desenhada, não pesa no celular).
@@ -205,6 +211,10 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 - O inverted hull falha em quinas agudas e malhas abertas. Alternativa futura: detecção de bordas em pós-processamento (via ADR).
 
 ## Desempenho no celular
+
+- **Sem rolar a página:** `html` e `body` fixos, sem "esticar" (`overscroll-behavior: none`) e sem zoom de toque
+  duplo (`touch-action: manipulation`), em `index.html`. Só painéis longos (diálogo, mensagens, plano) rolam por
+  dentro, com `overscroll-behavior: contain` para não arrastar a página junto.
 
 Perfil de qualidade em [`src/render/quality.ts`](../src/render/quality.ts) (`QUALITY`): no celular (toque como ponteiro
 principal ou sistema móvel; `?quality=high|low` força), densidade de pixels até 1,5 com **resolução dinâmica** (baixa um
