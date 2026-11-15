@@ -388,3 +388,41 @@ body.guiding .toast { top: 250px; }
 
 /* "O Sol ultimamente" (sol 1): erupções reais recentes do DONKI, ligadas à proteção. */
 .msg.sun-recent { border-color: #e0a52a; background: #fff8e8; }
+
+/* ---------- Intro da viagem (src/ui/LaunchIntro.ts): ~9 s, só visual, botão Pular ----------
+ * Linha do tempo: 0–1,5 s contagem 3-2-1 (foguete na base) · 1,5 s Liftoff! · 1,8–4 s decolagem (o chão desce, o céu
+ * escurece) · 3,6–7,6 s viagem (linhas de velocidade, a Terra fica para trás, o destino cresce, o fato) · 7,6–9 s o
+ * foguete voa até o destino. Movimento devagar; nada pisca mais de 3 vezes por segundo. */
+/* Antes da nave chegar (tela de escolha e viagem): nada da interface do jogo, só a Terra 3D e a caixa de escolha. */
+body.pre-mission #ui, body.pre-mission .crew-bubble, body.pre-mission .offscreen-arrow, body.pre-mission .intro-guide, body.pre-mission .toast { display: none !important; }
+/* Tela de escolha 3D (src/ui/PlaceChoice.ts): botões do tamanho dos planetas 3D, com nome e dica embaixo. */
+.place3d { position: fixed; inset: 0; z-index: 20; pointer-events: none; font-family: var(--font); color: #FBF4EC; }
+.place3d-head { position: absolute; top: max(20px, env(safe-area-inset-top)); left: 16px; right: 16px; text-align: center; }
+.place3d-head h2 { margin: 0; font-size: clamp(28px, 6vw, 44px); text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35); }
+.place3d-head p { margin: 6px 0 0; font-size: clamp(16px, 3.6vw, 20px); color: #E9E1F2; }
+.place3d-planet { position: absolute; transform: translateX(-50%); pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; width: max(var(--planet, 120px), 150px); max-width: 46vw; padding: var(--planet, 120px) 0 0; background: none; border: 0; border-radius: 24px; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.place3d-planet:focus-visible { outline: 4px solid #FFD27A; outline-offset: 4px; }
+.place3d-name { background: var(--paper); color: var(--ink); border: var(--border); border-radius: 999px; padding: 6px 18px; font-size: clamp(18px, 4.6vw, 24px); font-weight: 700; box-shadow: 0 4px 0 rgba(71, 60, 58, 0.35); transition: transform 0.15s; }
+.place3d-mars .place3d-name { background: var(--accent, #E8792B); color: #FFFFFF; }
+.place3d-planet:hover .place3d-name, .place3d-planet:focus-visible .place3d-name { transform: scale(1.08); }
+.place3d-hint { font-size: clamp(13px, 3.4vw, 16px); line-height: 1.25; text-align: center; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
+.launch-intro { position: fixed; inset: 0; z-index: 60; background: transparent; overflow: hidden; font-family: var(--font); color: var(--ink); transition: opacity 0.4s, background-color 0.25s; }
+.launch-intro.launch-closing { background: #1B1630; }
+.launch-intro.launch-out { opacity: 0; pointer-events: none; }
+
+.launch-text { position: absolute; left: 50%; bottom: max(24px, 6%); transform: translateX(-50%); width: min(720px, calc(100% - 32px)); text-align: center; }
+.launch-text p { margin: 0; }
+.launch-fact { font-size: clamp(19px, 3vw, 28px); line-height: 1.3; font-weight: 700; background: var(--paper); border: var(--border); border-radius: var(--radius); padding: 12px 18px; box-shadow: 0 4px 0 rgba(71, 60, 58, 0.35); opacity: 0; animation: launch-rise-in 0.8s ease 1.9s both; }
+.launch-source { margin-top: 6px; font-size: 13px; color: #C9BFD6; opacity: 0; animation: launch-fade-in 0.8s ease 2.1s both; }
+.launch-note { position: absolute; left: 50%; bottom: max(24px, 6%); width: min(560px, calc(100% - 32px)); margin: 0; transform: translateX(-50%); text-align: center; font-size: clamp(18px, 2.8vw, 24px); line-height: 1.3; background: var(--paper); border: var(--border); border-radius: var(--radius); padding: 10px 16px; box-shadow: 0 4px 0 rgba(71, 60, 58, 0.35); opacity: 0; }
+.launch-note strong { display: block; font-size: 1.15em; }
+.launch-burn { animation: launch-note 1.6s ease 0.3s both; }
+.launch-skip { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; z-index: 2; }
+
+@keyframes launch-note { 0% { opacity: 0; transform: translate(-50%, 16px); } 12% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0); } }
+@keyframes launch-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes launch-rise-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Reduzir movimento: a cena 3D fica parada no destino; aparece só o fato. */
+.launch-reduced .launch-fact, .launch-reduced .launch-source { animation: none; opacity: 1; }
+.launch-reduced .launch-note { display: none; }

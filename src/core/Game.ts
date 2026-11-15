@@ -21,7 +21,10 @@ import type { CrewMotion } from '@/scene/crewMotion';
 import { Hud } from '@/ui/Hud';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CrewBubble } from '@/ui/CrewBubble';
-import { showCard, showEnd, showMissionStart, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
+import { showCard, showEnd, showMissionStart, showNasaData, showReport, showTutorial } from '@/ui/dialogs';
+import { playLaunchIntro, prefersReducedMotion } from '@/ui/LaunchIntro';
+import { LaunchScene } from '@/scene/LaunchScene';
+import { showPlaceChoice3D } from '@/ui/PlaceChoice';
 import { IntroGuide } from '@/ui/IntroGuide';
 import { IntroDirector } from './intro';
 import { showModeChoice } from '@/ui/coop';
@@ -63,6 +66,8 @@ const BEDTIME_DAY_FRACTION = 0.7;
  */
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
+  /** Tela de escolha ou intro da viagem: o quadro desenha só ela (a base fica parada por trás). */
+  private launch: LaunchScene | null = null;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(50, 1, 0.1, 600);
   private readonly controls: OrbitControls;
@@ -271,11 +276,40 @@ export class Game {
 
   /** Solo: escolhe Marte ou Lua, cria a missão do lugar e começa o treino dos sóis 1 a 3 (o guia ensina na hora). */
   private startSolo(): void {
-    showPlaceChoice((place) => {
+    showPlaceChoice3D(this.showLaunchPad(), (place) => {
       this.setLocation(place);
       this.newMission();
+      // Viagem da Terra até a base (só visual, dá para pular); a missão começa quando o foguete chega.
+      this.playLaunch(place);
+    });
+  }
+
+  /** Viagem da Terra até a base em 3D cartoon (src/scene/LaunchScene.ts) com o texto por cima; depois, a missão. */
+  private playLaunch(place: Location): void {
+    const launch = this.showLaunchPad();
+    const reduced = prefersReducedMotion();
+    launch.begin(place, reduced);
+    // O foguete já está em órbita: o motor liga na hora e o texto ("Motor ligado!", fato, "Pular") entra junto.
+    playLaunchIntro(place, () => {
+      launch.dispose();
+      if (this.launch === launch) this.launch = null;
+      // A nave chegou: só agora aparecem o HUD e o resto da interface do jogo.
+      document.body.classList.remove('pre-mission');
       this.startMission();
     });
+  }
+
+  /**
+   * Tela de escolha (Marte ou Lua) em 3D: o foguete em órbita da Terra e os dois planetas para tocar, sem HUD
+   * (classe `pre-mission` no body). A mesma cena vira a viagem em `playLaunch`.
+   */
+  private showLaunchPad(): LaunchScene {
+    document.body.classList.add('pre-mission');
+    if (!this.launch) {
+      this.launch = new LaunchScene();
+      this.launch.resize(window.innerWidth, window.innerHeight);
+    }
+    return this.launch;
   }
 
   /** Abertura da missão: a missão histórica (datas reais) aparece logo depois da escolha, antes do sol 1 e do treino. */
@@ -730,13 +764,13 @@ export class Game {
     markPlayed();
     this.hud.setState(this.mission.state);
     // Jogar de novo: escolhe o lugar outra vez (dá para experimentar Marte e Lua e comparar).
-    showEnd(this.mission.state, () =>
-      showPlaceChoice((place) => {
+    showEnd(this.mission.state, () => {
+      showPlaceChoice3D(this.showLaunchPad(), (place) => {
         this.setLocation(place);
         this.newMission();
-        this.startMission();
-      }),
-    );
+        this.playLaunch(place);
+      });
+    });
   }
 
   /** Bateria prevista para depois da noite (a mesma prévia do plano; solo ou servidor). Só para a cena, de dia. */
@@ -829,12 +863,19 @@ export class Game {
     // Desloca a imagem para cima: a base fica visível acima do plano de energia.
     this.camera.setViewOffset(w, h, 0, h * (portrait ? 0.06 : 0.16), w, h);
     this.camera.updateProjectionMatrix();
+    this.launch?.resize(w, h);
   }
 
   private frame(time: number): void {
     this.timer.update(time);
     const rawDt = this.timer.getDelta();
     const dt = Math.min(rawDt, 0.1); // animações
+
+    if (this.launch) {
+      this.launch.update();
+      this.renderer.render(this.launch.scene, this.launch.camera);
+      return;
+    }
 
     const t = this.timer.getElapsed();
     this.controls.update();
