@@ -42,6 +42,7 @@
 | F24 | Garagem para rover: a NASA não usa | Num estudo da NASA, uma garagem pressurizada para o rover tripulado "seria muito cara": a manutenção é feita em EVA. No acampamento base estudado, o rover tripulado se acopla a uma porta do habitat | [NASA JSC: Lunar Surface Scenarios (Anderson et al., 2008)](https://ntrs.nasa.gov/api/citations/20080026000/downloads/20080026000.pdf), p. 6, e [NASA JSC: Common Habitat Base Camp (Howard)](https://ntrs.nasa.gov/api/citations/20210020956/downloads/A%20Common%20Habitat%20Basecamp%20for%20Moon%20and%20Mars%20Surface%20Operations.pdf), p. 4 e 14 | Garagem do rover (ver Atenção) | Contexto |
 | F25 | Como o Perseverance coleta e guarda as amostras | A broca do braço tira um cilindro de rocha (~13 mm × 60 mm) dentro do tubo; o tubo vai para dentro do rover, é medido, fotografado, lacrado e guardado. As amostras ficam no rover; 10 tubos foram deixados no chão em Three Forks como reserva | [JPL: Perseverance Rover](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/perseverance_rover/), [NASA: depósito Three Forks (2023)](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-perseverance-rover-completes-mars-sample-depot/), [NASA: 33 tubos (2025)](https://science.nasa.gov/photojournal/the-33-sample-tubes-collected-by-perseverance/) | Rover e tubos de amostra | 4. Jogar só no seguro também falha |
 | F26 | Os rastros do rover duram meses | Os rastros do Curiosity, vistos de órbita, devem durar meses antes de o vento apagá-los; na tempestade de poeira global de 2007, os do Opportunity ficaram intactos | [JPL (2025)](https://www.jpl.nasa.gov/news/nasa-orbiter-spots-curiosity-rover-making-tracks-to-next-science-stop/) e [HiRISE: Gone with the Wind](https://www.uahirise.org/epo/nuggets/gone-with-the-wind.pdf) | Rastros das rodas no chão (`src/scene/base/RoverTracks.ts`) | Contexto |
+| F27 | Tempestades de poeira duram semanas ou meses | Todo ano há tempestades grandes que duram semanas; as maiores, "semanas a meses"; a global de 2007 durou dois meses. Menos luz do Sol, menos energia nos painéis | [NASA: The Fact and Fiction of Martian Dust Storms (2015)](https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/) e [NASA: fim da missão Opportunity (2019)](https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/) | Treino da poeira no sol 3 (introdução) | 1. Energia e noite |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -234,11 +235,19 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **No jogo:** o rover deixa marcas das rodas no chão, que desbotam aos poucos com os sóis (60 sóis para sumir; numa missão de 15 sóis o rastro do sol 1 ainda aparece). A tempestade de poeira **não** acelera (é o que mostra o caso de 2007). Na Lua, sem vento, as marcas não desbotam.
 - **Atenção:** "meses" é o que a NASA diz, sem número exato; os 60 sóis são escolha do jogo (INTERPRETADO). Não diga que a tempestade apaga os rastros. A HiRISE é a câmera da NASA na sonda Mars Reconnaissance Orbiter, operada pela Universidade do Arizona (o PDF é do site oficial da câmera).
 
+### F27. Tempestades de poeira duram semanas ou meses
+
+- **Fato:** segundo Michael Smith (NASA Goddard), todo ano surgem em Marte tempestades de poeira grandes, que **"cobrem áreas do tamanho de continentes e duram semanas"**; as maiores **"podem durar de semanas a meses"** e, em média uma vez a cada 3 anos de Marte (~5,5 anos da Terra), viram tempestades que cobrem o planeta inteiro. A tempestade global de 2007 **durou dois meses** e pôs em risco o Opportunity; na de 2018, o rover parou de responder. A poeira no céu e nos painéis diminui a luz: **"menos luz do Sol quer dizer menos energia"**. ([NASA, 2015](https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/); [NASA, 2019](https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/))
+- **Criança (PT):** "Em Marte, uma tempestade de poeira pode durar semanas ou meses. Menos Sol, menos energia."
+- **Criança (EN):** "On Mars, a dust storm can last weeks or months. Less Sun means less energy."
+- **No jogo:** no sol 3 (introdução), um treino curto mostra o céu de poeira por alguns segundos e explica que, de verdade, ela dura muito mais. No jogo, a tempestade de poeira segura a poeira nos painéis por 3 sóis (INTERPRETADO).
+- **Atenção:** não diga que **toda** tempestade dura meses: as pequenas duram menos, e as que duram meses são as maiores. Os 3 sóis do jogo são escolha do jogo.
+
 ## Ligação com os objetivos de aprendizagem
 
 | Objetivo ([GDD](game-design.md#objetivos-de-aprendizagem)) | Fatos que reforçam |
 | --- | --- |
-| 1. Energia é limitada e a noite cobra a conta | F2, F10 |
+| 1. Energia é limitada e a noite cobra a conta | F2, F10, F27 |
 | 2. Proteção custa caro, mas falta de proteção custa a missão | F4, F5, F6, F7, F8 |
 | 3. A Terra está longe | F6 (o alerta vem da Terra, com atraso) |
 | 4. Jogar só no seguro também falha | F5 (o limite existe, mas a missão também precisa de ciência) |
@@ -533,6 +542,19 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
   - JPL (legenda): "which can linger on the Martian surface for months before being erased by the wind"
   - HiRISE: "Strong surface winds during the global dust storm of July, 2007 blew away the basaltic sand making up the wind streaks but, surprisingly, left the rover's tracks intact."
   - HiRISE: "The streaks gradually reappeared, starting at the alcoves in the crater's rim, and were completely restored to their former appearance by July, 2008, one Earth year after the dust storm."
+
+### 27. NASA: The Fact and Fiction of Martian Dust Storms (18/09/2015) e fim da missão Opportunity (13/02/2019)
+
+- **Links:** <https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/> (atualizada em 18/03/2026); <https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/> (RELEASE19-004). Lidos em 15/11/2026.
+- **Usado em:** F27
+- **Trechos:**
+  - "Every year there are some moderately big dust storms that pop up on Mars" … "they cover continent-sized areas and last for weeks at a time,"
+  - "Once started, bigger storms can last weeks to months."
+  - "Once every three Mars years (about 5 ½ Earth years), on average" … "normal storms grow into planet-encircling dust storms"
+  - "Less sunlight means less energy created."
+  - "This dust is an especially big problem for solar panels."
+  - Opportunity: "Two years later, a two-month dust storm imperiled the rover before relenting." (a tempestade de 2007)
+  - Opportunity: "a severe Mars-wide dust storm blanketed its location in June 2018"
 
 ### 9. Buscas feitas (para achar as fontes acima)
 

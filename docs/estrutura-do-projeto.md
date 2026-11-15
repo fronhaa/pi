@@ -45,11 +45,12 @@ src/
 │   ├── session.ts       MissionPort: a missão vista por quem joga (local ou servidor)
 │   ├── CrewTasks.ts     tempo e lugar da tripulação (quem está dentro, na câmara, fora)
 │   ├── ScenePointer.ts  clique e hover na cena
+│   ├── intro.ts         treino dos sóis 1 a 3: passos do guia e o que a cena mostra (só visual)
 │   └── coop/CoopMode.ts modo em grupo (estado do servidor, envio das decisões)
 ├── ui/                  INTERFACE HTML (mostra e repassa decisões)
 ├── i18n/
 │   ├── strings/         textos por assunto, PT e EN lado a lado:
-│   │                    ui, crew, cards, report, nasa, coop
+│   │                    ui, crew, cards, report, nasa, coop, intro
 │   └── moon.ts          só os textos que mudam na Lua
 ├── net/                 cliente e protocolo do modo em grupo
 ├── render/              materiais toon, paleta, modelos .glb

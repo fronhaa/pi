@@ -8,6 +8,12 @@ var JezeroSim = (function(exports) {
 	*/
 	var CONFIG = {
 		sols: 15,
+		/**
+		* Sóis de introdução (GDD, "Introdução: sóis 1 a 3"): um guia mostra a base, a mensagem da Terra, a energia de dia
+		* e de noite e um treino de poeira e de tempestade solar (só visual). Nesses sóis não há cartas, problemas pela base
+		* nem tempestade de poeira; as tempestades solares já começam no sol 4. A energia e a noite valem normalmente.
+		*/
+		intro: { sols: 3 },
 		energy: {
 			panelBlocks: 10,
 			minBlocks: 2
@@ -85,17 +91,17 @@ var JezeroSim = (function(exports) {
 			}
 		},
 		dustStorm: {
-			firstSol: 3,
+			firstSol: 4,
 			lastSol: 12
 		},
 		cards: {
 			perGame: 4,
-			firstSol: 2,
+			firstSol: 4,
 			lastSol: 14
 		},
 		/** Problemas pela base (GDD, "Tempo da tripulação"). Dia em tempo real com duração fixa. */
 		problems: {
-			firstSol: 3,
+			firstSol: 4,
 			minPerDay: 1,
 			maxPerDay: 2,
 			/** Segundos do dia em que o problema pode aparecer. */

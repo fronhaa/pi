@@ -83,6 +83,20 @@ const pt = {
   'scene.loadingPhysics': 'Carregando a física da Lua…',
   'crew.fact.gravity': 'Na Lua, a gravidade é só 1/6 da Terra. O mesmo pulo sobe cerca de 6 vezes mais alto!',
   'crew.fact.source': 'Fonte: NASA',
+
+  // Treino dos dias 1 a 3 (src/i18n/strings/intro.ts): na Lua não há tempestade de poeira; o treino é a sombra.
+  'intro.badge': '🎓 Treino · dia {sol} de 3',
+  'intro.1.base.text': 'Ela fica no polo sul da Lua. A tripulação mora lá dentro.',
+  'intro.1.night.title': '😴 Hora de dormir: a bateria',
+  'intro.1.night.text': 'Enquanto todos dormem, a base gasta a energia guardada na bateria.',
+  'intro.2.earth.text': 'A antena recebe mensagens da Terra. Da Lua, elas chegam em cerca de 1 segundo!',
+  'intro.2.far.title': '🌍 A Terra está perto',
+  'intro.2.far.text': 'Da Lua, a resposta chega na hora. Em Marte, ela leva minutos.',
+  'intro.2.battery.title': '🔋 Guarde para a hora de dormir',
+  'intro.2.battery.text': 'O que sobra do dia vai para a bateria. Até amanhã, a base gasta {cost}.',
+  'intro.3.dust.title': '🌑 Treino: sombra das montanhas',
+  'intro.3.dust.text': 'No polo sul, as montanhas fazem sombra, às vezes por dias. Menos Sol, menos energia.',
+  'intro.3.end.text': 'Foi só um treino: nada mudou na base. A partir do dia 4, é para valer!',
 } as const satisfies Partial<Record<StringKey, string>>;
 
 const en: Record<keyof typeof pt, string> = {
@@ -163,6 +177,19 @@ const en: Record<keyof typeof pt, string> = {
   'scene.loadingPhysics': 'Loading Moon physics…',
   'crew.fact.gravity': 'On the Moon, gravity is only 1/6 of Earth’s. The same jump goes about 6 times higher!',
   'crew.fact.source': 'Source: NASA',
+
+  'intro.badge': '🎓 Training · day {sol} of 3',
+  'intro.1.base.text': 'It is at the Moon’s south pole. The crew lives inside.',
+  'intro.1.night.title': '😴 Bedtime: the battery',
+  'intro.1.night.text': 'While everyone sleeps, the base uses the energy stored in the battery.',
+  'intro.2.earth.text': 'The antenna gets messages from Earth. From the Moon, they arrive in about 1 second!',
+  'intro.2.far.title': '🌍 Earth is close',
+  'intro.2.far.text': 'From the Moon, answers arrive right away. On Mars, they take minutes.',
+  'intro.2.battery.title': '🔋 Save some for bedtime',
+  'intro.2.battery.text': 'What is left from the day goes to the battery. Until tomorrow, the base uses {cost}.',
+  'intro.3.dust.title': '🌑 Training: mountain shadow',
+  'intro.3.dust.text': 'At the south pole, mountains cast shadows, sometimes for days. Less Sun means less energy.',
+  'intro.3.end.text': 'It was only training: nothing changed in the base. From day 4 on, it is for real!',
 };
 
 export const MOON_STRINGS = { pt, en } as const;
