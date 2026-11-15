@@ -35,6 +35,9 @@
 | F17 | Módulos e cabines da Estação Espacial | Destiny: 28 pés × 14 pés de diâmetro (~8,5 × 4,3 m); Harmony: 22 × 14 pés; cabine de dormir: 2,1 m³ | [NASA: Destiny](https://www.nasa.gov/international-space-station/destiny-laboratory-module/), [NASA: Harmony](https://www.nasa.gov/international-space-station/harmony-module/) e [NTRS 20130011142](https://ntrs.nasa.gov/api/citations/20130011142/downloads/20130011142.pdf) | Referência do tamanho dos módulos e da cama | Contexto |
 | F18 | Altura recomendada num habitat de superfície | 2,4 m para quase tudo; 1 m acima da cama para sentar; beliche é possível, mas quarto individual é muito recomendado | [NASA/Binera: Internal Layout of a Lunar Surface Habitat (2022)](https://ntrs.nasa.gov/api/citations/20220013669/downloads/Internal%20Layout%20of%20a%20Lunar%20Surface%20Habitat.pdf), p. 3, 5 e 9 | Medidas da base, do beliche e dos túneis | Contexto |
 | F19 | Espaço mínimo por tripulante | 28,96 m³ habitáveis por pessoa (4 pessoas, missões de 180 dias ou mais); habitat de Marte estudado: 7,2 m de diâmetro, 172 m³ para 4 | [NASA BVAD, NASA/TP-2015-218570 Rev2 (2022)](https://ntrs.nasa.gov/api/citations/20210024855/downloads/BVAD_2.15.22-final.pdf), tabela 3-8, e [NTRS 20180006797](https://ntrs.nasa.gov/api/citations/20180006797/downloads/20180006797.pdf), p. 3 | Volume da base | Contexto |
+| F20 | A estufa da NASA para a Lua e Marte é inflável | Cilindro inflável de 18 pés × mais de 8 pés de diâmetro; provavelmente enterrado sob o regolito por causa da radiação; luz do Sol por concentradores que seguem o Sol e fibra óptica; também LED | [NASA: Lunar, Martian Greenhouses Designed to Mimic Those on Earth (2017)](https://www.nasa.gov/science-research/lunar-martian-greenhouses-designed-to-mimic-those-on-earth/) | Estufa da base (ARC-002) e "Você sabia?" na primeira vez na estufa (`fact.greenhouseInflatable`) | 2. Proteção custa |
+| F21 | Mars Ice Home: casa coberta de gelo | Conceito da NASA Langley: anel inflável coberto de gelo; o gelo reduz a radiação e deixa a luz passar | [NASA Langley 100: Sojourning to Mars (2017)](https://www.nasa.gov/centers-and-facilities/langley/nasalangley100-sojourning-to-mars/) | Referência (não usado no jogo) | Contexto |
+| F22 | Aerogel: translúcido e isolante | Deixa a luz visível passar e bloqueia o ultravioleta; 2 a 3 cm aqueceram o chão em até 65 °C num teste de laboratório | [JPL: Want to Colonize Mars? Aerogel Could Help (2019)](https://jpl.nasa.gov/news/news.php?feature=7456) | Referência (não usado no jogo) | Contexto |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -177,6 +180,26 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **No jogo:** referência do volume da base ([ADR 0009](decisoes/0009-modulos-da-base-em-100-de-escala-com-medidas-da-nasa.md)).
 - **Atenção:** "volume habitável" é o espaço livre onde a tripulação vive e trabalha, **sem** equipamentos, depósitos e vãos; não compare com o volume total de um casco.
 
+### F20. A estufa da NASA para a Lua e Marte é inflável, não de vidro
+
+- **Fato:** a NASA e a Universidade do Arizona desenvolvem um protótipo de **estufa inflável e desmontável** para a Lua e Marte: um cilindro de **18 pés de comprimento e mais de 8 pés de diâmetro**. Para proteger da radiação, ela **provavelmente ficaria enterrada sob o regolito**; a luz do Sol entraria por **concentradores que seguem o Sol** e **feixes de fibra óptica**. A equipe também já cultivou plantas com **LED** e com luz mista. As plantas tiram o gás carbônico do ar e dão comida e oxigênio. ([NASA, 2017](https://www.nasa.gov/science-research/lunar-martian-greenhouses-designed-to-mimic-those-on-earth/))
+- **Criança (PT):** "A estufa da NASA para a Lua e Marte é inflável, não de vidro. Ela ficaria sob o solo, com luz do Sol por fibra óptica."
+- **Criança (EN):** "The greenhouse NASA is preparing for the Moon and Mars is inflatable, not glass. It would sit under soil, with sunlight sent through optical fibers."
+- **No jogo:** a estufa da base é uma membrana inflável em gomos, com anel de regolito, concentrador solar no topo (segue o Sol), cabos de fibra óptica e LEDs de cultivo (`src/scene/base/structures.ts`). O "Você sabia?" aparece na primeira vez que alguém trabalha na estufa (`fact.greenhouseInflatable`).
+- **Atenção:** é um **protótipo em desenvolvimento** (página de 2017), não uma estufa que já existe em Marte; use "ficaria", "seria". No jogo a membrana aparece **translúcida e fora do chão** pela mesma convenção dos módulos (para a criança ver as plantas e a tripulação); a estufa real ficaria coberta. Não diga "estufa de vidro". A página não cita quais plantas.
+
+### F21. Mars Ice Home: uma casa coberta de gelo
+
+- **Fato:** a NASA Langley propôs o **Mars Ice Home**, um **anel inflável, como uma boia, coberto por uma camada de gelo de água**. O gelo mais grosso por cima dos quartos **reduz a radiação** e ainda **deixa a luz passar**. ([NASA Langley, 2017](https://www.nasa.gov/centers-and-facilities/langley/nasalangley100-sojourning-to-mars/))
+- **No jogo:** só referência (a estufa do jogo é a da F20).
+- **Atenção:** é um **conceito de casa**, não de estufa. Não diga que ele existe nem que é uma estufa.
+
+### F22. Aerogel: deixa a luz entrar e segura o calor
+
+- **Fato:** o **aerogel de sílica** é translúcido: **deixa passar a luz visível e bloqueia o ultravioleta**, e é um ótimo isolante. Num teste de laboratório, **2 a 3 cm** de aerogel, sob uma lâmpada que imitava o Sol de Marte, aqueceram a superfície embaixo **em até 65 °C**. No inverno, a noite em Marte chega a **−90 °C**. ([JPL, 2019](https://jpl.nasa.gov/news/news.php?feature=7456))
+- **No jogo:** só referência, por enquanto.
+- **Atenção:** é um **teste de laboratório** (estudo liderado por Harvard), não uma estufa construída. A página diz que precisaria de muito aerogel e de pelo menos dois anos marcianos para criar água líquida embaixo.
+
 ## Ligação com os objetivos de aprendizagem
 
 | Objetivo ([GDD](game-design.md#objetivos-de-aprendizagem)) | Fatos que reforçam |
@@ -209,6 +232,8 @@ Ideias boas que só entram com link oficial aberto:
 - Composição exata do ar (95% CO₂) e pressão em relação à Terra (menos de 1%): a página de fatos da NASA só diz "fina" e "principalmente CO₂".
 - Tamanho de cada quarto da CHAPEA: a NASA só publica a área total (1.700 pés²). A comparação "do tamanho de uma casa térrea" aparece num podcast da NASA, mas não foi conferida no áudio nem na transcrição.
 - Largura mínima de corredor e tamanho de escotilha da NASA-STD-3001, vol. 2 (seções 8.3 e 8.4): o PDF não abriu na consulta de 14/11/2026. Até lá, o jogo usa a escotilha do próprio modelo (~1,96 m, [rover-e-base-de-pesquisa.md](rover-e-base-de-pesquisa.md)).
+- Pressão do ar em Marte (menos de 1% da Terra; a busca apontou 6,36 mb na *Mars Fact Sheet* da NASA, <https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html>): falta abrir e ler a página.
+- Texto recebido pelo time sobre estufas (15/11/2026), **conferido e NÃO usado** por falta de fonte oficial: micrometeorito a 20 km/s na Lua; "vidro blindado de 10 cm pesa toneladas" e "custa bilhões"; −170 °C na Lua; "o OSDR prova que a radiação destrói o DNA das sementes"; "ETFE/Kevlar translúcido" como material da NASA; "Ice Shield Greenhouse" (o Ice Home é uma casa, F21); "80 kg de gelo do rover RASSOR"; níveis de upgrade da estufa com números (energia 0, 50% de economia, 100% de bloqueio).
 - Diretrizes de cabine de dormir do NASA/TP-2020-220505 (*Deep Space Habitability Design Guidelines*): a busca citou "30 in × 30 in × 78 in", mas o número não foi achado no PDF lido.
 
 ## Fontes e evidências
@@ -395,6 +420,40 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
   - p. 3: "that study settled on a 7.2 m diameter, 172 m3 pressurized volume monolithic habitat to support four crew for up to 550-day surface stays."
   - p. 2: "4.27 m diameter ISS-type modules were proposed."
 
+### 20. NASA: Lunar, Martian Greenhouses Designed to Mimic Those on Earth (24/04/2017)
+
+- **Link:** <https://www.nasa.gov/science-research/lunar-martian-greenhouses-designed-to-mimic-those-on-earth/> (atualizada em 26/07/2023; lida em 15/11/2026)
+- **Usado em:** F20
+- **Trechos:**
+  - "The prototype involves an inflatable, deployable greenhouse to support plant and crop production for nutrition"
+  - "The prototypes now being developed are cylindrical — 18 feet long and more than 8 feet in diameter"
+  - "To protect from radiation in space, the greenhouse units would likely be buried under surface soil or regolith"
+  - "Solar light could be captured with light concentrators that track the sun" e "convey the light to the chamber using fiber optic bundles."
+  - "We've been successful in using electric LED (light emitting diode) lighting to grow plants," e "We also have tested hybrids using both natural and artificial lighting."
+  - "The approach uses plants to scrub carbon dioxide, while providing food and oxygen."
+  - Equipe: "a team of scientists, engineers and small businesses at the University of Arizona"; "director of the Controlled Environment Agriculture Center at the University of Arizona."
+
+### 21. NASA Langley 100: Sojourning to Mars (30/06/2017)
+
+- **Link:** <https://www.nasa.gov/centers-and-facilities/langley/nasalangley100-sojourning-to-mars/> (atualizada em 26/07/2023; lida em 15/11/2026). A página antiga do Ice Home (`nasa.gov/feature/langley/a-new-home-on-mars-...`) responde 404.
+- **Usado em:** F21
+- **Trechos:**
+  - "a large inflatable torus, similar to an inner tube, surrounded by a shell of water ice."
+  - "The design maximizes the thickness of ice above the crew quarters to reduce radiation exposure"
+  - "allowing light to pass through ice and surrounding materials."
+  - "Langley's proposed concept called" (Mars Ice Home); legenda da imagem: "NASA Mars Ice Home Concept".
+
+### 22. JPL: Want to Colonize Mars? Aerogel Could Help (15/07/2019, release 2019-144)
+
+- **Link:** <https://jpl.nasa.gov/news/news.php?feature=7456> (lida em 15/11/2026)
+- **Usado em:** F22
+- **Trechos:**
+  - "Aerogel is translucent, allowing visible light to pass through while blocking ultraviolet light's harmful radiation."
+  - "It's adept at preventing the transfer of heat as well, making it an excellent insulator"
+  - "2-3 centimeters of silica aerogel allowed light from a lamp tuned to simulate Martian sunlight to heat" e "the surface beneath it by up to 150 degrees Fahrenheit (65 degrees Celsius)"
+  - "winter nighttime temperatures can be as cold as minus 130 degrees Fahrenheit (minus 90 degrees Celsius)."
+  - "it would take lots of aerogel and at least two Mars years (or four Earth years) of warming"
+
 ### 9. Buscas feitas (para achar as fontes acima)
 
 | Busca | Domínios | Levou a |
@@ -415,6 +474,9 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
 | "NASA habitable volume per crew member long duration Mars mission net habitable volume m3 NTRS" | nasa.gov | Fonte 18 |
 | "Mars surface habitat concept dimensions Design Reference Architecture 5.0 habitat module diameter NTRS" | nasa.gov | Fonte 19 |
 | "NASA-STD-3001 translation path minimum width hatch size crew ceiling height habitat design" | nasa.gov | Nenhuma usada (ver Pendentes) |
+| "NASA prototype lunar greenhouse University of Arizona Controlled Environment Agriculture Center inflatable fiber optic sunlight" | nasa.gov | Fonte 20 |
+| "NASA Mars Ice Home concept Langley inflatable ice shell radiation translucent" | nasa.gov | Fontes 21 e 22 |
+| "Mars surface atmospheric pressure less than 1 percent of Earth NASA facts" | nasa.gov | Nenhuma lida ainda (ver Pendentes) |
 
 Os números entraram a partir do **documento aberto**, não dos resumos das buscas. Um exemplo: o resumo da busca dizia "0,4 a 0,5%" de perclorato, mas o PDF diz "0,3 a 0,5%" (p. 16), e é esse que está aqui.
 

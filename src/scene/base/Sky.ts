@@ -105,6 +105,11 @@ export class Sky {
     return { dir, elevation: el };
   }
 
+  /** Para onde está o Sol agora (vetor unitário a partir da base). */
+  get sunVector(): THREE.Vector3 {
+    return this.sun.position.clone().normalize();
+  }
+
   private placeSun(): { elevation: number } {
     const { dir, elevation } = this.sunDirection();
     this.sun.position.copy(dir).multiplyScalar(LIGHT_DISTANCE);

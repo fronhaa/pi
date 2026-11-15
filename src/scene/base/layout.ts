@@ -115,7 +115,7 @@ export const POSTS: Record<Role, THREE.Vector3> = {
   // Ao lado da base de comunicação, fora da caixa dela.
   commander: new THREE.Vector3(COMM_POSITION.x + 2.74, 0, COMM_POSITION.z - 1.4),
   engineer: new THREE.Vector3(-9.0, 0, 8.4),
-  medic: new THREE.Vector3(-3.6, 0, -6.2),
+  medic: new THREE.Vector3(-4.2, 0, -7.4), // atrás da estufa, fora do anel de regolito
   scientist: new THREE.Vector3(10.5, 0, 9.5),
 };
 
@@ -369,7 +369,7 @@ export const ROVER_TRACK = { cx: 2, cz: 2, rx: 26, rz: 15 } as const;
  */
 export const ROVER_KEEP_OUT: readonly { x: number; z: number; r: number }[] = [
   { x: SHELTER_CENTER.x, z: SHELTER_CENTER.z, r: 4.2 },
-  { x: DOME_CENTER.x, z: DOME_CENTER.z, r: DOME_RADIUS + 0.3 },
+  { x: DOME_CENTER.x, z: DOME_CENTER.z, r: DOME_RADIUS + 0.9 }, // cúpula e o anel de regolito
 ];
 
 /** Distância (m) de um ponto até a faixa sem pedras. */

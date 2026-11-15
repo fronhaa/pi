@@ -181,6 +181,7 @@ export class BaseScene {
       alarmOn: s.alert || s.stormNight,
       earthMessage: s.earthMessage,
       battery: s.res.battery / CONFIG.battery.max,
+      sunDir: this.sky.sunVector,
     });
     this.rover.update(dt, time, crew, s.scienceBlocks, s.night, s.sol ?? 0);
   }

@@ -550,4 +550,5 @@ O Mars Exploration deve construir uma identidade visual reconhecível, consisten
 | 1.1 | 14/11/2026 | Cabeçalho: projeto Mars Exploration, primeira missão Missão Jezero | Nome decidido pelo time |
 | 1.1 | 14/11/2026 | Seção 1: papel do jogador | Mesmo motivo da mudança de gênero |
 | 1.1 | 14/11/2026 | Seção 5: céu do pôr do sol | Fundamentação científica: pôr do sol azulado registrado pela Curiosity em 2015 |
+| 1.2 | 15/11/2026 | ARC-002: a estufa deixa de ser uma cúpula de vidro e passa a ser uma estufa inflável (membrana translúcida em gomos, anel de regolito, concentrador solar com fibra óptica e LEDs de cultivo) | Fundamentação científica: o protótipo da NASA com a Universidade do Arizona é inflável, ficaria sob o regolito por causa da radiação e recebe luz por fibra óptica e LED ([ciencia-marte.md](ciencia-marte.md), F20). A translucidez segue a convenção de ver através dos módulos |
 | 1.0 | 14/11/2026 | Direção artística inicial | — |

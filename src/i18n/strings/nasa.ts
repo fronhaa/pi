@@ -6,6 +6,8 @@
 export const pt = {
   'fact.exercise': 'Astronautas fazem exercício todo dia, umas 2 horas. Assim os ossos e os músculos continuam fortes.',
   'fact.exercise.source': 'Fonte: NASA, perda de osso e músculo no espaço (2023)',
+  'fact.greenhouseInflatable': 'A estufa da NASA para a Lua e Marte é inflável, não de vidro. Ela ficaria sob o solo, com luz do Sol por fibra óptica.',
+  'fact.greenhouseInflatable.source': 'Fonte: NASA, estufas para a Lua e Marte (2017)',
   'flare.real': 'Erupção real: {date}',
   'flare.simulated': 'Erupção simulada',
   'flare.link': 'ver no DONKI',
@@ -55,6 +57,8 @@ export const pt = {
 export const en: Record<keyof typeof pt, string> = {
   'fact.exercise': 'Astronauts exercise every day, about 2 hours. That keeps their bones and muscles strong.',
   'fact.exercise.source': 'Source: NASA, bone and muscle loss in space (2023)',
+  'fact.greenhouseInflatable': 'The greenhouse NASA is preparing for the Moon and Mars is inflatable, not glass. It would sit under soil, with sunlight sent through optical fibers.',
+  'fact.greenhouseInflatable.source': 'Source: NASA, greenhouses for the Moon and Mars (2017)',
   'flare.real': 'Real flare: {date}',
   'flare.simulated': 'Simulated flare',
   'flare.link': 'see on DONKI',
