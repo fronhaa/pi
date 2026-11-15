@@ -10,6 +10,11 @@ export interface SkyFrame {
   night: number;
   /** Poeira nos painéis, de 0 a 1 (em Marte, a mesma poeira escurece o céu). */
   dust: number;
+  /**
+   * Poeira NO AR (partículas), de 0 a 1: só durante a tempestade de poeira. A poeira que sobra nos painéis
+   * depois dela não levanta partículas.
+   */
+  airborne: number;
   alert: boolean;
   /** Luz do Sol de hoje, de 0 a 1 (Lua; em Marte é sempre 1). */
   sunlight: number;
@@ -39,6 +44,12 @@ export class Sky {
   private readonly stars: THREE.Points;
   private readonly earthDot: THREE.Mesh;
   private readonly dustParticles: THREE.Points;
+  /** Posições originais das partículas (as que caem dentro de um prédio são escondidas a cada quadro). */
+  private readonly dustBase: Float32Array;
+  /** Áreas dos prédios (caixas no chão): poeira não entra na base, nem com o casco transparente. */
+  private dustExclusion: readonly { center: THREE.Vector3; half: THREE.Vector3 }[] = [];
+  /** Prédios redondos (a cúpula da estufa): x, z, raio e altura. */
+  private dustCircles: readonly { x: number; z: number; r: number; h: number }[] = [];
   /** Disco do Sol no céu e a hora atual dele (amortecida). */
   private readonly sunDisc: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
   private sunT = 0.2;
@@ -73,6 +84,7 @@ export class Sky {
     this.earthDot.position.set(-60, 70, -150);
     root.add(this.earthDot);
     this.dustParticles = buildDustParticles();
+    this.dustBase = (this.dustParticles.geometry.getAttribute('position').array as Float32Array).slice();
     root.add(this.dustParticles);
     this.sunDisc = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS, 16, 12), new THREE.MeshBasicMaterial({ color: 0xfff4d6, fog: false }));
     root.add(this.sunDisc);
@@ -156,8 +168,48 @@ export class Sky {
     (this.earthDot.material as THREE.MeshBasicMaterial).opacity = n;
 
     const dp = this.dustParticles;
-    (dp.material as THREE.PointsMaterial).opacity = s.airless ? 0 : THREE.MathUtils.lerp(0, 0.7, Math.min(1, dust * 1.5)) * (1 - n * 0.6);
+    const airborne = s.airless ? 0 : Math.min(1, f.airborne);
+    const opacity = THREE.MathUtils.lerp(0, 0.7, Math.min(1, airborne * 1.5)) * (1 - n * 0.6);
+    (dp.material as THREE.PointsMaterial).opacity = opacity;
+    // Sem tempestade, nada é desenhado (antes ficavam partículas invisíveis passando por dentro da base).
+    dp.visible = opacity > 0.01;
     dp.position.x = ((f.time * 3) % 20) - 10;
+    if (dp.visible) this.hideDustInsideBuildings(dp.position.x);
+  }
+
+  /** Áreas dos prédios onde a poeira não aparece (as caixas de colisão da base). */
+  setDustExclusion(boxes: readonly { center: THREE.Vector3; half: THREE.Vector3 }[], circles: readonly { x: number; z: number; r: number; h: number }[] = []): void {
+    this.dustExclusion = boxes;
+    this.dustCircles = circles;
+  }
+
+  /** Esconde (joga para baixo do chão) as partículas que, com o vento de agora, caem dentro de um prédio. */
+  private hideDustInsideBuildings(offsetX: number): void {
+    const attr = this.dustParticles.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const pos = attr.array as Float32Array;
+    const base = this.dustBase;
+    for (let i = 0; i < base.length; i += 3) {
+      const x = base[i] + offsetX;
+      const y = base[i + 1];
+      const z = base[i + 2];
+      let inside = false;
+      for (const b of this.dustExclusion) {
+        if (Math.abs(x - b.center.x) < b.half.x + 0.5 && Math.abs(z - b.center.z) < b.half.z + 0.5 && y < b.center.y + b.half.y + 1.5) {
+          inside = true;
+          break;
+        }
+      }
+      if (!inside) {
+        for (const c of this.dustCircles) {
+          if (y < c.h && Math.hypot(x - c.x, z - c.z) < c.r) {
+            inside = true;
+            break;
+          }
+        }
+      }
+      pos[i + 1] = inside ? -50 : y;
+    }
+    attr.needsUpdate = true;
   }
 }
 
