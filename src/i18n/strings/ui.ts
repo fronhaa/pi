@@ -159,6 +159,9 @@ export const pt = {
   // Base lunar (docs/game-design.md, "Base lunar"). O resto dos textos da Lua está em src/i18n/moon.ts.
   'place.title': 'Para onde vamos?',
   'place.tap': 'Estamos em órbita da Terra. Toque num planeta e escolha a missão!',
+  'place.sun': '☀️ Sol',
+  'place.earth': '🌍 Terra: você está aqui',
+  'place.mapNote': '🛰️ Posições de hoje, calculadas com dados da NASA. Distâncias fora de escala.',
   'place.mars': '🔴 Marte',
   'place.mars.short': 'Mensagens da Terra demoram minutos. Tem tempestade de poeira!',
   'place.moon': '🌕 Lua',
@@ -336,6 +339,9 @@ export const en: Record<keyof typeof pt, string> = {
 
   'place.title': 'Where are we going?',
   'place.tap': 'We are in orbit around Earth. Tap a planet and pick your mission!',
+  'place.sun': '☀️ Sun',
+  'place.earth': '🌍 Earth: you are here',
+  'place.mapNote': '🛰️ Today’s positions, calculated with NASA data. Distances not to scale.',
   'place.mars': '🔴 Mars',
   'place.mars.short': 'Messages from Earth take minutes. Dust storms!',
   'place.moon': '🌕 Moon',

@@ -176,15 +176,21 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 ## Escolha e viagem (`src/scene/LaunchScene.ts`)
 
 - **O foguete já está no espaço**, em órbita da Terra (órbita de espera, F37): não há decolagem nem base de lançamento.
-- **Tela de escolha (Marte ou Lua):** câmera de longe: a Terra embaixo, a órbita tracejada e o foguete dando a volta
-  com o motor desligado (maior que o real, para não virar um pontinho). Marte e Lua em 3D presos à câmera, com noção de
-  profundidade: a Lua grande, perto da Terra; Marte pequeno, no alto do outro lado e lá no fundo (`PICK_PORTRAIT`,
-  `PICK_LANDSCAPE`). A criança toca no planeta: botões de verdade
+- **Tela de escolha (Marte ou Lua): mapa do Sistema Solar visto de cima**, com as posições de **hoje calculadas**
+  (`src/scene/solarSystem.ts`, F38 e F39): o Sol no meio (bola amarela com contorno e halo, a luz da cena sai dele),
+  as órbitas tracejadas da Terra (azul) e de Marte (laranja), Marte onde está hoje e a Lua em volta da Terra, na fase
+  de hoje (dá para ver o lado escuro). Distâncias e tamanhos **fora de escala** (`AU`, `MOON_DIST`, `MARS_R`…):
+  a ordem, as órbitas e as direções são as de verdade, e a tela diz isso no rodapé ("Posições de hoje, calculadas com
+  dados da NASA. Distâncias fora de escala."). Nomes "☀️ Sol" e "🌍 Terra: você está aqui" por cima; o da Terra vai
+  para cima quando a Lua está embaixo dela. O foguete dá a volta na Terra com o motor desligado (cresce com a
+  distância da câmera, para não virar um pontinho). A câmera enquadra o Sol, a Terra com a Lua e Marte
+  (`frameMap`), com espaço para o título e para os botões. A criança toca no planeta: botões de verdade
   (`src/ui/PlaceChoice.ts`) do tamanho do planeta, com nome e dica curta; o planeta cresce sob o dedo ou o mouse.
   Com o mouse em cima (ou foco do teclado, ou o primeiro toque no celular), os 3 níveis da missão aparecem embaixo
   do planeta, em botões empilhados (nome da missão e, embaixo, a idade recomendada: Marte 7+, 9+, 11+; Lua 7+, 10+, 12+); o botão do planeta não sai da tela (16 px de margem).
-- **Viagem (~7 s, só visual):** ao escolher, os planetas da escolha somem, o motor liga ("Motor ligado!") e o foguete
-  sai da órbita pela tangente, de onde estiver. A câmera vai para trás dele (o "para cima" da tela vira a direção da
+- **Viagem (~7 s, só visual):** ao escolher, o foguete corre na órbita até o ponto em que já aponta para o destino de
+  verdade (a Lua ou Marte no mapa), o motor liga ("Motor ligado!") e ele sai dali em linha reta, sempre se afastando
+  da Terra. A câmera desce do mapa até ele (o mapa some no meio do caminho) e vai para trás dele (o "para cima" da tela vira a direção da
   viagem), aparecem linhas de velocidade e o destino crescendo, e ele entra no planeta.
 - **Sem HUD até a nave chegar:** a classe `pre-mission` no `body` esconde o HUD (`#ui`), balões, setas, guia e avisos
   na tela de escolha e na viagem. Sai quando o foguete chega (`Game.playLaunch`).

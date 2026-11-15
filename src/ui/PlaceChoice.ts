@@ -8,6 +8,8 @@ type Place = 'mars' | 'moon';
 /** O que a tela de escolha precisa da cena 3D (src/scene/LaunchScene.ts). */
 export interface PlanetPicker {
   planetScreen(place: Place): { x: number; y: number; r: number };
+  /** Sol e Terra no mapa: só para o nome por cima (não são botões). */
+  bodyScreen(body: 'sun' | 'earth'): { x: number; y: number; r: number };
   setHover(place: Place | null): void;
 }
 
@@ -25,7 +27,15 @@ export function showPlaceChoice3D(
 ): void {
   const root = h('div', { class: 'place3d', role: 'dialog', 'aria-label': t('place.title') },
     h('div', { class: 'place3d-head' }, h('h2', {}, t('place.title')), h('p', {}, t('place.tap'))),
+    // Honestidade de dados: posições calculadas para hoje (não é ao vivo) e distâncias fora de escala.
+    h('p', { class: 'place3d-note' }, t('place.mapNote')),
   );
+  // Nomes do Sol e da Terra no mapa (só texto; quem se escolhe são Marte e Lua).
+  const labels = (['sun', 'earth'] as const).map((body) => {
+    const el = h('span', { class: `place3d-label place3d-label-${body}`, 'aria-hidden': 'true' }, t(`place.${body}` as StringKey));
+    root.append(el);
+    return { body, el };
+  });
   let raf = 0;
   const finish = (place: Place, level: Difficulty) => {
     cancelAnimationFrame(raf);
@@ -83,6 +93,14 @@ export function showPlaceChoice3D(
       box.style.left = `${left}px`;
       box.style.top = `${y - r}px`;
       box.style.setProperty('--planet', `${2 * r}px`);
+    }
+    // Nome embaixo do corpo; o da Terra vai para cima quando a Lua (e o botão dela) está embaixo da Terra.
+    const moon = picker.planetScreen('moon');
+    for (const { body, el } of labels) {
+      const { x, y, r } = picker.bodyScreen(body);
+      const above = body === 'earth' && moon.y > y;
+      el.style.left = `${x}px`;
+      el.style.top = above ? `${y - r - 28}px` : `${y + r + 6}px`;
     }
     raf = requestAnimationFrame(follow);
   };
