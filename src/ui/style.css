@@ -126,6 +126,9 @@
 .problem .name .status { font-weight: 600; opacity: 1; }
 .problem .bar { margin-top: 4px; }
 .problem.done { opacity: 0.6; }
+/* Tarefas opcionais (colher, analisar): subseção "Se sobrar tempo:", com fundo azul-claro. */
+.day-optional { margin: 8px 0 2px; font-size: 13px; font-weight: 700; opacity: 0.85; }
+.problem.optional { background: #eef7fb; border-radius: 10px; padding-left: 6px; padding-right: 6px; }
 .day-warn { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--bad); }
 /* Tripulação no dia: quem está dentro, na câmara de descompressão ou lá fora (EVA). Toque escolhe. */
 .crew-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 6px; }

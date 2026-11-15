@@ -19,7 +19,7 @@ import { Input } from './Input';
 import { CrewTasks } from './CrewTasks';
 import { MARS_G, MOON_G, NIGHT_WALK_SPEED, STORM_RUN_SPEED } from './constants';
 import type { CrewMotion } from '@/scene/crewMotion';
-import { BUNK_SPOTS, ENTRANCES, GREENHOUSE_WORK_SPOT, GYM_STATIONS, HABITAT_LOOK, HABITAT_SPOTS, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
+import { BUNK_SPOTS, ENTRANCES, GREENHOUSE_WORK_SPOT, GYM_STATIONS, HABITAT_LOOK, HABITAT_SPOTS, HARVEST_WORK_SPOT, LAB_BENCH_LOOK, LAB_WORK_SPOT, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
 import { ProblemMarkers } from '@/scene/ProblemMarkers';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CONFIG, type Location } from '@/sim/config';
@@ -1171,10 +1171,19 @@ export class Game {
         a.exercise(st.clip, st.speed, dt);
       } else {
         a.setLying(false);
-        if (this.tasks.onInsideTask(r)) {
-          // Consertando a estufa: de frente para o vazamento, nunca para a câmera.
-          a.root.position.copy(GREENHOUSE_WORK_SPOT);
-          a.faceToward(PROBLEM_SPOTS.greenhouseLeak, dt);
+        const task = this.tasks.insideTaskKind(r);
+        if (task) {
+          // Tarefa de dentro: no lugar dela, de frente para o trabalho, nunca para a câmera.
+          if (task === 'analysis') {
+            a.root.position.copy(LAB_WORK_SPOT);
+            a.faceToward(LAB_BENCH_LOOK, dt);
+          } else if (task === 'harvest') {
+            a.root.position.copy(HARVEST_WORK_SPOT);
+            a.faceToward(PROBLEM_SPOTS.harvest, dt);
+          } else {
+            a.root.position.copy(GREENHOUSE_WORK_SPOT);
+            a.faceToward(PROBLEM_SPOTS.greenhouseLeak, dt);
+          }
         } else {
           // Posto: olha a estação do módulo e, às vezes, um colega perto (ninguém encara a câmera).
           a.root.position.copy(HABITAT_SPOTS[r]);

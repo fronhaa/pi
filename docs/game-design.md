@@ -549,6 +549,8 @@ Junto vem a **faixa da tripulação** no HUD, para a criança ver o que cada ast
 
 ### A. Tarefas dentro da base: estufa e laboratório
 
+> **Implementado:** `CONFIG.indoorTasks`, `ProblemDef.optional` e `OPTIONAL_KINDS` (`src/sim/problems.ts`, fora do sorteio), bônus em `Mission.finishTask` sem dose, opcionais fora de `failed`/`carried`. Na cena, `PROBLEM_SPOTS.harvest`/`analysis` com marcadores 🌱/🔬 (anel azul) e o astronauta na cúpula ou na bancada do laboratório; no HUD, a subseção "Se sobrar tempo:". `npm run balance`: a estratégia atenta passa de 6% para 0% de 1★ (missões sorteadas); as estratégias ruins continuam perdendo.
+
 | Tarefa | Onde | Tempo | Efeito ao terminar | Limite | Dose |
 | --- | --- | --- | --- | --- | --- |
 | 🌱 **Colher na estufa** | Dentro da cúpula da estufa | 15 s | Suporte de vida **+3** | 1 vez por dia | Nenhuma (dentro) |

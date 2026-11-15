@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Mission } from '@/sim/mission';
 import { CONFIG } from '@/sim/config';
 import { PROBLEMS, taskTime } from '@/sim/problems';
-import type { Problem } from '@/sim/types';
+import type { Problem, ProblemKind } from '@/sim/types';
 import { ROLES, type Crew } from '@/scene/Crew';
 import type { CrewMotion } from '@/scene/crewMotion';
 import { ENTRANCES, PROBLEM_SPOTS, type Role } from '@/scene/MarsBase';
@@ -121,6 +121,13 @@ export class CrewTasks {
   /** Tem uma ordem (problema ou tarefa) agora? */
   hasTask(role: Role): boolean {
     return this.assignments.has(role);
+  }
+
+  /** Tipo da tarefa de dentro que este astronauta está fazendo (vazamento, colheita, análise), se houver. */
+  insideTaskKind(role: Role): ProblemKind | undefined {
+    const a = this.assignments.get(role);
+    const p = a && this.mission().state.problems.find((x) => x.uid === a.uid);
+    return p && !PROBLEMS[p.kind].outside ? p.kind : undefined;
   }
 
   onInsideTask(role: Role): boolean {

@@ -55,6 +55,15 @@ export const CONFIG = {
   },
 
   /**
+   * Tarefas dentro da base (GDD, "Atividades dentro da base", A): opcionais, uma vez por dia, sem dose.
+   * Colher na estufa (comida: suporte de vida) e analisar amostras (ciência). Valores iniciais, a balancear.
+   */
+  indoorTasks: {
+    harvest: { seconds: 15, life: 3 },
+    analysis: { seconds: 20, science: 4 },
+  },
+
+  /**
    * EVA (saída da base com traje). A tripulação fica dentro por padrão; problema de fora exige EVA.
    * Regras de jogo (INTERPRETADO), inspiradas no planejamento da NASA (GDD, "EVA: sair da base").
    */

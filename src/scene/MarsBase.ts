@@ -173,6 +173,12 @@ export const GYM_STATIONS = [
 
 /** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
 export const GREENHOUSE_WORK_SPOT = new THREE.Vector3(1.0, 0.4, -4.6);
+/** Na cúpula, entre as plantas: onde fica quem colhe (tarefa opcional). */
+export const HARVEST_WORK_SPOT = new THREE.Vector3(-0.3, 0.4, -3.6);
+/** Na bancada do laboratório, de frente para o microscópio/telas: onde fica quem analisa amostras. */
+export const LAB_WORK_SPOT = new THREE.Vector3(HABITAT_POSITION.x, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.15);
+/** Para onde olha quem analisa: a bancada do fundo do laboratório. */
+export const LAB_BENCH_LOOK = new THREE.Vector3(HABITAT_POSITION.x, HABITAT_FLOOR_Y + 1, HABITAT_POSITION.z + BACK_Z);
 
 /**
  * Onde a tripulação entra à noite (ponto no chão, em frente à porta): no habitat para dormir,
@@ -193,6 +199,9 @@ export const PROBLEM_SPOTS = {
   antenna: new THREE.Vector3(5.4, 0, -0.6),
   roverStuck: new THREE.Vector3(22, 0, 13),
   tornBag: new THREE.Vector3(SHELTER_CENTER.x, 0, SHELTER_CENTER.z + 3.9),
+  // Tarefas opcionais de dentro (marcador 🌱 / 🔬): no meio das plantas da cúpula e na bancada do laboratório.
+  harvest: new THREE.Vector3(-1.5, 0, -4.6),
+  analysis: new THREE.Vector3(HABITAT_POSITION.x, 0, HABITAT_POSITION.z),
 } as const;
 
 /** Céu por lugar: em Marte, rosado com poeira; na Lua, sem ar, o céu é preto até de dia. */
