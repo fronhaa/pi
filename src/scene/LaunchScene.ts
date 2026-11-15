@@ -159,6 +159,8 @@ export class LaunchScene {
   private thetaSweep = 0;
   /** Velocidade (unidades/s) com que o foguete sai da órbita: a que ganhou dando a volta. */
   private vLeave = 0;
+  /** Planeta escolhido (o outro some logo, para ficar claro para onde o foguete vai). */
+  private chosen: Place | null = null;
   private hover: Place | null = null;
   private readonly path = new THREE.Vector3();
   private readonly tmpA = new THREE.Vector3();
@@ -246,9 +248,17 @@ export class LaunchScene {
   begin(place: Place, reduced = false): void {
     if (this.started !== null) return;
     this.thetaStart = this.idleTheta();
-    // Destino: no mapa, onde a Lua ou Marte estão hoje; na clássica (celular), o planeta como aparece na tela.
-    const target = this.isMap ? this.bodies[place].pos : this.planets[place].getWorldPosition(this.tmpA);
-    this.dir.copy(target).sub(this.bodies.earth.pos).setZ(0).normalize();
+    this.chosen = place;
+    // Destino: no mapa, onde a Lua ou Marte estão hoje.
+    if (this.isMap) this.dir.copy(this.bodies[place].pos).sub(this.bodies.earth.pos).setZ(0).normalize();
+    else {
+      // Clássica (celular): os planetas ficam presos à câmera em profundidades diferentes, então a direção no espaço
+      // engana (a Lua, perto da câmera, ficaria "para cima" como Marte). Vale a direção NA TELA, da Terra até o
+      // planeta: é o que a criança vê. Câmera olhando para −Z com "para cima" = +Y: x e y da tela viram x e y do mundo.
+      const p = this.planets[place].getWorldPosition(this.tmpA).project(this.camera);
+      const e = this.tmpB.copy(this.bodies.earth.pos).project(this.camera);
+      this.dir.set((p.x - e.x) * this.aspect, p.y - e.y, 0).normalize();
+    }
     // Ganhar velocidade: com o motor ligado (T_BURN a T_LEAVE), o foguete acelera em volta da Terra até o ponto
     // em que a órbita (sentido horário, tangente = (cos θ, −sen θ)) aponta para o destino, dando pelo menos meia
     // volta; dali sai em linha reta, sempre se afastando da Terra, com a velocidade que ganhou.
@@ -406,7 +416,7 @@ export class LaunchScene {
     this.stars.position.copy(this.camera.position);
 
     if (this.isMap) this.layoutMap(idle, chase);
-    else this.layoutPicker(idle ? 1 : 1 - smooth((t - T_LEAVE + 0.4) / 0.4));
+    else this.layoutPicker(idle ? 1 : 1 - smooth((t - T_LEAVE) / 0.5));
     this.placeCards(t);
   }
 
@@ -423,6 +433,11 @@ export class LaunchScene {
         m?.dispose();
       }
     });
+  }
+
+  /** 0 → 1 nos primeiros `secs` segundos depois da escolha (suave). */
+  private sinceChoice(secs: number): number {
+    return this.started === null ? 0 : smooth((performance.now() - this.started) / 1000 / secs);
   }
 
   /**
@@ -442,7 +457,9 @@ export class LaunchScene {
       const hh = d * tan;
       const g = this.planets[place];
       this.planetScreenR[place] = r * (this.hover === place ? 1.12 : 1);
-      const target = ((this.planetScreenR[place] * hh) / PLANET_R) * show;
+      // O planeta que não foi escolhido some logo; o escolhido fica até a câmera descer até o foguete.
+      const keep = this.chosen && this.chosen !== place ? 1 - this.sinceChoice(0.3) : show;
+      const target = ((this.planetScreenR[place] * hh) / PLANET_R) * keep;
       g.scale.setScalar(g.scale.x + (target - g.scale.x) * 0.2);
       g.position.set(x * hh * this.aspect, (y + Math.sin(time * 1.3 + depth) * 0.01) * hh, -d);
       g.rotation.y = time * 0.25;
@@ -459,7 +476,8 @@ export class LaunchScene {
     const time = (performance.now() - this.created) / 1000;
     for (const place of ['mars', 'moon'] as const) {
       const g = this.planets[place];
-      const target = (this.bodies[place].r / PLANET_R) * (this.hover === place ? 1.12 : 1);
+      const other = this.chosen && this.chosen !== place ? 1 - this.sinceChoice(0.3) : 1;
+      const target = (this.bodies[place].r / PLANET_R) * (this.hover === place ? 1.12 : 1) * other;
       g.scale.setScalar(g.scale.x + (target - g.scale.x) * 0.2);
       g.rotation.y = time * 0.25;
     }
