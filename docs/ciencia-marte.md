@@ -44,6 +44,7 @@
 | F26 | Os rastros do rover duram meses | Os rastros do Curiosity, vistos de órbita, devem durar meses antes de o vento apagá-los; na tempestade de poeira global de 2007, os do Opportunity ficaram intactos | [JPL (2025)](https://www.jpl.nasa.gov/news/nasa-orbiter-spots-curiosity-rover-making-tracks-to-next-science-stop/) e [HiRISE: Gone with the Wind](https://www.uahirise.org/epo/nuggets/gone-with-the-wind.pdf) | Rastros das rodas no chão (`src/scene/base/RoverTracks.ts`) | Contexto |
 | F27 | Tempestades de poeira duram semanas ou meses | Todo ano há tempestades grandes que duram semanas; as maiores, "semanas a meses"; a global de 2007 durou dois meses. Menos luz do Sol, menos energia nos painéis | [NASA: The Fact and Fiction of Martian Dust Storms (2015)](https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/) e [NASA: fim da missão Opportunity (2019)](https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/) | Treino da poeira no sol 3 (introdução) | 1. Energia e noite |
 | F28 | Abrigo contra tempestade solar: mais massa, e máquinas cavam o regolito | No aviso, a tripulação monta um abrigo pondo massa entre ela e o Sol (no Orion, sacos de estiva, em até 1 hora); na superfície, regolito sobre o abrigo. Uma escavadeira da NASA (RASSOR 2.0) cava o regolito com energia elétrica (4 W por kg/h) e pode usá-lo como blindagem | [NASA (2016)](https://www.nasa.gov/missions/artemis/orion/scientists-and-engineers-evaluate-orion-radiation-protection-plan/), [NASA Science (2019)](https://science.nasa.gov/science-research/heliophysics/how-nasa-will-protect-astronauts-from-space-radiation-at-the-moon/), [NASA KSC: RASSOR 2.0 (Mueller et al., 2016)](https://ntrs.nasa.gov/api/citations/20210011366/downloads/ASCE%202016%20RASSOR%202%20Final%20%206_8_2016.pdf), p. 1 | Blindagem (blocos de energia viram sacos de regolito), ajuda "?" e treino do sol 3 | 2. Proteção custa caro |
+| F29 | Camundongos no espaço perderam músculo e osso | Camundongos que passaram 33 dias na Estação Espacial perderam massa muscular e óssea | [OSDR: OSD-342 (missão RR-19)](https://osdr.nasa.gov/bio/repo/data/studies/OSD-342) | Cartão do exercício (F9) e tela de fontes | Contexto (saúde) |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -251,6 +252,14 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **Criança (EN):** "Against a solar storm, the shelter needs more soil around it. Machines dig that soil using energy."
 - **No jogo:** cada bloco de energia na blindagem representa o trabalho das máquinas que cavam e enchem mais **sacos de regolito** no abrigo (+8 por bloco; os sacos aparecem na cena). O número é do jogo (INTERPRETADO); a ideia de que a energia **por si** protege está errada e não deve aparecer em texto.
 - **Atenção:** quem protege é a massa (regolito, água), não a energia. Diga "energia para as máquinas que enchem os sacos", nunca "energia na blindagem protege". A RASSOR é um protótipo de laboratório (não foi a Marte); o Orion usa sacos de estiva, não regolito.
+
+### F29. Camundongos no espaço perderam músculo e osso (OSDR)
+
+- **Fato:** no estudo **OSD-342** do OSDR (NASA Open Science Data Repository), camundongos foram para a Estação Espacial na missão **RR-19**: **"Wild type mice lost significant muscle and bone mass during the 33 d spent in microgravity"** (os camundongos comuns perderam muita massa muscular e óssea nos 33 dias em microgravidade). O estudo também testou um tratamento que protegeu músculo e osso. ([OSDR: OSD-342](https://osdr.nasa.gov/bio/repo/data/studies/OSD-342); publicação: Lee et al., *Targeting myostatin/activin A protects against skeletal muscle and bone loss during spaceflight*, PNAS)
+- **Criança (PT):** "Camundongos na Estação Espacial perderam músculo e osso em 33 dias."
+- **Criança (EN):** "Mice on the Space Station lost muscle and bone in 33 days."
+- **No jogo:** junto do cartão de exercício (F9), na primeira vez que alguém vai à academia; e na tela de fontes ("Data sources"), no item do OSDR.
+- **Atenção:** o estudo é com **camundongos**, não com pessoas; não diga que astronautas perdem o mesmo tanto. Não fale do tratamento com crianças (é remédio experimental). Conferido na descrição oficial do estudo pela API de busca do OSDR (`osdr.nasa.gov/osdr/data/search`) em 15/11/2026.
 
 ## Ligação com os objetivos de aprendizagem
 
