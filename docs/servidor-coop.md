@@ -24,7 +24,7 @@ flowchart LR
 | `server/cmd/jezero-server/` | O programa: lê variáveis de ambiente, sobe o HTTP. |
 | `server/Dockerfile`, `server/compose.yaml` | Container para o VPS. A imagem também compila e **serve o jogo**: um endereço só para jogo e coop. |
 | `src/net/` | Cliente: `CoopClient.ts` (conexão, reconexão automática com token) e `protocol.ts` (tipos iguais aos do Go). |
-| `src/ui/coop.ts` | Telas: escolher o modo, sala de espera (código, papéis, começar) e a vez da Terra. |
+| `src/ui/coop.ts` | Telas: escolher o modo (depois de escolher Marte na tela 3D; a Lua não tem grupo), sala de espera (abre quando o foguete chega a Marte; código, papéis, começar) e a vez da Terra. |
 
 ## Cliente (o jogo no navegador)
 
