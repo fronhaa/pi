@@ -7,8 +7,11 @@ import { createResearchBase } from '@/models/ResearchBase';
 import { createGreenhouseBase } from '@/models/GreenhouseBase';
 import { createCommBase } from '@/models/CommBase';
 import { createSolarPower } from '@/models/SolarPower';
+import { createDormitory } from '@/models/Dormitory';
+import { createRefectory } from '@/models/Refectory';
+import { createGym } from '@/models/Gym';
 
-const models = { 'mars-station': createMarsStation(), 'solar-panels': createSolarPanels(), rover: createRover(), 'mars-rocks': createRocks(), 'research-base': createResearchBase(), 'greenhouse-base': createGreenhouseBase(), 'comm-base': createCommBase(), 'solar-panels-battery': createSolarPower() };
+const models = { 'mars-station': createMarsStation(), 'solar-panels': createSolarPanels(), rover: createRover(), 'mars-rocks': createRocks(), 'research-base': createResearchBase(), 'greenhouse-base': createGreenhouseBase(), 'comm-base': createCommBase(), 'solar-panels-battery': createSolarPower(), dormitory: createDormitory(), refectory: createRefectory(), gym: createGym() };
 (async () => {
   const out: Record<string, string> = {};
   for (const [name, m] of Object.entries(models)) {

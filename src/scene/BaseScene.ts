@@ -163,11 +163,12 @@ export class BaseScene {
    */
   async loadModels(): Promise<void> {
     const { loadSceneryModel, SCENERY_MODELS } = await import('@/render/sceneryModel');
-    const [base, rover, comm, solar] = await Promise.allSettled([
+    const [base, rover, comm, solar, gym] = await Promise.allSettled([
       loadSceneryModel(SCENERY_MODELS.researchBase),
       loadSceneryModel(SCENERY_MODELS.rover),
       loadSceneryModel(SCENERY_MODELS.commBase),
       loadSceneryModel(SCENERY_MODELS.solarPanels),
+      loadSceneryModel(SCENERY_MODELS.gym),
     ]);
     if (comm.status === 'fulfilled') this.structures.useCommBase(comm.value);
     else console.warn('Base de comunicação (.glb) não carregou; usando a torre simples.', comm.reason);
@@ -175,10 +176,18 @@ export class BaseScene {
     else console.warn('Placas e bateria (.glb) não carregaram; usando as simples.', solar.reason);
     if (base.status === 'fulfilled') this.habitat.useModel(base.value);
     else console.warn('Base de pesquisa (.glb) não carregou; usando o módulo simples.', base.reason);
+    // Academia de vidro depois da base de pesquisa: os quartos são clonados do módulo da academia simples.
+    if (gym.status === 'fulfilled') this.habitat.useGym(gym.value);
+    else console.warn('Academia de vidro (.glb) não carregou; usando a academia simples.', gym.reason);
     if (rover.status === 'fulfilled') this.rover.useModel(rover.value);
     else console.warn('Rover (.glb) não carregou; usando o rover simples.', rover.reason);
     // Os cascos dos modelos novos nascem abertos: aplica o estado atual (fechado ou aberto).
     this.hullDirty = true;
+  }
+
+  /** Correias das esteiras da academia de vidro (a rotina diz se alguém está correndo). */
+  setTreadmillsRunning(on: boolean): void {
+    this.habitat.setTreadmillsRunning(on);
   }
 
   /** Fecha (opaco, como é de verdade) ou abre (transparente, para ver por dentro) o casco das cápsulas e da estufa. */
@@ -274,6 +283,7 @@ export class BaseScene {
   /** Animações por frame (só visual). `crew` = astronautas visíveis lá fora (o rover desvia deles). */
   update(dt: number, time: number, crew: THREE.Vector3[] = []): void {
     this.habitat.mixer?.update(dt);
+    this.habitat.gymMixer?.update(dt);
     this.rover.mixer?.update(dt);
     const s = this.state;
     if (!s) return;

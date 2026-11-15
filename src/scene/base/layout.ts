@@ -75,6 +75,16 @@ const PORT = 3.25;
 export const HABITAT_POSITION = new THREE.Vector3(DOME_CENTER.x + TUBE_END + PORT * HABITAT_SCALE, 0, DOME_CENTER.z);
 /** Porta do airlock no referencial do modelo: o astronauta anda até ela e some (doc do modelo). */
 export const HABITAT_DOOR_LOCAL_Z = 4.1;
+
+/**
+ * Blocos de vidro do Grégor (gym.glb, dormitory.glb, refectory.glb; docs/blocos-de-vidro.md): cilindros de 5,2 m
+ * com as portas de acoplamento na mesma altura dos módulos (2,65 m), a ±5,6 m do centro.
+ */
+export const GLASS_PORT = 5.6;
+/** Meia largura e meio comprimento do bloco de vidro no chão (casco, selas e tampas), para colisão e pedras. */
+export const GLASS_HALF = { x: 6.0, z: 2.9 };
+/** Academia de vidro no raio oeste: a porta de acoplamento dela encaixa onde o túnel da estufa termina. */
+export const GYM_GLASS_POSITION = new THREE.Vector3(DOME_CENTER.x - TUBE_END - GLASS_PORT, 0, DOME_CENTER.z);
 /** Abrigo de regolito (tempestade solar): à frente e à esquerda da base, longe do caminho do rover. */
 export const SHELTER_CENTER = new THREE.Vector3(-13.5, 0, 8.5);
 
@@ -303,13 +313,30 @@ export const BIKE_DX = 0.45;
 export const GYM_DX = 1.9;
 /** Onde fica o quadril de quem pedala, em Z, em relação ao centro do módulo (a bicicleta é montada em volta). */
 export const BIKE_Z = -0.3;
-export const GYM_STATIONS = [
+/** Um aparelho da academia onde o astronauta se exercita (posição dos pés, para onde olha, clipe e ritmo). */
+export interface GymStation {
+  pos: THREE.Vector3;
+  heading: number;
+  clip: 'walk' | 'pedal';
+  speed: number;
+}
+
+/**
+ * Aparelhos da academia. Começa com a esteira e a bicicleta do módulo simples; quando a academia de vidro
+ * (gym.glb) carrega, vira a lista dos pontos de interação dela (6 esteiras e 2 bicicletas): `setGymStations`.
+ */
+export const GYM_STATIONS: GymStation[] = [
   // Esteira: clipe `walk`; `speed` em m/s.
   // Esteira mais baixa, para a cabeça de quem corre não chegar no teto.
   { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + TREADMILL_DX, HABITAT_FLOOR_Y + 0.08, HABITAT_POSITION.z), heading: Math.PI, clip: 'walk', speed: 1.8 },
   // Bicicleta: sentado, clipe `pedal` (src/render/chibiPedal.ts); `speed` é a velocidade do clipe (1 = uma volta por segundo).
   { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + BIKE_DX, HABITAT_FLOOR_Y, HABITAT_POSITION.z + BIKE_Z), heading: Math.PI, clip: 'pedal', speed: 0.9 },
-] as const;
+];
+
+/** Troca os aparelhos da academia (a rotina lê esta lista a cada quadro). */
+export function setGymStations(list: GymStation[]): void {
+  GYM_STATIONS.splice(0, GYM_STATIONS.length, ...list);
+}
 
 /**
  * Para onde cada papel olha quando está parado no seu posto (GDD, "Para onde o astronauta olha"):

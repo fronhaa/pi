@@ -164,6 +164,14 @@ export class CrewRoutine {
 
   constructor(private readonly crew: Crew) {}
 
+  /** Alguém está correndo numa esteira (parado no aparelho, não andando até ele)? A cena anima as correias. */
+  anyoneOnTreadmill(): boolean {
+    return ROLES.some((r) => {
+      const w = this.walkers[r];
+      return w.going === 'gym' && w.path.length === 0 && GYM_STATIONS[w.station]?.clip === 'walk';
+    });
+  }
+
   /** Já chegou à estufa para consertar (andando por dentro)? O CrewTasks espera isso para começar o trabalho. */
   arrivedAtTask(r: Role): boolean {
     const w = this.walkers[r];
