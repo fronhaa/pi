@@ -25,3 +25,11 @@ Rover com rodas de raios em espiral, radiador atrás, faróis/LEDs e broca na fr
 Preservar `name`, `emissive`, transparência, `map`, `alphaTest` e `vertexColors`. Contorno: `userData.outline` (0 = sem contorno). Sombra: `sun.shadow.normalBias = 0.05`.
 
 Materiais que o jogo pode procurar pelo nome: `window`, `alarm`, `antenna_tip`, `plant`, `dome_glass`, `warning`, `rover_lights`, `base_lights`, `label`.
+
+## No jogo: garagem, manutenção e busca extra
+
+O rover faz uma expedição por sol (3 paradas de estudo, uma por tubo; a regra dos tubos é de `src/sim/day.ts`), entra na
+garagem pela rampa, entrega as amostras e faz a revisão automática. Se já saiu naquele sol, fica estacionado esperando a
+tripulação (`Rover.needsCrew`). Quando o cientista está livre, ele vai à garagem, para na frente do nariz do rover
+(`GARAGE_SERVICE_SPOT`), tira as amostras e faz a manutenção, e o rover sai para uma **busca extra** (`releaseForSurvey`):
+explora e fotografa 3 rochas com o braço guardado, **sem encher tubos**, e volta. Só cena (GDD, "Tubos de amostra").

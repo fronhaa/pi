@@ -326,6 +326,13 @@ export class Astronaut {
     if (this.freeHeading !== null) this.turnTo(this.freeHeading, dt);
   }
 
+  /** Mexendo em algo parado (manutenção do rover): segura o tablet (clipe `interact`). */
+  tinker(dt: number): void {
+    if (!this.chibi) return this.idle(dt);
+    this.playChibi('interact');
+    this.chibi.update(dt);
+  }
+
   /** Pulo (Espaço): toca o clipe `jump` uma vez. */
   jump(): void {
     if (!this.chibi) return;
