@@ -124,7 +124,9 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   (`GREENHOUSE_FLOOR_Y`); os canteiros deixam livre o espaço embaixo da passarela e na frente das escadas.
 - Túneis: raio `TUBE_RADIUS` (0,85 m): sobra ~1,7 m e o astronauta (1,87 m) passa **abaixado** (corpo curvado para a
   frente a partir dos pés, `Astronaut.fitHeadroom`). Os beliches ficam em `BUNK_Z`, um pouco mais para o meio do casco
-  que a bancada, para quem deita na cama de cima não sair pelo casco.
+  que a bancada, para quem deita na cama de cima não sair pelo casco; colchão de `BED_DEPTH` (0,7 m) e cama de baixo
+  em 0,25 m, para o capacete deitado (0,67 m) caber entre as duas camas. Deitar: de pé na frente da cama, de frente para
+  os pés dela, deita para trás girando em volta do quadril (`Astronaut.lieBlend`).
 - Os módulos do habitat ficam em 80% (`HABITAT_SCALE`), para o astronauta caber justo na cabine; a torre do airlock e o
   armário continuam em 100% (a porta segue mais alta que o astronauta). As janelas acendem à noite. Deitado no beliche, o boneco fica em 80% para caber entre as camas.
 - Academia: terceiro módulo (`GYM_OFFSET_X`), com esteira, bicicleta e aparelho de força (F9). Rotina só visual

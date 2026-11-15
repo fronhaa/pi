@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { ROLES, type Role } from '@/sim/crew';
-import type { Crew } from './Crew';
+import { Astronaut, FACING_BED_FEET, type Crew } from './Crew';
 import {
+  BUNK_LEVELS,
   BUNK_SPOTS,
-  BUNK_Z,
   DOME_CENTER,
   GREENHOUSE_STAIRS,
   GREENHOUSE_WORK_SPOT,
@@ -12,7 +12,10 @@ import {
   HABITAT_LOOK,
   HABITAT_POSITION,
   HABITAT_SPOTS,
+  MODULE_FLOOR_LENGTH,
   PROBLEM_SPOTS,
+  QUARTERS_LANE_Z,
+  QUARTERS_OFFSET_X,
   headroomAt,
 } from './base/layout';
 
@@ -25,23 +28,38 @@ const WALK_SPEED = 1.3;
 const NIGHT_WALK_SPEED = 2.2;
 /** Indo consertar a estufa: apressado (o conserto só começa quando ele chega). */
 const TASK_WALK_SPEED = 2.4;
-/** Subindo ou descendo do beliche (já deitado): devagar. */
-const CLIMB_SPEED = 0.9;
+/** Deitar no beliche e levantar dele (s). */
+const LIE_DOWN_SECONDS = 1.5;
+const GET_UP_SECONDS = 1.3;
+/**
+ * Como deita em cada cama (fração do tempo): até quando inclina para trás, quando começa a entrar e o arco do quadril.
+ * Cama de baixo: sem arco (o capacete bateria na cama de cima). Medido com o corpo do chibi nas 4 camas, deitando e
+ * levantando: nenhuma parte entra no casco, no chão ou num colchão. Entrar mais cedo (menos tempo quase deitado)
+ * faz o corpo atravessar 5 a 9 cm: entre as camas sobram 0,69 m e o capacete deitado tem 0,67 m.
+ */
+export const BED_MOVE = {
+  lower: { leanEnd: 0.65, intoStart: 0.3, arc: 0 },
+  upper: { leanEnd: 0.75, intoStart: 0.4, arc: 0.22 },
+};
 /** Corredor central: todos os módulos, os túneis e a passarela da cúpula ficam nesta linha (z) e neste piso (y). */
 const CORRIDOR_Z = DOME_CENTER.z;
 const FLOOR_Y = HABITAT_FLOOR_Y;
 /** Quem volta de fora aparece aqui: dentro do laboratório, junto à porta do airlock. */
 const DOOR_INSIDE = new THREE.Vector3(HABITAT_POSITION.x, FLOOR_Y, HABITAT_POSITION.z + 0.6);
 /**
- * Ao lado da cama, de pé (na frente do beliche, sem encostar nele): anda até aqui e então deita. Deitado, sobe
- * até a altura da cama um pouco mais perto dela (BED_APPROACH_Z) e desliza para dentro: o corpo nunca sai do casco.
+ * Ao lado da cama, de pé na frente do beliche (sem encostar nele), com o quadril na altura do meio da cama: anda até
+ * aqui, vira para os pés da cama e deita para trás (Astronaut.lieBlend). O corpo só entra na cama quando já está
+ * quase deitado, para não bater na cama de cima nem sair do casco.
  */
-const BESIDE_BED_Z = CORRIDOR_Z + 0.45;
-const BED_APPROACH_Z = HABITAT_POSITION.z + BUNK_Z + 0.65;
-/** Deitado, o corpo vai até ~0,35 m abaixo da origem do boneco: deitado no chão, a origem sobe isso. */
-const LYING_HALF = 0.36;
-/** Deitado logo acima do chão, um pouco mais para o meio do casco (o casco é redondo). */
-const LIE_DOWN_Z = CORRIDOR_Z + 0.3;
+const BESIDE_BED_Z = CORRIDOR_Z + QUARTERS_LANE_Z;
+/**
+ * Alojamento: anda pela faixa da frente (QUARTERS_LANE_Z), não pelo eixo do casco, para as pernas não passarem pela
+ * borda das camas de baixo. Entra e sai da faixa nas portas de acoplamento do módulo.
+ */
+const QUARTERS_X = HABITAT_POSITION.x + QUARTERS_OFFSET_X;
+const QUARTERS_PORT = MODULE_FLOOR_LENGTH / 2;
+const QUARTERS_OUTER = QUARTERS_PORT + 0.2;
+const QUARTERS_INNER = QUARTERS_PORT - 0.2;
 /** Olha o teto até esta distância à frente (m), para já chegar abaixado na boca do túnel. */
 const HEADROOM_LOOKAHEAD = 0.8;
 /** Parado no posto, olha às vezes para um colega a até esta distância (m). */
@@ -65,10 +83,13 @@ export interface RoutineFrame {
 
 type Activity = 'post' | 'gym' | 'bed' | 'task' | 'sleep';
 
-/** Um ponto do caminho e como ele vai até lá: andando em pé ou deitado (subindo ou descendo do beliche). */
+/**
+ * Um passo do caminho: andar até um ponto, virar para os pés da cama (`face`), deitar na cama (`lie`, de pé ao lado
+ * dela até deitado nela) ou levantar (`rise`, o contrário).
+ */
 interface Step {
+  kind: 'walk' | 'face' | 'lie' | 'rise';
   to: THREE.Vector3;
-  lying: boolean;
 }
 
 interface Walker {
@@ -88,8 +109,8 @@ interface Walker {
   /** Já apareceu dentro alguma vez (no começo do jogo ele já está no lugar; depois, entra pela porta). */
   placed: boolean;
   wasInside: boolean;
-  /** Estava deitado no quadro anterior (subindo ou descendo do beliche)? */
-  wasLying: boolean;
+  /** Tempo já passado no passo de deitar ou levantar (s). */
+  stepTime: number;
 }
 
 /**
@@ -110,7 +131,7 @@ export class CrewRoutine {
   onFirstExercise: () => void = () => {};
   private exerciseShown = false;
   private readonly walkers = Object.fromEntries(
-    ROLES.map((r) => [r, { at: 'post', idle: 0, left: 0, station: 0, rested: true, pos: HABITAT_SPOTS[r].clone(), path: [], going: null, placed: false, wasInside: false, wasLying: false } as Walker]),
+    ROLES.map((r) => [r, { at: 'post', idle: 0, left: 0, station: 0, rested: true, pos: HABITAT_SPOTS[r].clone(), path: [], going: null, placed: false, wasInside: false, stepTime: 0 } as Walker]),
   ) as Record<Role, Walker>;
 
   constructor(private readonly crew: Crew) {}
@@ -129,14 +150,55 @@ export class CrewRoutine {
     return HABITAT_SPOTS[r];
   }
 
-  /** Ao lado da cama: de pé no chão, deitado logo acima do chão e deitado na altura da cama, quase entrando nela. */
-  private besideBed(r: Role): { floor: THREE.Vector3; low: THREE.Vector3; high: THREE.Vector3 } {
-    const bed = BUNK_SPOTS[r];
-    return {
-      floor: new THREE.Vector3(bed.x, FLOOR_Y, BESIDE_BED_Z),
-      low: new THREE.Vector3(bed.x, FLOOR_Y + LYING_HALF, LIE_DOWN_Z),
-      high: new THREE.Vector3(bed.x, bed.y, BED_APPROACH_Z),
-    };
+  /** Onde ele fica de pé ao lado da cama: na frente dela, com o quadril em cima do quadril de quem está deitado. */
+  private besideBed(r: Role): THREE.Vector3 {
+    const hip = Astronaut.lyingHip(BUNK_SPOTS[r]);
+    return new THREE.Vector3(hip.x, FLOOR_Y, BESIDE_BED_Z);
+  }
+
+  /**
+   * Deitando (u de 0 a 1; levantando é o mesmo ao contrário): primeiro deita para trás na frente da cama, com o
+   * quadril subindo ou descendo até a altura dela; só no fim entra na cama (z). Devolve o quanto está deitado
+   * (0 a 1) e onde fica o quadril.
+   */
+  private bedPose(r: Role, u: number): { k: number; hip: THREE.Vector3 } {
+    const start = Astronaut.standingHip(this.besideBed(r));
+    const end = Astronaut.lyingHip(BUNK_SPOTS[r]);
+    const upper = BUNK_SPOTS[r].y > FLOOR_Y + BUNK_LEVELS[1];
+    const p = upper ? BED_MOVE.upper : BED_MOVE.lower;
+    // Deita para trás na frente da cama e vai entrando nela enquanto termina de deitar.
+    const lean = THREE.MathUtils.smoothstep(u, 0, p.leanEnd);
+    const into = THREE.MathUtils.smoothstep(u, p.intoStart, 1);
+    const hip = new THREE.Vector3(
+      THREE.MathUtils.lerp(start.x, end.x, u),
+      // Na cama de cima, um arco ao entrar: as pernas passam por cima do colchão, não por dentro.
+      THREE.MathUtils.lerp(start.y, end.y, lean) + p.arc * Math.sin(Math.PI * into),
+      THREE.MathUtils.lerp(start.z, end.z, into),
+    );
+    return { k: lean, hip };
+  }
+
+  /** Onde se anda no corredor central neste x (no alojamento, a faixa da frente). */
+  private corridorZ(x: number): number {
+    return Math.abs(x - QUARTERS_X) < QUARTERS_INNER ? CORRIDOR_Z + QUARTERS_LANE_Z : CORRIDOR_Z;
+  }
+
+  /** Pontos do corredor de um x a outro, entrando e saindo da faixa do alojamento nas portas dele. */
+  private corridor(fromX: number, toX: number): THREE.Vector3[] {
+    const gates = [
+      new THREE.Vector3(QUARTERS_X + QUARTERS_OUTER, FLOOR_Y, CORRIDOR_Z),
+      new THREE.Vector3(QUARTERS_X + QUARTERS_INNER, FLOOR_Y, CORRIDOR_Z + QUARTERS_LANE_Z),
+      new THREE.Vector3(QUARTERS_X - QUARTERS_INNER, FLOOR_Y, CORRIDOR_Z + QUARTERS_LANE_Z),
+      new THREE.Vector3(QUARTERS_X - QUARTERS_OUTER, FLOOR_Y, CORRIDOR_Z),
+    ];
+    const lo = Math.min(fromX, toX);
+    const hi = Math.max(fromX, toX);
+    const between = gates.filter((g) => g.x > lo + 0.01 && g.x < hi - 0.01).sort((a, b) => (toX > fromX ? a.x - b.x : b.x - a.x));
+    return [
+      new THREE.Vector3(fromX, FLOOR_Y, this.corridorZ(fromX)),
+      ...between,
+      new THREE.Vector3(toX, FLOOR_Y, this.corridorZ(toX)),
+    ];
   }
 
   /**
@@ -145,20 +207,19 @@ export class CrewRoutine {
    * atravessando cama, casco ou canteiro.
    */
   private route(r: Role, from: THREE.Vector3, to: THREE.Vector3, fromBed: boolean, toBed: boolean, toGreenhouse: boolean): Step[] {
-    const stand = (p: THREE.Vector3): Step => ({ to: p.clone(), lying: false });
-    const lie = (p: THREE.Vector3): Step => ({ to: p.clone(), lying: true });
+    const stand = (p: THREE.Vector3): Step => ({ kind: 'walk', to: p.clone() });
     const side = this.besideBed(r);
     const steps: Step[] = [];
-    if (fromBed) steps.push(lie(side.high), lie(side.low), stand(side.floor));
+    if (fromBed) steps.push({ kind: 'rise', to: side.clone() });
     // Escada da estufa do lado do vazamento (norte): o conserto fica lá embaixo.
     const stair = GREENHOUSE_STAIRS[0];
     const corridorX = toGreenhouse ? stair.top.x : to.x;
-    steps.push(stand(new THREE.Vector3(from.x, FLOOR_Y, CORRIDOR_Z)), stand(new THREE.Vector3(corridorX, FLOOR_Y, CORRIDOR_Z)));
+    steps.push(...this.corridor(from.x, corridorX).map(stand));
     if (toGreenhouse) steps.push(stand(stair.top), stand(stair.bottom));
-    if (toBed) steps.push(stand(side.floor), lie(side.low), lie(side.high));
-    steps.push(toBed ? lie(to) : stand(to));
-    // Tira pontos repetidos (já está no corredor, ou o destino fica no corredor).
-    return steps.filter((st, i) => st.to.distanceTo(i === 0 ? from : steps[i - 1].to) > 0.05);
+    if (toBed) steps.push(stand(side), { kind: 'face', to: side.clone() }, { kind: 'lie', to: to.clone() });
+    else steps.push(stand(to));
+    // Tira pontos repetidos (já está no corredor, ou o destino fica no corredor). Virar, deitar e levantar ficam.
+    return steps.filter((st, i) => st.kind !== 'walk' || st.to.distanceTo(i === 0 ? from : steps[i - 1].to) > 0.05);
   }
 
   /** Menor altura livre daqui até HEADROOM_LOOKAHEAD metros à frente, seguindo o caminho. */
@@ -184,8 +245,8 @@ export class CrewRoutine {
     if (from.y > FLOOR_Y - 0.3) return [];
     const stair = GREENHOUSE_STAIRS[0];
     return [
-      { to: stair.bottom.clone(), lying: false },
-      { to: stair.top.clone(), lying: false },
+      { kind: 'walk', to: stair.bottom.clone() },
+      { kind: 'walk', to: stair.top.clone() },
     ];
   }
 
@@ -265,31 +326,56 @@ export class CrewRoutine {
       const activity: Activity = f.sleeping ? 'sleep' : f.onInsideTask(r) ? 'task' : w.at;
 
       // Mudou de atividade: calcula o caminho até o novo lugar.
-      if (activity !== w.going) {
-        // Estava no meio do caminho do beliche (subindo ou descendo, deitado)? Conta como saindo da cama.
-        const fromBed = w.going === 'bed' || w.going === 'sleep' || (w.path[0]?.lying ?? false);
+      // No meio de deitar ou levantar, termina o movimento antes de mudar de ideia (não pula de pose).
+      const midBedMove = (w.path[0]?.kind === 'lie' || w.path[0]?.kind === 'rise') && w.stepTime > 0;
+      if (activity !== w.going && !midBedMove) {
+        // Na cama de verdade (já deitou)? Quem ainda está andando até ela não precisa levantar.
+        const inBed = (w.going === 'bed' || w.going === 'sleep') && w.path.length === 0;
         const toBed = activity === 'bed' || activity === 'sleep';
-        const stillInBed = toBed && (w.going === 'bed' || w.going === 'sleep');
+        // Indo para a cama e continua indo (descanso → sono): segue o mesmo caminho.
+        const goingToBed = (w.going === 'bed' || w.going === 'sleep') && w.path.length > 0;
         w.going = activity;
-        w.path = stillInBed
-          ? w.path
-          : [...this.leaveGreenhouse(w.pos), ...this.route(r, w.pos, this.spotOf(r, activity, w.station), fromBed, toBed, activity === 'task')];
+        if (!((inBed || goingToBed) && toBed)) {
+          w.path = [...this.leaveGreenhouse(w.pos), ...this.route(r, w.pos, this.spotOf(r, activity, w.station), inBed, toBed, activity === 'task')];
+          w.stepTime = 0;
+        }
       }
 
-      // Andando: segue o caminho a velocidade constante, virado para onde vai. Subindo ou descendo do beliche,
-      // vai deitado e devagar. Onde o teto é baixo (túneis), anda abaixado.
+      // Deitando ou levantando: o tempo do passo leva de em pé a deitado (ou o contrário), sem deslizar no ar.
+      const bedStep = w.path[0];
+      if (bedStep && (bedStep.kind === 'lie' || bedStep.kind === 'rise')) {
+        const dur = bedStep.kind === 'lie' ? LIE_DOWN_SECONDS : GET_UP_SECONDS;
+        w.stepTime = Math.min(dur, w.stepTime + dt);
+        const t = w.stepTime / dur;
+        const { k, hip } = this.bedPose(r, bedStep.kind === 'lie' ? t : 1 - t);
+        a.lieBlend(k, hip, FLOOR_Y); // os pés nunca entram no chão
+        a.idle(dt);
+        if (w.stepTime >= dur) {
+          w.pos.copy(bedStep.to);
+          w.path.shift();
+          w.stepTime = 0;
+          if (bedStep.kind === 'lie') a.setLying(true);
+        } else w.pos.copy(a.root.position);
+        continue;
+      }
+      // Ao lado da cama: vira para os pés dela antes de deitar.
+      if (bedStep?.kind === 'face') {
+        a.setLying(false);
+        a.root.position.copy(w.pos);
+        a.faceHeading(FACING_BED_FEET, dt);
+        a.idle(dt);
+        const left = Math.atan2(Math.sin(FACING_BED_FEET - a.model.rotation.y), Math.cos(FACING_BED_FEET - a.model.rotation.y));
+        if (Math.abs(left) < 0.02) w.path.shift();
+        continue;
+      }
+
+      // Andando: segue o caminho a velocidade constante, virado para onde vai. Onde o teto é baixo (túneis),
+      // anda abaixado.
       if (w.path.length) {
-        const lying = w.path[0].lying;
-        // Deitando ao lado da cama: o corpo começa logo acima do chão, nunca enfiado nele.
-        if (lying) w.pos.y = Math.max(w.pos.y, FLOOR_Y + LYING_HALF);
-        // Levantando ao lado da cama (estava deitado): fica de pé direto no chão (em pé lá em cima, a cabeça
-        // passaria do casco). Só nesse momento: a esteira, por exemplo, fica um pouco acima do piso.
-        else if (w.wasLying) w.pos.y = FLOOR_Y;
-        w.wasLying = lying;
-        const speed = lying ? CLIMB_SPEED : activity === 'task' ? TASK_WALK_SPEED : f.sleeping ? NIGHT_WALK_SPEED : WALK_SPEED;
+        const speed = activity === 'task' ? TASK_WALK_SPEED : f.sleeping ? NIGHT_WALK_SPEED : WALK_SPEED;
         let step = speed * dt;
         let heading = a.model.rotation.y;
-        while (step > 0 && w.path.length && w.path[0].lying === lying) {
+        while (step > 0 && w.path.length && w.path[0].kind === 'walk') {
           const next = w.path[0].to;
           const d = w.pos.distanceTo(next);
           const flat = Math.hypot(next.x - w.pos.x, next.z - w.pos.z);
@@ -303,15 +389,10 @@ export class CrewRoutine {
             step = 0;
           }
         }
+        a.setLying(false);
         a.root.position.copy(w.pos);
-        if (lying) {
-          a.setLying(true);
-          a.idle(dt);
-        } else {
-          a.setLying(false);
-          a.setMotion(speed, heading, dt);
-          a.fitHeadroom(this.headroomAhead(w), dt);
-        }
+        a.setMotion(speed, heading, dt);
+        a.fitHeadroom(this.headroomAhead(w), dt);
         continue;
       }
       a.fitHeadroom(Infinity, dt);

@@ -6,6 +6,8 @@ import {
   BACK_Z,
   BIKE_Z,
   BUNK_Z,
+  BED_DEPTH,
+  BED_THICKNESS,
   GREENHOUSE_STAIRS,
   STAIR_RUN,
   STAIR_STEPS,
@@ -365,19 +367,19 @@ export class Habitat {
     // Alojamento: dois beliches encostados no fundo, cada um com duas camas.
     for (const bx of [QUARTERS_OFFSET_X - BUNK_DX, QUARTERS_OFFSET_X + BUNK_DX]) {
       for (const level of BUNK_LEVELS) {
-        const bed = toonMesh(new THREE.BoxGeometry(1.9, 0.18, 0.8), PALETTE.light, 0.04);
+        const bed = toonMesh(new THREE.BoxGeometry(1.9, BED_THICKNESS, BED_DEPTH), PALETTE.light, 0.04);
         bed.position.set(bx, y + level, BUNK_Z);
         inside.add(bed);
-        const blanket = toonMesh(new THREE.BoxGeometry(1.3, 0.08, 0.82), PALETTE.panel, 0);
+        const blanket = toonMesh(new THREE.BoxGeometry(1.3, 0.08, BED_DEPTH + 0.02), PALETTE.panel, 0);
         blanket.position.set(bx + 0.25, y + level + 0.12, BUNK_Z);
         inside.add(blanket);
-        const pillow = toonMesh(new THREE.BoxGeometry(0.4, 0.12, 0.6), 0xffffff, 0);
+        const pillow = toonMesh(new THREE.BoxGeometry(0.4, 0.12, BED_DEPTH - 0.15), 0xffffff, 0);
         pillow.position.set(bx - 0.7, y + level + 0.14, BUNK_Z);
         inside.add(pillow);
       }
       for (const px of [-0.93, 0.93]) {
         const post = toonMesh(new THREE.BoxGeometry(0.06, 1.4, 0.06), PALETTE.tech, 0);
-        post.position.set(bx + px, y + 0.7, BUNK_Z + 0.38);
+        post.position.set(bx + px, y + 0.7, BUNK_Z + BED_DEPTH / 2 - 0.02);
         inside.add(post);
       }
     }

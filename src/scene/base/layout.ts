@@ -145,14 +145,26 @@ export const TUBES: readonly { from: THREE.Vector3; to: THREE.Vector3 }[] = [
   { from: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START), to: new THREE.Vector3(DOME_CENTER.x, TUBE_Y, DOME_CENTER.z + TUBE_START + TUBE_LENGTH) },
 ];
 /** Altura das duas camas de cada beliche, acima do piso. */
-export const BUNK_LEVELS = [0.3, 1.12] as const;
+export const BUNK_LEVELS = [0.25, 1.12] as const;
+/**
+ * Medidas da cama e do boneco deitado (80%): colchão de 0,7 m de fundo e 0,18 m de altura; entre as duas camas
+ * sobram ~0,69 m e o capacete deitado tem ~0,67 m. A origem do boneco deitado fica BUNK_BODY_Y acima do centro da cama.
+ */
+export const BED_DEPTH = 0.7;
+export const BED_THICKNESS = 0.18;
+const BUNK_BODY_Y = BED_THICKNESS / 2 + 0.34;
 /** Fundo dos módulos, onde ficam a bancada e os aparelhos (z relativo ao centro do casco). */
 export const BACK_Z = -0.55;
 /**
  * Beliches um pouco mais para o meio do casco que a bancada: o casco é redondo, e deitado na cama de cima o
  * ombro saía pelo casco (raio 1,3 m em volta de y = 2,1) com a cama no fundo (BACK_Z).
  */
-export const BUNK_Z = -0.38;
+export const BUNK_Z = -0.42;
+/**
+ * Faixa por onde se anda dentro do alojamento: mais à frente que o eixo do casco, para as pernas não passarem
+ * pela borda das camas de baixo (relativa ao centro do casco).
+ */
+export const QUARTERS_LANE_Z = 0.45;
 /** Piso dentro do casco (em 80% o casco vai de y = 0,8 a 3,4; neste piso sobra ~2,1 m de altura). */
 export const HABITAT_FLOOR_Y = 1.25;
 /** Raio do casco dos módulos em 80% e a altura do eixo dele. */
@@ -231,8 +243,9 @@ export function insideHull(zFromAxis: number, y: number): boolean {
 export const HABITAT_SPOTS: Record<Role, THREE.Vector3> = {
   commander: new THREE.Vector3(HABITAT_POSITION.x - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
   scientist: new THREE.Vector3(HABITAT_POSITION.x + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
-  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
-  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + 0.35),
+  // No alojamento, na faixa da frente (QUARTERS_LANE_Z): virando para olhar em volta, não encosta no beliche.
+  engineer: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X - 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + QUARTERS_LANE_Z + 0.05),
+  medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X + 1.0, HABITAT_FLOOR_Y, HABITAT_POSITION.z + QUARTERS_LANE_Z + 0.05),
 };
 
 /** Centro de cada beliche em relação ao centro do alojamento. */
@@ -252,7 +265,7 @@ function bunkSpot(dx: number, level: 0 | 1): THREE.Vector3 {
   // O boneco deitado tem os pés na origem: a origem fica na ponta da cama, longe do travesseiro.
   return new THREE.Vector3(
     HABITAT_POSITION.x + QUARTERS_OFFSET_X + dx + LYING_LENGTH / 2,
-    HABITAT_FLOOR_Y + BUNK_LEVELS[level] + 0.36,
+    HABITAT_FLOOR_Y + BUNK_LEVELS[level] + BUNK_BODY_Y,
     HABITAT_POSITION.z + BUNK_Z,
   );
 }
