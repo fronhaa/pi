@@ -9,7 +9,7 @@ import { RoverTracks } from './base/RoverTracks';
 import { Sky } from './base/Sky';
 import { BaseStructures } from './base/structures';
 import { buildTerrain } from './base/terrain';
-import type { Obstacle } from './base/layout';
+import { DOME_CENTER, DOME_RADIUS, type Obstacle } from './base/layout';
 
 /** O que a cena precisa saber do jogo para mostrar o estado (GDD, "A cena tem que mostrar o estado do jogo"). */
 export interface SceneState {
@@ -19,6 +19,8 @@ export interface SceneState {
   stormNight: boolean;
   earthMessage: boolean;
   scienceBlocks: number;
+  /** Tempestade de poeira acontecendo (no sol dela e nos sóis em que a poeira fica no ar): só aí há partículas. */
+  dustStorm?: boolean;
   /** Sol (dia) atual: o rover faz uma expedição por sol, como a regra dos tubos (src/sim/day.ts). */
   sol?: number;
   /** Lua: dia de sombra das montanhas (a luz do Sol fica fraca). */
@@ -86,6 +88,8 @@ export class BaseScene {
   constructor(scene: THREE.Scene) {
     scene.add(this.root);
     this.sky = new Sky(scene, this.root, this.scenario);
+    // A lista de caixas é preenchida pela montagem da base; a cúpula é redonda e entra à parte.
+    this.sky.setDustExclusion(this.obstacles, [{ x: DOME_CENTER.x, z: DOME_CENTER.z, r: DOME_RADIUS + 0.5, h: DOME_RADIUS + 1 }]);
     const terrain = buildTerrain(this.root);
     this.mesas = terrain.mesas;
     this.habitat = new Habitat(this.obstacles);
@@ -246,7 +250,9 @@ export class BaseScene {
     const dust = Math.max(s.res.dust / CONFIG.dust.max, (this.demo.dust ?? 0) * d);
     const alert = s.alert || (!!this.demo.alert && d > 0.4);
     const sunlight = (s.sunlight ?? 1) * (1 - (this.demo.dark ?? 0) * d);
-    this.sky.update({ night: n, dust, alert, sunlight, time, dt, dayTime: this.dayTime });
+    // Partículas no ar só com a tempestade de poeira ativa (ou no treino da introdução).
+    const airborne = Math.max(s.dustStorm ? dust : 0, (this.demo.dust ?? 0) * d);
+    this.sky.update({ night: n, dust, airborne, alert, sunlight, time, dt, dayTime: this.dayTime });
     this.habitat.update(n);
     this.structures.update({
       time,
