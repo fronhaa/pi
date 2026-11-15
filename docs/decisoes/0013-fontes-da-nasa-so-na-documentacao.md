@@ -38,7 +38,7 @@ original em [ciencia-marte.md](../ciencia-marte.md).
 - Também saem a linha "Fonte: NASA…" da intro da viagem (`launch.source.*`) e o crédito escrito nos cartões de foto
   (`LaunchScene.ts`); os créditos ficam em `fontes-nasa.md`.
 - Continuam no jogo, porque são o conteúdo e a honestidade, não a referência: "Tempestade real: data" / "Erupção
-  simulada", "dados reais baixados em…" na mensagem "O Sol ultimamente" (nunca "ao vivo") e o selo "FOTO REAL" com a
+  simulada", a mensagem "☀️ O Sol antes da viagem" (sem selo de data desde 15/11/2026; o texto não diz "agora") e o selo "FOTO REAL" com a
   legenda curta nos cartões da viagem ("A Terra vista pela Apollo 17 (1972)").
 - O "modo cientista" (unidade real) fica só na dica do mouse.
 - O estudo do OSDR (OSD-342) e a medição do RAD do Curiosity deixam de aparecer no jogo: ficam só na documentação e no pitch.

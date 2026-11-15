@@ -803,7 +803,7 @@ O passo do tutorial do sol 1 sobre energia passa a apontar para a estufa, não p
 
 ## Dados reais da NASA
 
-> **Clima espacial atual (15/11/2026):** a **primeira tempestade** da missão é sorteada entre as **5 erupções reais mais recentes** do DONKI (`CONFIG.solarStorms.recentPool`); as outras continuam sorteadas de todo o histórico. No **sol 1**, a mensagem "O Sol ultimamente" mostra quantas erupções fortes reais houve nos 30 dias antes do download, a mais recente (só na dica do mouse) e a dica da proteção, com o selo "dados reais baixados em…" (nunca "ao vivo"). Atualizar: `npm run fetch-data`.
+> **Clima espacial atual (15/11/2026):** a **primeira tempestade** da missão é sorteada entre as **5 erupções reais mais recentes** do DONKI (`CONFIG.solarStorms.recentPool`); as outras continuam sorteadas de todo o histórico. No **sol 1**, a mensagem "☀️ O Sol antes da viagem" mostra quantas erupções fortes reais houve nos 30 dias antes do download, a mais recente (só na dica do mouse) e a dica da proteção, sem selo de data e sem dizer "agora" (nunca parece ao vivo). Atualizar: `npm run fetch-data`.
 
 As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros conjuntos de dados entram aos poucos. As fontes, com link e estado de cada uma, ficam em [fontes-nasa.md](fontes-nasa.md), não no jogo ([ADR 0013](decisoes/0013-fontes-da-nasa-so-na-documentacao.md)).
 
@@ -818,7 +818,7 @@ As tempestades solares do jogo devem usar erupções reais do DONKI. Os outros c
 
 **Regras de honestidade (o enunciado do desafio pede isso):**
 
-- O jogo nunca apresenta dado estático como ao vivo: "O Sol ultimamente" diz "dados reais baixados em…".
+- O jogo nunca apresenta dado estático como ao vivo. Não há selo de data na tela: a mensagem do sol 1 se chama "☀️ O Sol antes da viagem" e fala de "30 dias", não de "últimos 30 dias".
 - Cada alerta de tempestade diz se a erupção é real (com a data) ou simulada.
 - Energia, vida, blindagem e dose são simplificados, e a dose nunca aparece em unidade real (mSv). Só é chamado de real o que veio de uma fonte.
 - As fontes ficam na documentação ([fontes-nasa.md](fontes-nasa.md)), com links; o jogo não mostra referências, nomes de bases de dados nem links (crianças de 7 a 12 anos).
