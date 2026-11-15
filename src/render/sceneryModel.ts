@@ -3,20 +3,23 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { addOutline, toonMaterial } from '@/render/toon';
 
 /**
- * Modelos .glb do cenário (base de pesquisa e rover, docs/rover-e-base-de-pesquisa.md).
+ * Modelos .glb do cenário (base de pesquisa e rover, docs/rover-e-base-de-pesquisa.md; base de comunicação e
+ * placas com bateria, docs/base-comunicacao-e-bateria.md).
  * Ao carregar, troca os materiais por toonMaterial (mantendo nome, brilho, transparência e textura)
  * e põe o contorno com a espessura gravada em `userData.outline` de cada peça (0 = sem contorno).
  */
 export const SCENERY_MODELS = {
   researchBase: `${import.meta.env.BASE_URL}assets/models/research-base.glb`,
   rover: `${import.meta.env.BASE_URL}assets/models/rover.glb`,
+  commBase: `${import.meta.env.BASE_URL}assets/models/comm-base.glb`,
+  solarPanels: `${import.meta.env.BASE_URL}assets/models/solar-panels-battery.glb`,
 } as const;
 
 export interface SceneryModel {
   root: THREE.Group;
   mixer: THREE.AnimationMixer;
-  /** Toca um clipe do .glb em loop (ou uma vez). Nome desconhecido: não faz nada. */
-  play(name: string, once?: boolean): void;
+  /** Toca um clipe do .glb em loop (ou uma vez) e devolve a ação. Nome desconhecido: não faz nada (null). */
+  play(name: string, once?: boolean): THREE.AnimationAction | null;
 }
 
 export async function loadSceneryModel(url: string): Promise<SceneryModel> {
@@ -30,11 +33,12 @@ export async function loadSceneryModel(url: string): Promise<SceneryModel> {
     mixer,
     play(name, once = false) {
       const clip = clips.get(name);
-      if (!clip) return;
+      if (!clip) return null;
       const action = mixer.clipAction(clip);
       action.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
       action.clampWhenFinished = once;
       action.reset().play();
+      return action;
     },
   };
 }
