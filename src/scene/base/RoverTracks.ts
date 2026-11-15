@@ -70,12 +70,15 @@ export class RoverTracks {
       this.dummy.rotation.set(0, heading, 0);
       this.dummy.updateMatrix();
       this.mesh.setMatrixAt(this.next, this.dummy.matrix);
+      // A marca nasce já com a cor do rastro: sem isso, ela fica com a cor padrão (branca) até o próximo fade().
+      this.mesh.setColorAt(this.next, this.color.copy(this.ground).lerp(TRACK_COLOR, TRACK_STRENGTH));
       this.sols[this.next] = sol;
       this.next = (this.next + 1) % MAX_MARKS;
       this.count = Math.min(MAX_MARKS, this.count + 1);
     }
     this.mesh.count = this.count;
     this.mesh.instanceMatrix.needsUpdate = true;
+    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
   }
 
   /** Desbota pelos sóis passados (o vento apaga devagar). Chamado de vez em quando, não precisa ser a cada frame. */
