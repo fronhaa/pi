@@ -466,10 +466,10 @@ export class Game {
     }
     const r = this.tasks.assign(this.selected, uid);
     if (r === 'ok') this.crew.members[this.selected].cancelLook(); // ordem cancela o olhar para a câmera
-    if (r === 'storm') this.hud.toast(t('eva.banned'));
-    else if (r === 'full') this.hud.toast(t('eva.full'));
-    else if (r === 'nobody') this.hud.toast(t('eva.nobody'));
-    else if (r === 'noPower') this.hud.toast(t('day.noPowerToast'));
+    if (r === 'storm') this.hud.toast(t('eva.banned'), undefined, t('eva.banned.title'));
+    else if (r === 'full') this.hud.toast(t('eva.full'), undefined, t('eva.full.title'));
+    else if (r === 'nobody') this.hud.toast(t('eva.nobody'), undefined, t('eva.nobody.title'));
+    else if (r === 'noPower') this.hud.toast(t('day.noPowerToast'), undefined, t('day.noPowerToast.title'));
   }
 
   /** Solo: todos os astronautas. Em grupo: ver CoopMode.canControl. */
@@ -484,7 +484,7 @@ export class Game {
       if (this.phase === 'day' && e.code === 'KeyP') this.togglePause();
       if (this.phase === 'day' && !this.paused && e.code === 'KeyE') {
         if (!this.canControl(this.selected)) this.hud.toast(t('coop.crew.pickYours'));
-        else if (!this.tasks.interact(this.selected)) this.hud.toast(t('task.nothingNear'));
+        else if (!this.tasks.interact(this.selected)) this.hud.toast(t('task.nothingNear'), undefined, t('task.nothingNear.title'));
       }
       if (!this.motion && /^(Digit|Numpad)[1-4]$/.test(e.code)) {
         this.select(ROLES[Number(e.code.slice(-1)) - 1]);
@@ -533,7 +533,7 @@ export class Game {
   private announceProblem(p: Problem): void {
     this.markers.add(p.uid, p.kind);
     if (p.kind === 'roverStuck') this.base.setRoverStuck(PROBLEM_SPOTS.roverStuck);
-    this.hud.toast(t('problem.new', { problem: t(`problem.${p.kind}` as StringKey) }), this.problemTipShown ? undefined : t('day.hint'));
+    this.hud.toast(t('problem.new', { problem: t(`problem.${p.kind}` as StringKey) }), this.problemTipShown ? undefined : t('day.hint'), t('problem.new.title'));
     this.problemTipShown = true;
   }
 

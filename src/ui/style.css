@@ -204,6 +204,8 @@
   font-family: var(--font); color: var(--ink); font-size: 16px; font-weight: 600; max-width: min(520px, calc(100vw - 32px));
   text-align: center;
 }
+.toast-title, .msg-head { font-weight: 700; }
+.toast-title { display: block; font-size: 17px; margin-bottom: 2px; }
 .toast small { display: block; font-weight: 400; font-size: 12px; opacity: 0.8; margin-top: 2px; }
 
 /* ---------- treino dos sóis 1 a 3 (src/ui/IntroGuide.ts) ---------- */

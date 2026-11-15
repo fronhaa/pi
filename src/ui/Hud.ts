@@ -170,9 +170,10 @@ export class Hud {
     this.renderCrew();
   }
 
-  /** Aviso curto que some sozinho (ex.: fato sobre a gravidade de Marte). */
-  toast(text: string, source?: string): void {
-    const el = h('div', { class: 'toast panel', role: 'status' }, text, source ? h('small', {}, source) : null);
+  /** Aviso curto que some sozinho. `title` = ícone + 2 ou 3 palavras em negrito (docs/linguagem-e-ui-criancas.md). */
+  toast(text: string, source?: string, title?: string): void {
+    const el = h('div', { class: 'toast panel', role: 'status' },
+      title ? h('strong', { class: 'toast-title' }, title) : null, text, source ? h('small', {}, source) : null);
     document.body.append(el);
     window.setTimeout(() => el.remove(), 7000);
   }
@@ -453,8 +454,8 @@ export class Hud {
     const warnings: { text: string; tone: 'bad' | 'warn' | 'info' }[] = [];
     if (pv) {
       if (pv.missing > 0) warnings.push({ text: t('preview.batteryShort', { life: fmt(pv.lifeLost) }), tone: 'bad' });
-      if (pv.stormTonight) warnings.push({ text: t('preview.stormTonight', { label: pv.stormTonight.label, dose: pv.stormDose, shield: Math.round(Math.min(SIM.shield.max, Math.max(0, s.res.shield + pv.shieldDelta))) }), tone: 'bad' });
-      if (pv.stormTomorrow) warnings.push({ text: t('preview.stormTomorrow', { label: pv.stormTomorrow.label, dose: pv.doseTomorrowIfNow, shield: Math.round(pv.after.shield) }), tone: 'warn' });
+      if (pv.stormTonight) warnings.push({ text: t('preview.stormTonight', { strength: t(`storm.strength.${pv.stormTonight.cls}` as StringKey), dose: pv.stormDose, shield: Math.round(Math.min(SIM.shield.max, Math.max(0, s.res.shield + pv.shieldDelta))) }), tone: 'bad' });
+      if (pv.stormTomorrow) warnings.push({ text: t('preview.stormTomorrow', { strength: t(`storm.strength.${pv.stormTomorrow.cls}` as StringKey), dose: pv.doseTomorrowIfNow, shield: Math.round(pv.after.shield) }), tone: 'warn' });
       if (pv.after.life <= 0) warnings.push({ text: t('preview.lifeZero'), tone: 'bad' });
       else if (pv.after.life <= 25) warnings.push({ text: t('preview.lifeLow', { v: fmt(pv.after.life) }), tone: 'bad' });
       if (pv.after.dose >= SIM.dose.max) warnings.push({ text: t('preview.doseMax'), tone: 'bad' });
@@ -605,10 +606,11 @@ export function flareBadge(f: Flare): HTMLElement {
 
 /** Texto do aviso: erupção (classe) ou nuvem de plasma de missão histórica (força e velocidade). */
 function stormText(f: Flare, when: 'alert' | 'today', sol?: number): string {
-  if (f.source !== 'cme') {
-    return when === 'alert' ? t('msg.stormAlert', { label: f.label, sol: sol ?? 0 }) : t('msg.stormToday', { label: f.label });
-  }
+  // Força em palavra (fraca, média, forte): a classe real (M, X, R…) fica no selo e no link do DONKI ("modo cientista").
   const strength = t(`storm.strength.${f.cls}` as StringKey);
+  if (f.source !== 'cme') {
+    return when === 'alert' ? t('msg.stormAlert', { strength, sol: sol ?? 0 }) : t('msg.stormToday', { strength });
+  }
   const speed = f.speedKmS ? f.speedKmS.toLocaleString(getLang() === 'pt' ? 'pt-BR' : 'en') : '?';
   return when === 'alert' ? t('msg.stormAlert.cme', { strength, speed, sol: sol ?? 0 }) : t('msg.stormToday.cme', { strength });
 }
@@ -631,6 +633,13 @@ function recentSunEl(r: RecentSun): HTMLElement {
 }
 
 function messageEl(m: MarsMessage): HTMLElement {
+  const el = messageBody(m);
+  // Todo aviso começa com ícone + 2 ou 3 palavras em negrito (docs/linguagem-e-ui-criancas.md, regra 5).
+  el.prepend(h('strong', { class: 'msg-head' }, t(`msg.head.${m.kind}` as StringKey)), ' ');
+  return el;
+}
+
+function messageBody(m: MarsMessage): HTMLElement {
   const delay = 'delayMin' in m ? h('span', { class: 'meta' }, t('msg.delay', { n: m.delayMin })) : null;
   switch (m.kind) {
     case 'earth':
