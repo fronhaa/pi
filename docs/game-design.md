@@ -929,7 +929,7 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 
 | Área | Conteúdo |
 | --- | --- |
-| Barra superior | Nome da missão e local, "Sol N de 15", botões "Dados da NASA" e idioma |
+| Barra superior | Pílulas soltas sobre o cenário: nome da missão; "Sol N de 15" com barrinha de progresso (tocar explica o que é um sol); botões "Como jogar" e "Dados da NASA" (só ícone no celular) e seletor de idioma PT \| EN |
 | Recursos (esquerda) | Bateria, suporte de vida, blindagem, dose (com marcas em 50 e 70), ciência (com a meta) e tubos de amostra (de 38), cada um com barra e botão "?" |
 | Mensagens da Terra (direita) | Alertas do dia, com o atraso em minutos e o selo de erupção real ou simulada |
 | Plano de energia (baixo) | **Só visualização:** blocos de cada parte, dicas como "precisa de 3 para não cair", prévia e avisos, e o botão "Terminar o sol". A divisão é feita tocando nos lugares da base (ver [Energia no ambiente](#energia-no-ambiente-especificação)) |

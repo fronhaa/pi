@@ -8,7 +8,7 @@ export const pt = {
   'game.subtitle': 'Mars Exploration · Cratera Jezero, Marte',
   'top.sol': 'Sol {sol} de {total}',
   'top.nasaData': 'Dados da NASA',
-  'top.lang': 'English',
+  'top.lang': 'Idioma',
   'top.help': 'Como jogar',
 
   'res.battery': 'Bateria',
@@ -131,7 +131,7 @@ export const en: Record<keyof typeof pt, string> = {
   'game.subtitle': 'Mars Exploration · Jezero Crater, Mars',
   'top.sol': 'Sol {sol} of {total}',
   'top.nasaData': 'NASA data',
-  'top.lang': 'Português',
+  'top.lang': 'Language',
   'top.help': 'How to play',
 
   'res.battery': 'Battery',
