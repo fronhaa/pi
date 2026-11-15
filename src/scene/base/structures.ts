@@ -33,6 +33,15 @@ const DOME_BERM_BOXES = 24;
 const FIBER_COLOR = 0xffd27a;
 const LED_COLOR = 0xe08cff;
 const LED_HEIGHT = 2.7;
+/** Luminárias da fibra óptica lá dentro (relativas ao centro da estufa) e a força do foco com o Sol pleno. */
+const FIBER_LAMPS: readonly [number, number][] = [[0.8, -3.6], [-1.2, 3.4]];
+const FIBER_LAMP_HEIGHT = 3.5;
+const FIBER_SPOT_INTENSITY = 14;
+
+/** Facho de luz visível: cone translúcido que soma luz (não escurece o que está atrás). */
+function beamMaterial(color: number): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+}
 /** Largura do medidor de bateria (m). */
 const METER_WIDTH = 1.8;
 
@@ -95,7 +104,11 @@ export class BaseStructures {
   private readonly fiberMat = new THREE.MeshBasicMaterial({ color: FIBER_COLOR });
   private readonly ledMat = new THREE.MeshBasicMaterial({ color: LED_COLOR });
   private readonly ledLight = new THREE.PointLight(LED_COLOR, 2.5, 9, 1.4);
-  private readonly fiberLight = new THREE.PointLight(0xfff0d0, 0, 14, 1.2);
+  /** Luminárias da fibra óptica lá dentro: um foco de luz do Sol sobre cada canteiro (sem sombra). */
+  private readonly fiberSpots: THREE.SpotLight[] = [];
+  /** Fachos visíveis (cones translúcidos): mostram de onde vem a luz das plantas, na sombra do casco. */
+  private readonly fiberBeamMat = beamMaterial(FIBER_COLOR);
+  private readonly ledBeamMat = beamMaterial(LED_COLOR);
   /** Animações dos .glb (antena girando, bateria). */
   private readonly mixers: THREE.AnimationMixer[] = [];
 
@@ -160,8 +173,12 @@ export class BaseStructures {
     this.fiberMat.color.setHex(FIBER_COLOR).multiplyScalar(0.35 + 0.65 * day * (sun === UP ? 0.3 : 1));
     this.ledMat.color.setHex(LED_COLOR).multiplyScalar(0.7 + 0.5 * f.darkness);
     this.ledLight.intensity = 1.2 + 2.3 * f.darkness;
-    // De dia, a luz do Sol entra pela fibra óptica (com o Sol abaixo do horizonte, quase nada).
-    this.fiberLight.intensity = 9 * day * (sun === UP ? 0.15 : 1);
+    // De dia, a luz do Sol entra pela fibra óptica e desce em fachos sobre os canteiros (com o Sol abaixo do
+    // horizonte, quase nada); à noite, os fachos dos LEDs ficam mais fortes.
+    const sunlight = day * (sun === UP ? 0.15 : 1);
+    for (const spot of this.fiberSpots) spot.intensity = FIBER_SPOT_INTENSITY * sunlight;
+    this.fiberBeamMat.opacity = 0.2 * sunlight;
+    this.ledBeamMat.opacity = 0.05 + 0.13 * f.darkness;
   }
 
   /**
@@ -351,6 +368,12 @@ export class BaseStructures {
       const bar = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.07, 0.3), this.ledMat);
       bar.position.set(x, LED_HEIGHT, z);
       this.root.add(bar);
+      // Facho magenta da barra até os canteiros.
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.75, LED_HEIGHT - 0.5, 16, 1, true), this.ledBeamMat);
+      beam.scale.x = 1.5;
+      beam.position.set(x, (LED_HEIGHT + 0.5) / 2, z);
+      beam.renderOrder = 2;
+      this.root.add(beam);
       for (const ox of [-1, 1]) {
         const post = toonMesh(new THREE.CylinderGeometry(0.035, 0.035, LED_HEIGHT - 0.4, 6), PALETTE.tech, 0);
         post.position.set(x + ox, (LED_HEIGHT + 0.4) / 2, z);
@@ -359,9 +382,37 @@ export class BaseStructures {
     }
     this.ledLight.position.set(center.x, LED_HEIGHT + 0.5, center.z);
     this.root.add(this.ledLight);
-    // Saída da fibra óptica lá dentro, no alto: a luz do Sol entra por ela (o casco faz sombra).
-    this.fiberLight.position.set(center.x, DOME_RADIUS * 0.8, center.z);
-    this.root.add(this.fiberLight);
+    this.buildFiberLamps(center);
+  }
+
+  /**
+   * Fibra óptica por dentro: os cabos entram pelo topo, sob o concentrador, até um difusor; dele saem fibras até duas
+   * luminárias sobre os canteiros (longe da passarela e das escadas). Cada uma tem um foco de luz de verdade (SpotLight,
+   * sem sombra) e um facho visível, para mostrar que a luz das plantas vem de dentro.
+   */
+  private buildFiberLamps(center: THREE.Vector3): void {
+    const hub = new THREE.Vector3(center.x, center.y + DOME_RADIUS * 0.92, center.z);
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.08, 20), this.fiberMat);
+    disc.position.copy(hub);
+    this.root.add(disc);
+    for (const [dx, dz] of FIBER_LAMPS) {
+      const lamp = new THREE.Vector3(center.x + dx, FIBER_LAMP_HEIGHT, center.z + dz);
+      // Fibra do difusor até a luminária.
+      const mid = hub.clone().lerp(lamp, 0.5).add(new THREE.Vector3(0, 0.5, 0));
+      this.root.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(hub, mid, lamp), 20, 0.03, 6), this.fiberMat));
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.28, 0.16, 16), this.fiberMat);
+      head.position.copy(lamp);
+      this.root.add(head);
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 1.3, FIBER_LAMP_HEIGHT - 0.5, 20, 1, true), this.fiberBeamMat);
+      beam.position.set(lamp.x, (FIBER_LAMP_HEIGHT + 0.5) / 2, lamp.z);
+      beam.renderOrder = 2;
+      this.root.add(beam);
+      const spot = new THREE.SpotLight(FIBER_COLOR, 0, 7, 0.55, 0.7, 1.2);
+      spot.position.copy(lamp);
+      spot.target.position.set(lamp.x, 0, lamp.z);
+      this.root.add(spot, spot.target);
+      this.fiberSpots.push(spot);
+    }
   }
 
   private buildTower() {
