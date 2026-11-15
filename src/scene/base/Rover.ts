@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { PALETTE, toonMesh } from '@/render/toon';
 import type { SceneryModel } from '@/render/sceneryModel';
-import { ROVER_DOCK, ROVER_KEEP_OUT, ROVER_TRACK, terrainHeight, type Obstacle } from './layout';
+import { GARAGE_FLOOR_Y, GARAGE_POSITION, GARAGE_RAMP, GARAGE_SCALE, ROVER_DOCK, ROVER_KEEP_OUT, ROVER_TRACK, terrainHeight, type Obstacle } from './layout';
 import type { Rock } from './terrain';
 
 // Valores de cena (só visual), não regras do jogo.
@@ -35,6 +35,20 @@ const DELIVER_SECONDS = 2.5;
 const SERVICE_SECONDS = 9;
 /** Velocidade na rampa e na manobra de entrar e sair (m/s): devagar e com cuidado. */
 const DOCK_SPEED = 1.3;
+/**
+ * Rodas (como o Perseverance: suspensão rocker-bogie e as 4 rodas dos cantos viram).
+ * Cada roda sobe ou desce até SUSPENSION_UP/DOWN m para acompanhar o chão embaixo dela; o corpo fica na média.
+ * As rodas dos cantos viram até STEER_MAX rad: na curva, apontam para o centro da curva; girando parado, ficam em "X".
+ */
+const SUSPENSION_UP = 0.22;
+const SUSPENSION_DOWN = 0.15;
+const STEER_MAX = 0.9;
+/** Quão rápido a suspensão, a direção das rodas e a inclinação do corpo acompanham (1/s). */
+const SUSPENSION_SPEED = 12;
+const STEER_SPEED = 8;
+const TILT_SPEED = 10;
+/** Na rampa, mais devagar perto do pé e do topo (onde a inclinação muda). */
+const RAMP_EASE = 0.5;
 /** Luz da revisão (verde) e de espera por astronauta (âmbar). */
 const LIGHT_SERVICE = 0x5cf07a;
 /** Velocidade andando (m/s) e giro máximo (rad/s): ele vira aos poucos, como um veículo de verdade. */
@@ -104,6 +118,11 @@ export class Rover {
   private model: SceneryModel | null = null;
   private modelStudying = false;
   private wheelRadius = 0.3;
+  /** Cada roda: posição no rover (x para a frente, z para o lado), altura de repouso, quanto subiu e quanto virou. */
+  private wheelInfo: { obj: THREE.Object3D; x: number; z: number; restY: number; lift: number; steer: number }[] = [];
+  /** Inclinação do corpo (amortecida): arfagem (nariz) e rolagem (lado). */
+  private pitch = 0;
+  private roll = 0;
   /** Rover atolado: fica parado e inclinado neste ponto até alguém resolver. */
   private stuckAt: THREE.Vector3 | null = null;
   /** Parado porque há um astronauta (ou nenhuma passagem) à frente, e há quanto tempo a frente está livre. */
@@ -195,6 +214,8 @@ export class Rover {
     this.root.position.copy(ROVER_DOCK.inside);
     this.heading = ROVER_DOCK.heading;
     this.root.rotation.set(0, this.heading, 0);
+    this.setupWheels();
+    this.pose(ROVER_DOCK.inside.x, ROVER_DOCK.inside.z, 1, 0, 0);
   }
 
   /** Troca o rover simples pelo .glb: a lógica de andar, parar e desviar continua a mesma. */
@@ -207,6 +228,7 @@ export class Rover {
       if (w) this.wheels.push(w);
     }
     this.wheelRadius = 0.34;
+    this.setupWheels();
     this.warning.position.set(0, 2.62, 0);
     this.root.add(m.root);
     this.model = m;
@@ -557,10 +579,10 @@ export class Rover {
       const a = ROVER_DOCK.approach;
       const gap = Math.hypot(a.x - p.x, a.z - p.z);
       if (Math.abs(diff) > 0.02 || gap > 0.01) {
-        this.heading += THREE.MathUtils.clamp(diff, -TURN_RATE * dt, TURN_RATE * dt);
+        const turn = THREE.MathUtils.clamp(diff, -TURN_RATE * dt, TURN_RATE * dt);
+        this.heading += turn;
         const k = gap > 0 ? Math.min(1, (DOCK_SPEED * dt) / gap) : 1;
-        p.set(p.x + (a.x - p.x) * k, terrainHeight(p.x, p.z), p.z + (a.z - p.z) * k);
-        this.root.rotation.set(0, this.heading, 0);
+        this.pose(p.x + (a.x - p.x) * k, p.z + (a.z - p.z) * k, dt, gap * k, turn / dt);
         return;
       }
       this.heading = ROVER_DOCK.heading;
@@ -571,14 +593,16 @@ export class Rover {
     }
     this.blocked = false;
     const total = Rover.dockLength();
-    const step = DOCK_SPEED * dt;
+    // Mais devagar perto do pé e do topo da rampa, onde a inclinação muda.
+    const footS = Math.hypot(ROVER_DOCK.foot.x - ROVER_DOCK.approach.x, ROVER_DOCK.foot.z - ROVER_DOCK.approach.z);
+    const topS = footS + Math.hypot(ROVER_DOCK.top.x - ROVER_DOCK.foot.x, ROVER_DOCK.top.z - ROVER_DOCK.foot.z);
+    const edge = Math.min(Math.abs(this.dockS - footS), Math.abs(this.dockS - topS));
+    const step = DOCK_SPEED * dt * (RAMP_EASE + (1 - RAMP_EASE) * THREE.MathUtils.smoothstep(edge, 0, 1.6));
     this.dockS = this.phase === 'dockIn' ? Math.min(total, this.dockS + step) : Math.max(0, this.dockS - step);
-    // De ré as rodas giram ao contrário.
-    for (const w of this.wheels) w.rotation.z -= (this.phase === 'dockIn' ? step : -step) / this.wheelRadius;
+    // A altura e a inclinação vêm das rodas (pose): as da frente sobem a rampa primeiro, e o corpo inclina aos poucos.
+    // De ré, as rodas giram ao contrário.
     const q = this.dockPoint(this.dockS);
-    this.root.position.set(q.x, q.y, q.z);
-    this.root.rotation.order = 'YZX';
-    this.root.rotation.set(0, this.heading, q.slope);
+    this.pose(q.x, q.z, dt, this.phase === 'dockIn' ? step : -step, 0);
     if (this.phase === 'dockIn' && this.dockS >= total) {
       this.phase = 'service';
       this.serviceLeft = SERVICE_SECONDS;
@@ -662,18 +686,75 @@ export class Rover {
     const step = speed * dt;
     const x = p.x + Math.cos(this.heading) * step;
     const z = p.z - Math.sin(this.heading) * step;
-    for (const w of this.wheels) w.rotation.z -= step / this.wheelRadius;
+    this.pose(x, z, dt, step, THREE.MathUtils.clamp(diff, -TURN_RATE * dt, TURN_RATE * dt) / dt);
+  }
 
-    // Terreno: inclina o rover conforme o relevo (frente/trás = arfagem, lados = rolagem).
+  // ---------- rodas, suspensão e inclinação ----------
+
+  /** Guarda onde cada roda fica no rover (modelo simples ou .glb). */
+  private setupWheels(): void {
+    this.wheelInfo = this.wheels.map((obj) => ({ obj, x: obj.position.x, z: obj.position.z, restY: obj.position.y, lift: 0, steer: 0 }));
+  }
+
+  /** Altura do chão: na rampa e na garagem, a da rampa (sobe do pé até o piso); fora delas, o relevo. */
+  private groundAt(x: number, z: number): number {
+    const { top, foot, width } = GARAGE_RAMP;
+    if (Math.abs(x - foot.x) <= width / 2 + 0.2) {
+      if (z >= top.z && z <= foot.z) return THREE.MathUtils.lerp(top.y, foot.y, (z - top.z) / (foot.z - top.z));
+      if (z < top.z && z >= GARAGE_POSITION.z - 3.25 * GARAGE_SCALE) return GARAGE_FLOOR_Y;
+    }
+    return terrainHeight(x, z);
+  }
+
+  /**
+   * Põe o rover em (x, z) apoiado nas 6 rodas: o corpo fica na altura média do chão embaixo delas e inclina
+   * pela diferença entre frente e trás (arfagem) e entre os lados (rolagem), aos poucos. Cada roda sobe ou desce
+   * o que falta para tocar o chão (suspensão), as rodas dos cantos viram conforme a curva e todas giram pela
+   * distância andada (`forward`, negativo de ré). `yawRate` = quanto ele está virando (rad/s).
+   */
+  private pose(x: number, z: number, dt: number, forward: number, yawRate: number): void {
     const h = this.heading;
-    const fx = Math.cos(h);
-    const fz = -Math.sin(h);
-    const front = terrainHeight(x + fx, z + fz);
-    const back = terrainHeight(x - fx, z - fz);
-    const left = terrainHeight(x - fz * 0.65, z + fx * 0.65);
-    const right = terrainHeight(x + fz * 0.65, z - fx * 0.65);
+    const c = Math.cos(h);
+    const sn = Math.sin(h);
+    // Roda (x para a frente, z para o lado) → mundo. O nariz (+X) aponta para (cos h, −sin h).
+    const contact = this.wheelInfo.map((w) => this.groundAt(x + w.x * c + w.z * sn, z - w.x * sn + w.z * c));
+    const mean = (pick: (w: (typeof this.wheelInfo)[number]) => boolean) => {
+      const hs = contact.filter((_, i) => pick(this.wheelInfo[i]));
+      return hs.length ? hs.reduce((a, b) => a + b, 0) / hs.length : 0;
+    };
+    const xs = this.wheelInfo.map((w) => w.x);
+    const zs = this.wheelInfo.map((w) => w.z);
+    const base = Math.max(0.5, Math.max(...xs) - Math.min(...xs));
+    const track = Math.max(0.5, Math.max(...zs) - Math.min(...zs));
+    const ground = contact.reduce((a, b) => a + b, 0) / Math.max(1, contact.length);
+    const pitchTarget = Math.atan2(mean((w) => w.x > 0.3) - mean((w) => w.x < -0.3), base);
+    // Rolagem: o lado +Z (esquerdo) mais alto sobe o lado esquerdo do rover (sinal negativo pela ordem YZX).
+    const rollTarget = -Math.atan2(mean((w) => w.z > 0) - mean((w) => w.z < 0), track);
+    const k = Math.min(1, TILT_SPEED * dt);
+    this.pitch += (pitchTarget - this.pitch) * k;
+    this.roll += (rollTarget - this.roll) * k;
+    this.root.position.set(x, ground, z);
     this.root.rotation.order = 'YZX';
-    this.root.rotation.set(Math.atan2(left - right, 1.3), h, Math.atan2(front - back, 2));
-    this.root.position.set(x, terrainHeight(x, z), z);
+    this.root.rotation.set(this.roll, h, this.pitch);
+
+    const v = dt > 0 ? forward / dt : 0;
+    const moving = Math.abs(v) > 0.05 || Math.abs(yawRate) > 0.05;
+    this.wheelInfo.forEach((w, i) => {
+      // Suspensão: quanto o chão embaixo desta roda está acima (ou abaixo) do plano do corpo.
+      const plane = ground + w.x * Math.sin(this.pitch) - w.z * Math.sin(this.roll);
+      const lift = THREE.MathUtils.clamp(contact[i] - plane, -SUSPENSION_DOWN, SUSPENSION_UP);
+      w.lift += (lift - w.lift) * Math.min(1, SUSPENSION_SPEED * dt);
+      w.obj.position.y = w.restY + w.lift;
+      // Direção: só as rodas dos cantos. A roda aponta para onde aquele ponto do rover está indo.
+      if (Math.abs(w.x) > 0.3 && moving) {
+        let steer = Math.atan2(yawRate * w.x, v + yawRate * w.z);
+        if (steer > Math.PI / 2) steer -= Math.PI; // de ré, a roda gira para trás em vez de virar 180°
+        if (steer < -Math.PI / 2) steer += Math.PI;
+        steer = THREE.MathUtils.clamp(steer, -STEER_MAX, STEER_MAX);
+        w.steer += (steer - w.steer) * Math.min(1, STEER_SPEED * dt);
+      }
+      w.obj.rotation.y = w.steer;
+      w.obj.rotation.z -= forward / this.wheelRadius;
+    });
   }
 }
