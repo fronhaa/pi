@@ -43,6 +43,7 @@
 | F25 | Como o Perseverance coleta e guarda as amostras | A broca do braço tira um cilindro de rocha (~13 mm × 60 mm) dentro do tubo; o tubo vai para dentro do rover, é medido, fotografado, lacrado e guardado. As amostras ficam no rover; 10 tubos foram deixados no chão em Three Forks como reserva | [JPL: Perseverance Rover](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/spacecraft/perseverance_rover/), [NASA: depósito Three Forks (2023)](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-perseverance-rover-completes-mars-sample-depot/), [NASA: 33 tubos (2025)](https://science.nasa.gov/photojournal/the-33-sample-tubes-collected-by-perseverance/) | Rover e tubos de amostra | 4. Jogar só no seguro também falha |
 | F26 | Os rastros do rover duram meses | Os rastros do Curiosity, vistos de órbita, devem durar meses antes de o vento apagá-los; na tempestade de poeira global de 2007, os do Opportunity ficaram intactos | [JPL (2025)](https://www.jpl.nasa.gov/news/nasa-orbiter-spots-curiosity-rover-making-tracks-to-next-science-stop/) e [HiRISE: Gone with the Wind](https://www.uahirise.org/epo/nuggets/gone-with-the-wind.pdf) | Rastros das rodas no chão (`src/scene/base/RoverTracks.ts`) | Contexto |
 | F27 | Tempestades de poeira duram semanas ou meses | Todo ano há tempestades grandes que duram semanas; as maiores, "semanas a meses"; a global de 2007 durou dois meses. Menos luz do Sol, menos energia nos painéis | [NASA: The Fact and Fiction of Martian Dust Storms (2015)](https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/) e [NASA: fim da missão Opportunity (2019)](https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/) | Treino da poeira no sol 3 (introdução) | 1. Energia e noite |
+| F28 | Abrigo contra tempestade solar: mais massa, e máquinas cavam o regolito | No aviso, a tripulação monta um abrigo pondo massa entre ela e o Sol (no Orion, sacos de estiva, em até 1 hora); na superfície, regolito sobre o abrigo. Uma escavadeira da NASA (RASSOR 2.0) cava o regolito com energia elétrica (4 W por kg/h) e pode usá-lo como blindagem | [NASA (2016)](https://www.nasa.gov/missions/artemis/orion/scientists-and-engineers-evaluate-orion-radiation-protection-plan/), [NASA Science (2019)](https://science.nasa.gov/science-research/heliophysics/how-nasa-will-protect-astronauts-from-space-radiation-at-the-moon/), [NASA KSC: RASSOR 2.0 (Mueller et al., 2016)](https://ntrs.nasa.gov/api/citations/20210011366/downloads/ASCE%202016%20RASSOR%202%20Final%20%206_8_2016.pdf), p. 1 | Blindagem (blocos de energia viram sacos de regolito), ajuda "?" e treino do sol 3 | 2. Proteção custa caro |
 
 Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-padrão-de-classificação-científica)). O jeito como aparecem no jogo (escala, tempos) continua INTERPRETADO.
 
@@ -243,12 +244,20 @@ Todos são classificação **REAL** ([Art Bible, seção 11](art-bible.md#11-pad
 - **No jogo:** no sol 3 (introdução), um treino curto mostra o céu de poeira por alguns segundos e explica que, de verdade, ela dura muito mais. No jogo, a tempestade de poeira segura a poeira nos painéis por 3 sóis (INTERPRETADO).
 - **Atenção:** não diga que **toda** tempestade dura meses: as pequenas duram menos, e as que duram meses são as maiores. Os 3 sóis do jogo são escolha do jogo.
 
+### F28. Abrigo contra tempestade solar: mais massa, e máquinas cavam o regolito
+
+- **Fato:** contra uma tempestade solar, a proteção é **massa** entre a tripulação e o Sol. No Orion, com o aviso, a tripulação usa os **sacos de estiva** de bordo para montar um abrigo denso no meio da cápsula, **em até 1 hora**, e pode ficar lá **até 24 horas**. Na superfície da Lua, os astronautas poderiam **empilhar regolito sobre os abrigos**. Para cavar regolito, a NASA testa escavadeiras robóticas: a **RASSOR 2.0** (66 kg) gasta **4 W por kg/h** de regolito cavado, cava **pelo menos 2,7 toneladas por dia** e o regolito pode ser usado **como blindagem contra radiação**. ([NASA, 2016](https://www.nasa.gov/missions/artemis/orion/scientists-and-engineers-evaluate-orion-radiation-protection-plan/); [NASA Science, 2019](https://science.nasa.gov/science-research/heliophysics/how-nasa-will-protect-astronauts-from-space-radiation-at-the-moon/); [Mueller et al., NASA KSC Swamp Works, 2016](https://ntrs.nasa.gov/api/citations/20210011366/downloads/ASCE%202016%20RASSOR%202%20Final%20%206_8_2016.pdf), p. 1)
+- **Criança (PT):** "Contra a tempestade solar, o abrigo precisa de mais terra em volta. Máquinas cavam essa terra usando energia."
+- **Criança (EN):** "Against a solar storm, the shelter needs more soil around it. Machines dig that soil using energy."
+- **No jogo:** cada bloco de energia na blindagem representa o trabalho das máquinas que cavam e enchem mais **sacos de regolito** no abrigo (+8 por bloco; os sacos aparecem na cena). O número é do jogo (INTERPRETADO); a ideia de que a energia **por si** protege está errada e não deve aparecer em texto.
+- **Atenção:** quem protege é a massa (regolito, água), não a energia. Diga "energia para as máquinas que enchem os sacos", nunca "energia na blindagem protege". A RASSOR é um protótipo de laboratório (não foi a Marte); o Orion usa sacos de estiva, não regolito.
+
 ## Ligação com os objetivos de aprendizagem
 
 | Objetivo ([GDD](game-design.md#objetivos-de-aprendizagem)) | Fatos que reforçam |
 | --- | --- |
 | 1. Energia é limitada e a noite cobra a conta | F2, F10, F27 |
-| 2. Proteção custa caro, mas falta de proteção custa a missão | F4, F5, F6, F7, F8 |
+| 2. Proteção custa caro, mas falta de proteção custa a missão | F4, F5, F6, F7, F8, F28 |
 | 3. A Terra está longe | F6 (o alerta vem da Terra, com atraso) |
 | 4. Jogar só no seguro também falha | F5 (o limite existe, mas a missão também precisa de ciência) |
 
@@ -555,6 +564,19 @@ Onde cada informação foi encontrada, com o trecho original (em inglês, como e
   - "This dust is an especially big problem for solar panels."
   - Opportunity: "Two years later, a two-month dust storm imperiled the rover before relenting." (a tempestade de 2007)
   - Opportunity: "a severe Mars-wide dust storm blanketed its location in June 2018"
+
+### 28. NASA: Orion Radiation Protection Plan (22/09/2016), NASA Science (07/08/2019) e RASSOR 2.0 (NASA KSC, 2016)
+
+- **Links:** <https://www.nasa.gov/missions/artemis/orion/scientists-and-engineers-evaluate-orion-radiation-protection-plan/>; <https://science.nasa.gov/science-research/heliophysics/how-nasa-will-protect-astronauts-from-space-radiation-at-the-moon/> (atualizada em 16/01/2026); <https://ntrs.nasa.gov/api/citations/20210011366/downloads/ASCE%202016%20RASSOR%202%20Final%20%206_8_2016.pdf> ("Design of an Excavation Robot: Regolith Advanced Surface Systems Operations Robot (RASSOR) 2.0", Mueller et al., Swamp Works, NASA Kennedy; lido com `pdftotext`). Lidos em 15/11/2026.
+- **Usado em:** F28
+- **Trechos:**
+  - Orion: "The crew will use stowage bags on board Orion during missions to deep space to create a dense shelter."
+  - Orion: "the crew would create the shelter within an hour" … "would need to stay inside for as long as 24 hours"
+  - NASA Science: "astronauts could pile lunar soil, or regolith, over their shelters"
+  - NASA Science: "they might tell the crew to build a temporary shelter"
+  - RASSOR, p. 1: "RASSOR 2.0 is a planetary excavator, which has a mass of 66 kg" … "power usage of 4 W per kg of regolith excavation rate."
+  - RASSOR, p. 1: "A single RASSOR 2.0 can excavate a minimum of 2.7 metric tons of regolith per day."
+  - RASSOR, p. 1: "use the regolith as radiation shielding"
 
 ### 9. Buscas feitas (para achar as fontes acima)
 
