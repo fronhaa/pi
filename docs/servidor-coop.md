@@ -35,6 +35,7 @@ flowchart LR
 - No modo em grupo, o jogo **não roda regras**: mostra o que o servidor manda e repassa decisões. A noite, o relatório e a tela final são os mesmos do solo.
 - Cada jogador só mexe na parte da energia do seu papel; os outros botões ficam travados. "Terminar o sol" só para o comandante.
 - O modo em grupo é **só em Marte** por enquanto: a base lunar ([GDD](game-design.md#base-lunar), ADR 0007) é só no solo. Ao entrar no modo em grupo, o cliente volta a cena e os textos para Marte. O estado tem `location` e `shadowSol` (sempre `"mars"` e `0` no servidor).
+- Os **níveis de dificuldade** ([GDD](game-design.md#níveis-de-dificuldade)) também são só do solo: a sala é sempre do nível Médio. O estado tem `difficulty` (sempre `"medium"` no servidor; o Go ignora o campo). `newMission` da ponte (`src/sim/bridge.ts`) já aceita o nível como 5º parâmetro, para quando a sala puder escolher.
 - Se a internet cair ou a página recarregar, o jogo volta sozinho para a mesma sala e o mesmo papel (token guardado na aba, `sessionStorage`).
 
 ## Regras do coop implementadas no servidor

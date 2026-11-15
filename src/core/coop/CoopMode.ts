@@ -421,6 +421,8 @@ export class CoopMode {
     return {
       seed: 0,
       location: 'mars',
+      // Salas em grupo: sempre o nível Médio por enquanto (o servidor cria a missão sem nível).
+      difficulty: 'medium',
       historical: null,
       sol: m?.sol ?? e?.sol ?? 1,
       res: m?.res ?? e?.res ?? this.host.localState.res,

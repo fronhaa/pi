@@ -7,7 +7,7 @@ import { Mission } from '@/sim/mission';
 import type { EnergyPlan, GameState, Problem, Resources, SolReport } from '@/sim/types';
 import { ROLES, type Role } from '@/sim/crew';
 import { needsEva } from '@/sim/eva';
-import { CONFIG, type Location } from '@/sim/config';
+import { CONFIG, tuning, type Difficulty, type Location } from '@/sim/config';
 import { pickHistorical } from '@/sim/historical';
 import { loadFlares, type FlareSource } from '@/data/flares';
 import { isFirstGame, loadMissions, markPlayed, type MissionSource } from '@/data/missions';
@@ -21,7 +21,8 @@ import type { CrewMotion } from '@/scene/crewMotion';
 import { Hud } from '@/ui/Hud';
 import { OffscreenArrows } from '@/ui/OffscreenArrows';
 import { CrewBubble } from '@/ui/CrewBubble';
-import { showCard, showEnd, showMissionStart, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
+import { showCard, showEnd, showLevelChoice, showMissionStart, showNasaData, showPlaceChoice, showReport, showTutorial } from '@/ui/dialogs';
+import { preferredLevel, saveLevel } from '@/data/level';
 import { IntroGuide } from '@/ui/IntroGuide';
 import { IntroDirector } from './intro';
 import { showModeChoice } from '@/ui/coop';
@@ -83,6 +84,8 @@ export class Game {
   private mission!: Mission;
   /** Onde fica a base (solo). O modo em grupo é sempre em Marte, por enquanto. */
   private location: Location = 'mars';
+  /** Nível do jogo solo (src/sim/config.ts, DIFFICULTY). Em grupo, o servidor usa o Médio. */
+  private difficulty: Difficulty = 'medium';
   private plan: EnergyPlan = { life: 3, shield: 1, science: 3 };
   private night = false;
   private stormNight = false;
@@ -271,10 +274,19 @@ export class Game {
 
   /** Solo: escolhe Marte ou Lua, cria a missão do lugar e começa o treino dos sóis 1 a 3 (o guia ensina na hora). */
   private startSolo(): void {
+    this.choosePlaceAndLevel();
+  }
+
+  /** Lugar, depois nível (uma decisão por tela), e a missão começa. Usado ao começar e ao jogar de novo. */
+  private choosePlaceAndLevel(): void {
     showPlaceChoice((place) => {
       this.setLocation(place);
-      this.newMission();
-      this.startMission();
+      showLevelChoice(preferredLevel(), (level) => {
+        this.difficulty = level;
+        saveLevel(level);
+        this.newMission();
+        this.startMission();
+      });
     });
   }
 
@@ -514,7 +526,7 @@ export class Game {
       return;
     }
     // Treino (sóis 1 a 3, sem problemas): um dia curto para ver o Sol cruzar o céu e os painéis trabalharem.
-    this.dayLength = m.state.problems.length === 0 ? INTRO_DAY_SECONDS : CONFIG.problems.daySeconds;
+    this.dayLength = m.state.problems.length === 0 ? INTRO_DAY_SECONDS : tuning(m.state.difficulty).daySeconds;
     this.phase = 'day';
     this.dayElapsed = 0;
     this.paused = false;
@@ -635,8 +647,8 @@ export class Game {
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
     // Marte: missão histórica real, se houver; senão, erupções reais sorteadas; senão, simuladas.
     // Lua: erupções reais sorteadas (o atraso das missões históricas é Terra-Marte; não serve para a Lua).
-    const historical = this.location === 'mars' ? pickHistorical(this.missions.missions, seed, isFirstGame()) : null;
-    this.mission = new Mission(seed, this.flares.flares, historical, this.location);
+    const historical = this.location === 'mars' ? pickHistorical(this.missions.missions, seed, isFirstGame(), this.difficulty) : null;
+    this.mission = new Mission(seed, this.flares.flares, historical, this.location, this.difficulty);
     this.bubble.hide();
     // Solo começa pelo treino (a base fechada); em grupo, sem treino.
     this.intro.reset(!this.coop);
@@ -729,14 +741,8 @@ export class Game {
   private finish(): void {
     markPlayed();
     this.hud.setState(this.mission.state);
-    // Jogar de novo: escolhe o lugar outra vez (dá para experimentar Marte e Lua e comparar).
-    showEnd(this.mission.state, () =>
-      showPlaceChoice((place) => {
-        this.setLocation(place);
-        this.newMission();
-        this.startMission();
-      }),
-    );
+    // Jogar de novo: escolhe o lugar e o nível outra vez (dá para comparar Marte e Lua, ou subir de nível).
+    showEnd(this.mission.state, () => this.choosePlaceAndLevel());
   }
 
   /** Bateria prevista para depois da noite (a mesma prévia do plano; solo ou servidor). Só para a cena, de dia. */

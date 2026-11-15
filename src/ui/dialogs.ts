@@ -1,4 +1,4 @@
-import { CONFIG, doseFor3 } from '@/sim/config';
+import { CONFIG, DIFFICULTIES, doseFor3, tuning, type Difficulty } from '@/sim/config';
 import type { Card, GameState, HistoricalMission, SolReport } from '@/sim/types';
 import type { FlareSource } from '@/data/flares';
 import type { MissionSource } from '@/data/missions';
@@ -44,6 +44,23 @@ export function showPlaceChoice(onChoose: (place: 'mars' | 'moon') => void): voi
       { label: t('place.mars'), primary: true, onClick: () => onChoose('mars') },
       { label: t('place.moon'), onClick: () => onChoose('moon') },
     ],
+    row: true,
+  });
+}
+
+/**
+ * Depois do lugar: o nível da missão (src/sim/config.ts, DIFFICULTY). Uma decisão por tela (docs/publico-e-impacto.md).
+ * O botão marcado é o último nível jogado; na primeira partida, a Primeira missão.
+ */
+export function showLevelChoice(preferred: Difficulty, onChoose: (level: Difficulty) => void): void {
+  openDialog({
+    title: t('level.title'),
+    body: [
+      h('p', {}, t('level.text')),
+      ...DIFFICULTIES.map((l) => h('p', {}, t(`level.${l}.hint` as StringKey))),
+      h('p', { class: 'source' }, h('small', {}, `🛰️ ${t('level.nasa')}`)),
+    ],
+    actions: DIFFICULTIES.map((l) => ({ label: t(`level.${l}` as StringKey), primary: l === preferred, onClick: () => onChoose(l) })),
     row: true,
   });
 }
@@ -104,10 +121,11 @@ export function showEnd(state: GameState, onAgain: () => void): void {
   } else {
     return;
   }
+  const goal = tuning(state.difficulty).scienceGoal;
   const criteria = [
     [o.status === 'won', 'end.star1'],
-    [o.status === 'won' && r.science >= CONFIG.science.goal, 'end.star2'],
-    [o.status === 'won' && r.science >= CONFIG.science.goal && r.dose < doseFor3(state.location), 'end.star3'],
+    [o.status === 'won' && r.science >= goal, 'end.star2'],
+    [o.status === 'won' && r.science >= goal && r.dose < doseFor3(state.location), 'end.star3'],
   ] as const;
   // A lição mais relevante para o que aconteceu vem primeiro.
   const lessons: StringKey[] =
@@ -127,7 +145,9 @@ export function showEnd(state: GameState, onAgain: () => void): void {
       h('p', {}, text),
       h('div', { class: 'stars', 'aria-label': t('end.stars', { n: stars }) },
         ...[1, 2, 3].map((i) => h('span', { class: i <= stars ? '' : 'off', 'aria-hidden': 'true' }, '★'))),
-      h('ul', { class: 'criteria' }, ...criteria.map(([ok, key]) => h('li', {}, `${ok ? '✅' : '⬜'} ${t(key, { limit: doseFor3(state.location) })}`))),
+      // 3 estrelas no Fácil não são 3 estrelas no Difícil: o nível aparece junto.
+      h('p', { class: 'level-badge' }, t('end.level', { name: t(`level.${state.difficulty ?? 'medium'}` as StringKey) })),
+      h('ul', { class: 'criteria' }, ...criteria.map(([ok, key]) => h('li', {}, `${ok ? '✅' : '⬜'} ${t(key, { limit: doseFor3(state.location), goal })}`))),
       hist ? missionRecap(hist) : null,
       h('h3', {}, t('end.learned')),
       h('ul', {}, ...lessons.map((k) => h('li', {}, lessonText(k)))),

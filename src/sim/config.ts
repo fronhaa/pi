@@ -158,6 +158,81 @@ export const CONFIG = {
 
 export type FlareClass = keyof typeof CONFIG.solarStorms.intensity;
 
+/** Nível da missão (docs/game-design.md, "Níveis de dificuldade"). */
+export type Difficulty = 'easy' | 'medium' | 'hard';
+export const DIFFICULTIES: readonly Difficulty[] = ['easy', 'medium', 'hard'];
+
+/** O que muda de um nível para o outro. Tudo é escala de jogo (INTERPRETADO). */
+export interface Tuning {
+  /** Blocos a mais (ou a menos) dos painéis por sol, antes da poeira. Na Lua, soma ao Sol pleno. */
+  extraBlocks: number;
+  batteryStart: number;
+  lifeStart: number;
+  /** Cartas de decisão por partida. */
+  cards: number;
+  /** Problemas pela base por dia (sorteado entre min e max). */
+  problemsPerDay: { min: number; max: number };
+  /** Duração do dia em tempo real (segundos). */
+  daySeconds: number;
+  /** Ciência para a 2ª estrela. */
+  scienceGoal: number;
+  /** A prévia do plano mostra o resultado da noite (setas e "a base passa bem")? */
+  showForecast: boolean;
+  /** Missões históricas sorteadas em Marte: só as de força média, todas, ou só as fortes. */
+  historical: 'medium' | 'any' | 'hard';
+}
+
+/**
+ * Níveis da missão. O Médio é o jogo de sempre (os números do CONFIG acima). Fácil é para quem tem 7 a 9 anos e
+ * está na primeira missão; Difícil, para quem já entende o jogo (10 a 12 anos).
+ *
+ * NUNCA muda com o nível o que vem de dado real da NASA: a força de cada tempestade solar (classe da erupção do
+ * DONKI, `solarStorms.intensity`), o atraso real das mensagens, as datas das missões históricas e os fatos de
+ * docs/ciencia-marte.md. O nível muda só quanta energia, folga e pressa a tripulação tem.
+ */
+export const DIFFICULTY: Record<Difficulty, Tuning> = {
+  easy: {
+    extraBlocks: 2,
+    batteryStart: 70,
+    lifeStart: 80,
+    cards: 2,
+    problemsPerDay: { min: 1, max: 1 },
+    daySeconds: 90,
+    scienceGoal: 80,
+    showForecast: true,
+    historical: 'medium',
+  },
+  medium: {
+    extraBlocks: 0,
+    batteryStart: CONFIG.battery.start,
+    lifeStart: CONFIG.life.start,
+    cards: CONFIG.cards.perGame,
+    problemsPerDay: { min: CONFIG.problems.minPerDay, max: CONFIG.problems.maxPerDay },
+    daySeconds: CONFIG.problems.daySeconds,
+    scienceGoal: CONFIG.science.goal,
+    showForecast: true,
+    historical: 'any',
+  },
+  hard: {
+    extraBlocks: -1,
+    batteryStart: 40,
+    lifeStart: 70,
+    cards: 5,
+    // Mais problemas por dia somam dose (cada conserto lá fora é uma EVA) e tiravam a 3ª estrela de todos (balance).
+    problemsPerDay: { min: 1, max: 2 },
+    daySeconds: 60,
+    scienceGoal: 100,
+    showForecast: false,
+    // Todas as missões reais (as fortes sozinhas tiravam a 3ª estrela de todos, até jogando perfeito).
+    historical: 'any',
+  },
+};
+
+/** Números do nível. Sem nível (estado antigo, servidor antigo), é o Médio. */
+export function tuning(difficulty: Difficulty | undefined): Tuning {
+  return DIFFICULTY[difficulty ?? 'medium'] ?? DIFFICULTY.medium;
+}
+
 /** Onde fica a base. Marte é o padrão (modo em grupo só em Marte por enquanto). */
 export type Location = 'mars' | 'moon';
 

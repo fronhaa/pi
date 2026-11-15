@@ -43,4 +43,5 @@ adiciona a linha na tabela abaixo. Preencha, abra PR e discuta lá.
 | [0010](0010-quartos-individuais-em-vez-de-beliche.md) | Quartos individuais em vez de beliche | Aceito |
 | [0011](0011-rover-sem-garagem-e-quartos-no-raio-sul.md) | Rover sem garagem e quartos no raio sul | Aceito |
 | [0012](0012-sois-de-introducao.md) | Sóis de introdução | Aceito |
+| [0013](0013-niveis-de-dificuldade-so-com-escala-de-jogo.md) | Níveis de dificuldade só com escala de jogo | Proposto |
 <!-- adr-index:fim (não remova, usado pelo scripts/new-adr.mjs) -->

@@ -1,4 +1,4 @@
-import { CONFIG } from './config.ts';
+import { CONFIG, tuning, type Difficulty } from './config.ts';
 import { createRng } from './rng.ts';
 import type { HistoricalMission } from './types.ts';
 
@@ -45,9 +45,19 @@ export function parseMissions(data: MissionsFile): HistoricalMission[] {
   return out;
 }
 
-/** Primeira partida: só missões de força média; depois, qualquer uma (GDD, "Regras"). */
-export function pickHistorical(missions: HistoricalMission[], seed: number, firstGame: boolean): HistoricalMission | null {
-  const pool = firstGame ? missions.filter((m) => m.difficulty === 'medium') : missions;
+/**
+ * Sorteia a missão histórica (GDD, "Regras"). Nível Médio: na primeira partida só as de força média; depois, qualquer
+ * uma. Fácil: só as de força média. Difícil: só as fortes. As tempestades e as datas são as reais em todos os níveis.
+ */
+export function pickHistorical(
+  missions: HistoricalMission[],
+  seed: number,
+  firstGame: boolean,
+  difficulty: Difficulty = 'medium',
+): HistoricalMission | null {
+  const want = tuning(difficulty).historical;
+  const only = want === 'any' ? (firstGame ? 'medium' : null) : want;
+  const pool = only ? missions.filter((m) => m.difficulty === only) : missions;
   const list = pool.length > 0 ? pool : missions;
   return list.length > 0 ? createRng(seed ^ 0x9e3779b9).pick(list) : null;
 }

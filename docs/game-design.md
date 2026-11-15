@@ -230,6 +230,46 @@ Qualquer mudança nos números deve manter essa forma: as duas estratégias extr
 
 **Com as cartas do rover** (MOXIE e "Caminho do rover", 2026-11-14, 1.000 partidas por estratégia, erupções reais, simuladas e as 6 missões): a forma se mantém em todos os cenários. As estratégias extremas continuam falhando sempre, "ignora a blindagem" não mudou, e a estratégia atenta (que pega o atalho e resgata o rover) termina com 1 estrela um pouco menos vezes (ex.: erupções reais, de 9% para 5%).
 
+## Níveis de dificuldade
+
+Depois do lugar (Marte ou Lua), a criança escolhe o nível na tela "🎯 Escolha a missão". É uma decisão por tela
+(`docs/publico-e-impacto.md`). Fica marcado o último nível jogado; na primeira partida, a Primeira missão. Os números
+ficam em `src/sim/config.ts` (`DIFFICULTY`) e a escolha em `src/core/Game.ts` (`choosePlaceAndLevel`).
+
+**Regra de ouro: dado real da NASA nunca muda com o nível.** Nos 3 níveis são iguais a força de cada tempestade solar
+(classe da erupção do DONKI), os sóis das tempestades, o atraso real das mensagens, as datas das missões históricas,
+a tempestade de poeira e a luz do Sol na Lua. O teste `tests/sim/difficulty.test.ts` confere isso. O nível muda só a
+escala do jogo (INTERPRETADO): quanta energia, folga e pressa a tripulação tem.
+
+| | 🌱 Primeira missão (Fácil) | 🚀 Missão normal (Médio) | 🔥 Missão expert (Difícil) |
+| --- | --- | --- | --- |
+| Para quem | 7 a 9 anos, primeira vez | quem já jogou | 10 a 12 anos, quer desafio |
+| Blocos por sol (Marte; na Lua, soma ao Sol pleno) | 12 | 10 | 9 |
+| Bateria / suporte de vida no começo | 70 / 80 | 50 / 70 | 40 / 70 |
+| Cartas de decisão | 2 | 4 | 5 |
+| Problemas por dia | 1 | 1 a 2 | 1 a 2 |
+| Duração do dia | 90 s | 75 s | 60 s |
+| Ciência para a 2ª estrela | 80 | 100 | 100 |
+| Prévia da noite (setas e "a base passa bem") | sim | sim | **não**: a criança faz a conta (os avisos de tempestade da Terra continuam) |
+| Missões históricas (Marte) | só as de força média | médias na 1ª partida; depois, todas | todas |
+
+A tela final mostra o nível junto das estrelas (3★ no Fácil não é 3★ no Difícil). No modo em grupo as salas são
+sempre do nível Médio, por enquanto.
+
+**Equilíbrio dos níveis** (`npm run balance`, 2.000 partidas por estratégia, 2026-11-15, erupções reais do DONKI;
+o robô joga sem erro, então a criança acha cada nível mais difícil do que a tabela):
+
+| Estratégia "reage aos alertas" | Fácil | Médio | Difícil |
+| --- | --- | --- | --- |
+| Marte, erupções sorteadas: 3★ | 86% | 44% | 34% |
+| Lua: 3★ | 64% | 27% | 22% |
+| Missões históricas de força média: 3★ | 98% a 100% | 13% a 20% | 12% a 17% |
+
+Nos 3 níveis, "só ciência" perde sempre e "só segurança" fica com 1 estrela: a lição de energia × proteção é a mesma.
+Medido e descartado no Difícil: 2 a 3 problemas por dia (cada conserto lá fora soma dose, e ninguém tirava 3★) e só as
+missões históricas fortes (0% de 3★ mesmo jogando perfeito). A pressão do Difícil vem da energia curta, das cartas a
+mais, do dia curto e da conta sem prévia, que o robô do `balance` não sente.
+
 ## Base lunar
 
 Antes da missão solo, a criança escolhe **Marte** ou **Lua** (tela "Para onde vamos?"; aparece de novo em "Jogar de novo").
@@ -973,7 +1013,7 @@ A interface fica por cima da cena e tem só cinco áreas, todas com bordas gross
 
 ### Prévia do plano de energia
 
-Ao lado de cada linha do plano aparece o resultado previsto para esta noite ("Vida: 70 → 76"), em verde quando sobe e vermelho quando cai, e acima do botão os avisos: bateria acabando, tempestade esta noite (com a dose), tempestade de amanhã (com a dose que daria com a blindagem desta noite), suporte de vida em perigo e dose passando de 50 (perde a 3ª estrela). A criança vê a troca **antes** de decidir. A prévia usa o mesmo cálculo do fim do sol (`src/sim/day.ts`), então nunca mostra um número diferente do que acontece; ela não conta os problemas do dia, que ainda não apareceram, e diz isso.
+Ao lado de cada linha do plano aparece o resultado previsto para esta noite ("Vida: 70 → 76"), em verde quando sobe e vermelho quando cai, e acima do botão os avisos: bateria acabando, tempestade esta noite (com a dose), tempestade de amanhã (com a dose que daria com a blindagem desta noite), suporte de vida em perigo e dose passando de 50 (perde a 3ª estrela). A criança vê a troca **antes** de decidir. A prévia usa o mesmo cálculo do fim do sol (`src/sim/day.ts`), então nunca mostra um número diferente do que acontece; ela não conta os problemas do dia, que ainda não apareceram, e diz isso. Na Missão expert (nível Difícil) a prévia não mostra o resultado da noite, só os avisos de tempestade, e a criança faz a conta ([Níveis de dificuldade](#níveis-de-dificuldade)).
 
 ### Linguagem
 

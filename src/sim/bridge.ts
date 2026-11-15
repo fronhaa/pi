@@ -1,4 +1,4 @@
-import { CONFIG } from './config.ts';
+import { CONFIG, type Difficulty } from './config.ts';
 import { Mission } from './mission.ts';
 import { parseMissions, pickHistorical, type MissionsFile } from './historical.ts';
 import { applyAction, type MissionAction } from './actions.ts';
@@ -29,11 +29,14 @@ export function state(): string {
   return JSON.stringify({ ...s, cardSols: Object.fromEntries(s.cardSols) });
 }
 
-/** `location` é opcional: o servidor Go de hoje não manda e a sala fica em Marte (Lua só no solo, por enquanto). */
-export function newMission(seed: number, flaresJson: string, historicalJson: string, location?: string): void {
+/**
+ * `location` e `difficulty` são opcionais: o servidor Go de hoje não manda, e a sala fica em Marte no nível Médio
+ * (Lua e níveis só no solo, por enquanto).
+ */
+export function newMission(seed: number, flaresJson: string, historicalJson: string, location?: string, difficulty?: string): void {
   const flares = JSON.parse(flaresJson) as Flare[];
   const historical = JSON.parse(historicalJson) as HistoricalMission | null;
-  mission = new Mission(seed >>> 0, flares, historical, location === 'moon' ? 'moon' : 'mars');
+  mission = new Mission(seed >>> 0, flares, historical, location === 'moon' ? 'moon' : 'mars', (difficulty ?? 'medium') as Difficulty);
 }
 
 /**
