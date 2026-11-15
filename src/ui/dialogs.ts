@@ -6,12 +6,18 @@ import { formatDate, t, type StringKey } from '@/i18n';
 import { h, openDialog } from './dom';
 
 /** Tutorial de 3 passos (GDD, "Janelas"). */
-export function showTutorial(onDone: () => void, step = 1): void {
+/**
+ * Como jogar (3 passos). `onSources`: aberto pelo HUD, o último passo também leva às fontes da NASA
+ * (o desafio pede as fontes dentro do jogo; o botão saiu do topo para limpar o HUD).
+ */
+export function showTutorial(onDone: () => void, step = 1, onSources?: () => void): void {
   const last = step === 3;
+  const actions = [{ label: last ? t('tutorial.start') : t('tutorial.next'), primary: true, onClick: () => (last ? onDone() : showTutorial(onDone, step + 1, onSources)) }];
+  if (last && onSources) actions.push({ label: `🛰️ ${t('tutorial.sources')}`, primary: false, onClick: onSources });
   openDialog({
     title: t(`tutorial.${step}.title` as StringKey),
     body: [h('p', {}, t(`tutorial.${step}.text` as StringKey)), h('p', { class: 'steps' }, `${step} / 3`)],
-    actions: [{ label: last ? t('tutorial.start') : t('tutorial.next'), primary: true, onClick: () => (last ? onDone() : showTutorial(onDone, step + 1)) }],
+    actions,
     row: true,
   });
 }

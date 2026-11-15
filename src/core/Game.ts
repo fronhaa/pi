@@ -170,7 +170,7 @@ export class Game {
         setLang(getLang() === 'pt' ? 'en' : 'pt');
         this.hud.render();
       },
-      onHowTo: () => showTutorial(() => {}),
+      onHowTo: () => showTutorial(() => {}, 1, () => showNasaData(this.flares, this.missions, this.mission.state.historical)),
       onToggleHull: () => this.base.setHullsOpen(!this.base.hullsOpen),
       hullsOpen: () => this.base.hullsOpen,
       nightCost: () => (this.coop || !this.mission ? CONFIG.battery.nightCost : this.mission.nightCost()),

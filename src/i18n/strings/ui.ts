@@ -12,6 +12,9 @@ export const pt = {
   'top.help': 'Como jogar',
 
   'res.battery': 'Bateria',
+  'res.battery.short': 'Bateria',
+  'res.life.short': 'Vida',
+  'res.shield.short': 'Proteção',
   'res.life': 'Suporte de vida',
   'res.shield': 'Blindagem',
   'res.dose': 'Dose de radiação',
@@ -22,6 +25,10 @@ export const pt = {
   'res.tubes.none': 'acabaram',
   'res.dust': 'Poeira nos painéis',
   'res.goal': 'meta {n}',
+  'res.title': 'Cuide da base',
+  'goal.science': 'Ciência {n} de {goal}',
+  'goal.tubes': '{n} tubos',
+  'risk.of': '{n} de {max}',
 
   'help.battery': 'A bateria guarda a energia que sobra de dia. De noite os aquecedores gastam 20. Se faltar, o suporte de vida sofre.',
   'help.life': 'Ar, água e comida da tripulação. Precisa de 3 blocos por sol para ficar estável. Se chegar a 0, a missão acaba.',
@@ -106,6 +113,7 @@ export const pt = {
   'tutorial.3.text': 'A Terra avisa quando vem uma tempestade solar, com atraso. Reforce a blindagem antes! A tripulação fica dentro da base. Para consertar lá fora, sai uma dupla.',
   'tutorial.next': 'Próximo',
   'tutorial.start': 'Começar a missão',
+  'tutorial.sources': 'Fontes: dados da NASA',
 
   'scene.loadingPhysics': 'Carregando a física de Marte…',
   'hover.select': 'clique para escolher',
@@ -142,6 +150,9 @@ export const en: Record<keyof typeof pt, string> = {
   'top.help': 'How to play',
 
   'res.battery': 'Battery',
+  'res.battery.short': 'Power',
+  'res.life.short': 'Life',
+  'res.shield.short': 'Shield',
   'res.life': 'Life support',
   'res.shield': 'Shielding',
   'res.dose': 'Radiation dose',
@@ -152,6 +163,10 @@ export const en: Record<keyof typeof pt, string> = {
   'res.tubes.none': 'none left',
   'res.dust': 'Dust on panels',
   'res.goal': 'goal {n}',
+  'res.title': 'Keep the base alive',
+  'goal.science': 'Science {n} of {goal}',
+  'goal.tubes': '{n} tubes',
+  'risk.of': '{n} of {max}',
 
   'help.battery': 'The battery stores the energy left over during the day. At night the heaters use 20. If it runs out, life support suffers.',
   'help.life': 'Air, water and food for the crew. It needs 3 blocks per sol to stay steady. If it reaches 0, the mission ends.',
@@ -236,6 +251,7 @@ export const en: Record<keyof typeof pt, string> = {
   'tutorial.3.text': 'Earth warns you when a solar storm is coming, with a delay. Reinforce the shielding first! The crew stays inside the base. To fix things outside, a pair goes out.',
   'tutorial.next': 'Next',
   'tutorial.start': 'Start the mission',
+  'tutorial.sources': 'Data sources (NASA)',
 
   'scene.loadingPhysics': 'Loading Mars physics…',
   'hover.select': 'click to select',

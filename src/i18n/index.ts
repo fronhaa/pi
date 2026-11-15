@@ -5,15 +5,15 @@ export type { Lang, StringKey };
 
 const STORAGE_KEY = 'jezero.lang';
 
+/**
+ * O jogo abre sempre em inglês (decisão de 15/11/2026: o desafio e os juízes são em inglês, e o seletor de
+ * idioma poluía o HUD no celular). Os textos em português continuam no código (`?lang=pt` para testar).
+ */
 function initialLang(): Lang {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === 'pt' || saved === 'en') return saved;
-  } catch {
-    /* sem localStorage (modo privado etc.) */
-  }
-  return navigator.language.toLowerCase().startsWith('pt') ? 'pt' : 'en';
+  return new URLSearchParams(location.search).get('lang') === 'pt' ? 'pt' : 'en';
 }
+/** Mantido para quem ainda chama `setLang` (salvar a escolha não é mais usado). */
+void STORAGE_KEY;
 
 let lang: Lang = initialLang();
 const listeners = new Set<() => void>();
