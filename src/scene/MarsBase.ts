@@ -137,11 +137,18 @@ export const HABITAT_LOOK: Record<Role, THREE.Vector3> = {
   medic: new THREE.Vector3(HABITAT_POSITION.x + QUARTERS_OFFSET_X, HABITAT_FLOOR_Y + 0.7, HABITAT_POSITION.z + 0.3),
 };
 
-const GYM_DX = 1.8;
+/**
+ * Posição (x, relativa ao centro da academia) de cada aparelho. A academia é o último módulo: na ponta da
+ * esquerda fica a parede (anel da porta de acoplamento), então a esteira fica perto do meio, com folga para
+ * os braços de quem corre; o aparelho de força (só decoração) vai para a outra ponta.
+ */
+const TREADMILL_DX = -1.15;
+const BIKE_DX = 0.45;
+const GYM_DX = 1.9;
 export const GYM_STATIONS = [
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X - GYM_DX, HABITAT_FLOOR_Y + 0.14, HABITAT_POSITION.z), heading: Math.PI, speed: 1.8 },
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + TREADMILL_DX, HABITAT_FLOOR_Y + 0.08, HABITAT_POSITION.z), heading: Math.PI, speed: 1.8 },
   // Na bicicleta, pedalando em pé atrás do guidão (o boneco não tem pose sentada).
-  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X, HABITAT_FLOOR_Y + 0.05, HABITAT_POSITION.z - 0.35), heading: Math.PI, speed: 0.9 },
+  { pos: new THREE.Vector3(HABITAT_POSITION.x + GYM_OFFSET_X + BIKE_DX, HABITAT_FLOOR_Y + 0.05, HABITAT_POSITION.z - 0.35), heading: Math.PI, speed: 0.9 },
 ] as const;
 
 /** Dentro da cúpula, perto do vazamento: onde fica quem conserta a estufa (problema de dentro). */
@@ -576,32 +583,32 @@ export class MarsBase {
 
     // Academia: esteira e bicicleta viradas para a frente (GYM_STATIONS) e um aparelho de força no fundo.
     const g = GYM_OFFSET_X;
-    const treadBase = toonMesh(new THREE.BoxGeometry(0.8, 0.12, 1.7), PALETTE.light, 0.04);
-    treadBase.position.set(g - GYM_DX, y + 0.06, 0);
+    const treadBase = toonMesh(new THREE.BoxGeometry(0.8, 0.07, 1.7), PALETTE.light, 0.04);
+    treadBase.position.set(g + TREADMILL_DX, y + 0.035, 0);
     inside.add(treadBase);
     const belt = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.02, 1.5), new THREE.MeshBasicMaterial({ color: PALETTE.shadow }));
-    belt.position.set(g - GYM_DX, y + 0.13, 0);
+    belt.position.set(g + TREADMILL_DX, y + 0.075, 0);
     inside.add(belt);
     for (const side of [-0.38, 0.38]) {
       const rail = toonMesh(new THREE.BoxGeometry(0.05, 1.0, 0.05), PALETTE.tech, 0);
-      rail.position.set(g - GYM_DX + side, y + 0.6, 0.75);
+      rail.position.set(g + TREADMILL_DX + side, y + 0.6, 0.75);
       inside.add(rail);
     }
     const panel = toonMesh(new THREE.BoxGeometry(0.85, 0.2, 0.12), PALETTE.accent, 0);
-    panel.position.set(g - GYM_DX, y + 1.1, 0.75);
+    panel.position.set(g + TREADMILL_DX, y + 1.1, 0.75);
     inside.add(panel);
 
     const bikeFrame = toonMesh(new THREE.BoxGeometry(0.3, 0.25, 1.1), PALETTE.light, 0.04);
-    bikeFrame.position.set(g, y + 0.13, 0);
+    bikeFrame.position.set(g + BIKE_DX, y + 0.13, 0);
     inside.add(bikeFrame);
     const wheel = toonMesh(new THREE.CylinderGeometry(0.28, 0.28, 0.12, 16).rotateZ(Math.PI / 2), PALETTE.accent, 0.04);
-    wheel.position.set(g, y + 0.4, 0.45);
+    wheel.position.set(g + BIKE_DX, y + 0.4, 0.45);
     inside.add(wheel);
     const bars = toonMesh(new THREE.BoxGeometry(0.6, 0.05, 0.05), PALETTE.tech, 0);
-    bars.position.set(g, y + 1.0, 0.55);
+    bars.position.set(g + BIKE_DX, y + 1.0, 0.55);
     inside.add(bars);
     const stem = toonMesh(new THREE.BoxGeometry(0.05, 0.75, 0.05), PALETTE.tech, 0);
-    stem.position.set(g, y + 0.62, 0.55);
+    stem.position.set(g + BIKE_DX, y + 0.62, 0.55);
     inside.add(stem);
 
     const rack = toonMesh(new THREE.BoxGeometry(1.3, 1.6, 0.12), PALETTE.tech, 0.03);
