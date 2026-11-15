@@ -6,7 +6,7 @@ import type { StringKey } from './strings';
  * Toda chave precisa existir nos dois idiomas (o TypeScript confere).
  */
 const pt = {
-  'game.title': 'Missão Shackleton',
+  'game.title': 'Artemis Quest',
   'game.subtitle': 'Moon Base · Polo sul da Lua',
   'top.sol': 'Dia {sol} de {total}',
 
@@ -100,7 +100,7 @@ const pt = {
 } as const satisfies Partial<Record<StringKey, string>>;
 
 const en: Record<keyof typeof pt, string> = {
-  'game.title': 'Mission Shackleton',
+  'game.title': 'Artemis Quest',
   'game.subtitle': 'Moon Base · Lunar south pole',
   'top.sol': 'Day {sol} of {total}',
 

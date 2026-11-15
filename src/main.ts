@@ -8,17 +8,17 @@ import { LoadingScreen } from '@/ui/LoadingScreen';
 async function boot(): Promise<void> {
   const loading = new LoadingScreen();
   try {
-    loading.setStatus('Baixando o jogo…');
+    loading.setStatus('Downloading the game…');
     const { Game } = await import('@/core/Game');
 
-    loading.setStatus('Ligando a física…');
+    loading.setStatus('Starting the physics…');
     const game = await Game.create(document.body);
 
     game.start();
     loading.hide();
   } catch (err) {
     console.error(err);
-    loading.showError('Não foi possível carregar o jogo. Verifique a conexão.');
+    loading.showError('The game could not load. Check your connection.');
   }
 }
 
