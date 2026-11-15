@@ -389,7 +389,7 @@ Este modo e o modo Terra e Marte funcionam juntos: os dois fazem parte do jogo.
 
 | Ação | Clique / toque | Teclado |
 | --- | --- | --- |
-| Escolher astronauta | Botões da tripulação na lista do dia (🏠 dentro, 🚪 na câmara, 👩‍🚀 lá fora) ou tocar nele quando está lá fora | Teclas **1 a 4** (comandante, engenheiro de voo, oficial médico, cientista) |
+| Escolher astronauta | Botões da tripulação na lista do dia (🔧 trabalhando, 🚶 indo para a tarefa, 🏠 dentro, 🚪 na câmara, 👩‍🚀 lá fora) ou tocar nele quando está lá fora | Teclas **1 a 4** (comandante, engenheiro de voo, oficial médico, cientista) |
 | Ver quem é (mouse) | Passar o mouse: destaque, cursor de mãozinha e o nome do papel; sobre um “!”, o problema e quem será enviado | — |
 | Achar problema fora da tela | Uma seta na borda aponta para cada problema fora do enquadramento, com o nome; tocar nela envia o astronauta selecionado | Tab até a seta e Enter |
 | Andar | Tocar no chão; ele anda sozinho até lá | **Setas** ou **WASD**, relativas à câmera |

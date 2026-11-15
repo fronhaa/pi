@@ -192,7 +192,8 @@
 .crew-chip .touch { display: none; }
 @media (pointer: coarse) { .crew-chip .keys { display: none; } .crew-chip .touch { display: inline; } }
 .toast {
-  position: fixed; left: 50%; top: 132px; transform: translateX(-50%); z-index: 15;
+  /* Só informa: não pega clique (fica 7 s por cima dos painéis, principalmente no celular). */
+  position: fixed; left: 50%; top: 132px; transform: translateX(-50%); z-index: 15; pointer-events: none;
   font-family: var(--font); color: var(--ink); font-size: 16px; font-weight: 600; max-width: min(520px, calc(100vw - 32px));
   text-align: center;
 }
@@ -222,7 +223,8 @@ body.guiding .toast { top: 250px; }
 
 /* ---------- setas para problemas fora da tela ---------- */
 .offscreen-arrow {
-  position: fixed; z-index: 16; transform: translate(-50%, -50%);
+  /* Abaixo do HUD (#ui, z 2): na borda da tela a seta pode cair sobre um painel, e o botão do painel ganha o clique. */
+  position: fixed; z-index: 1; transform: translate(-50%, -50%);
   width: 44px; height: 44px; padding: 0; border: 3px solid var(--ink); border-radius: 50%;
   background: #ffb020; color: var(--ink); cursor: pointer; font-family: var(--font);
   box-shadow: 0 3px 0 rgba(71, 60, 58, 0.4); animation: offscreen-pulse 1s ease-in-out infinite;

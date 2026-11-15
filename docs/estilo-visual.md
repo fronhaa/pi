@@ -83,7 +83,11 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 - Tripulação: o astronauta chibi (`public/assets/models/astronaut-chibi.glb`, ver [astronauta-chibi.md](astronauta-chibi.md)).
   `Crew.loadChibi()` baixa o `.glb` uma vez, clona para os 4 papéis e troca o laranja do traje pela cor do papel
   (`ROLE_COLORS`). Animações: `walk` ao andar, `jump` no Espaço, `interact` ao consertar. Até carregar (ou se falhar),
-  fica o boneco simples de cápsulas.
+  fica o boneco simples de cápsulas. Quem está trabalhando ganha uma plaquinha sobre a cabeça ("🔧 Engenheiro", bolinha
+  na cor do papel), desenhada por cima de tudo para aparecer através do casco da base (`Astronaut.setWorking`).
+- HUD por cima do jogo: o que só informa não pega clique (`.toast` com `pointer-events: none`), e as setas de problema
+  fora da tela ficam abaixo dos painéis (z-index 1), para não roubar o clique de um botão do HUD. Painel que redesenha
+  sozinho (HUD do dia, sala do modo em grupo) usa `patchChildren`, nunca `replaceChildren`.
 - Base e rover: `research-base.glb` e `rover.glb` (ver [rover-e-base-de-pesquisa.md](rover-e-base-de-pesquisa.md)),
   carregados por `BaseScene.loadModels()` com `src/render/sceneryModel.ts`. A base fica em `HABITAT_POSITION`, com a porta
   do airlock (`ENTRANCES.habitat`) virada para a câmera. O rover usa a mesma lógica de andar, parar e desviar; as rodas
@@ -113,8 +117,16 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   o posto do comandante ficam ao lado dela. Código: `BaseStructures.useCommBase` (`src/scene/base/structures.ts`).
 - Placas e bateria (`solar-panels-battery.glb`): o modelo foi feito com o primeiro painel em (12; 2); no arranjo em
   estrela ele é deslocado em `SOLAR_MODEL_OFFSET` para `PANELS_ORIGIN`, à direita da base de comunicação, com a bateria
-  (`BATTERY_POSITION`) na frente dela. A poeira escurece as células (`panel_cells`). A bateria toca `battery_charge` de
-  dia, `battery_discharge` à noite e, cheia, mostra o nível (`battery_level` com `timeScale = 0`). A tomada fica em
+  (`BATTERY_POSITION`) na frente dela. A poeira escurece as células (`panel_cells`). As células da bateria mostram
+  a carga (em código, só a altura de cada `battery_cell_N` muda, de baixo para cima; o clipe `battery_level`
+  não é usado porque encolhe a largura junto) e batem com a prévia do plano: de manhã, a carga atual; no dia, andam
+  junto com o Sol direto até o resultado previsto ("depois da noite" no plano), subindo ou descendo, sem passar dele;
+  à noite terminam de chegar ao resultado (dia curto ou sem dia). Quando a carga pula (carta, tarefa, noite), a
+  bateria sobe ou desce suave até ela (~1 s), com os pulsos de entrada ou saída, nunca de uma vez. Conta em `BaseScene.batteryFrame`, prévia em
+  `Game.batteryTarget`. De `battery_charge` (energia entrando) e
+  `battery_discharge` (saindo) o jogo tira as trilhas das células e usa só os pulsos de energia e as luzes. Carregando, os pulsos também
+  vão da bateria até a tomada (a base continua gastando), sem a luz laranja da descarga; os pulsos de descarga
+  seguem o cabo de saída encurtado. A tomada fica em
   `OUTLET_LOCAL_X` (5,0 no referencial do modelo), depois da torre do airlock; o cabo de saída é encurtado junto.
   Código: `BaseStructures.useSolarField`.
 - **Estufa fechada, do mesmo material das cápsulas, não de vidro** (ARC-002,

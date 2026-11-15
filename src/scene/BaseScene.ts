@@ -7,7 +7,7 @@ import { Habitat } from './base/Habitat';
 import { Rover } from './base/Rover';
 import { RoverTracks } from './base/RoverTracks';
 import { Sky } from './base/Sky';
-import { BaseStructures } from './base/structures';
+import { BaseStructures, type BatteryFlow } from './base/structures';
 import { buildTerrain } from './base/terrain';
 import { DOME_CENTER, DOME_RADIUS, type Obstacle } from './base/layout';
 
@@ -27,6 +27,11 @@ export interface SceneState {
   shadow?: boolean;
   /** Lua: luz do Sol de hoje (0–1). O Sol passa atrás dos morros e a cena fica mais clara ou mais escura. */
   sunlight?: number;
+  /**
+   * Bateria prevista para depois da noite (a prévia do plano, Mission.previewSol). De dia a bateria da cena anda de
+   * `res.battery` até ela junto com o Sol, sempre na direção do resultado. Sem ela, a cena mostra só `res.battery`.
+   */
+  batteryTarget?: number;
 }
 
 /**
@@ -46,6 +51,17 @@ const HULL_SECONDS = 1.6;
 /** Cores de terreno que mudam de um cenário para o outro (as outras, como prédios e plantas, são as mesmas). */
 const TERRAIN_KEYS = ['soil', 'rock', 'lit', 'dust'] as const;
 
+/** Hora do sol (Game.dayTime) em que o dia em tempo real começa e termina: a bateria anda nesse trecho. */
+const DAY_START = 0.25;
+const DAY_END = 0.85;
+/**
+ * Rapidez com que a bateria da cena alcança a carga certa quando ela pula (carta, tarefa, noite): ~1 s para quase
+ * chegar, sem passar do valor. A noite dura ≥ 2,2 s, dá tempo.
+ */
+const BATTERY_EASE = 3;
+/** Diferença (pontos de bateria) a partir da qual a cena mostra a energia entrando ou saindo enquanto alcança. */
+const BATTERY_FLOW_GAP = 0.3;
+
 /**
  * Cena da base (ENV-001). Só desenha: nunca muda regras do jogo.
  *
@@ -54,6 +70,8 @@ const TERRAIN_KEYS = ['soil', 'rock', 'lit', 'dust'] as const;
  * Geometria simples (primitivas) para manter o jogo leve; modelos .glb trocam as peças quando carregam.
  */
 export class BaseScene {
+  /** Bateria mostrada (pontos de bateria, não 0–1): anda entre o começo do dia, a prévia e o resultado da noite. */
+  private shownBattery: number = CONFIG.battery.start;
   readonly root = new THREE.Group();
   /** Colliders estáticos (caixas no chão) para a movimentação da tripulação. */
   readonly obstacles: Obstacle[] = [];
@@ -222,6 +240,27 @@ export class BaseScene {
     return this.rover.samplesToday;
   }
 
+  /**
+   * Bateria da cena (só visual; os números vêm da simulação). A carga certa agora: de dia, anda junto com o Sol do
+   * começo do dia até a prévia; de manhã e à noite, é a carga do estado. A cena nunca pula: quando a carga certa
+   * muda de repente (carta, tarefa, resultado da noite), a bateria sobe ou desce suave até ela, sem passar dela.
+   */
+  private batteryFrame(s: SceneState, dt: number): { battery: number; batteryFlow: BatteryFlow } {
+    const now = s.res.battery;
+    const flowOf = (from: number, to: number): BatteryFlow => (to > from + 0.01 ? 'charge' : to < from - 0.01 ? 'discharge' : 'idle');
+    let goal = now;
+    let flow: BatteryFlow = 'idle';
+    if (!s.night) {
+      const target = s.batteryTarget ?? now;
+      const k = THREE.MathUtils.clamp((this.dayTime - DAY_START) / (DAY_END - DAY_START), 0, 1);
+      goal = THREE.MathUtils.lerp(now, target, k);
+      if (k > 0 && k < 1) flow = flowOf(now, target);
+    }
+    this.shownBattery = THREE.MathUtils.damp(this.shownBattery, goal, BATTERY_EASE, dt);
+    if (Math.abs(goal - this.shownBattery) > BATTERY_FLOW_GAP) flow = flowOf(this.shownBattery, goal);
+    return { battery: THREE.MathUtils.clamp(this.shownBattery / CONFIG.battery.max, 0, 1), batteryFlow: flow };
+  }
+
   /** Hora do sol: 0 = nascer, 0,5 = meio-dia, 1 = pôr; acima de 1, noite. Chamado a cada frame pelo Game. */
   setDayTime(t: number): void {
     this.dayTime = t;
@@ -260,10 +299,9 @@ export class BaseScene {
       time,
       dt,
       darkness: n,
-      night: s.night,
       alarmOn: alert || s.stormNight,
       earthMessage: s.earthMessage || (!!this.demo.alert && d > 0.4),
-      battery: s.res.battery / CONFIG.battery.max,
+      ...this.batteryFrame(s, dt),
       sunDir: this.sky.sunVector,
       inside,
     });

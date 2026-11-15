@@ -486,6 +486,7 @@ export class Game {
     this.paused = false;
     this.hud.setBusy(true);
     this.refreshDayHud();
+    this.updateScene();
   }
 
   private togglePause(): void {
@@ -582,7 +583,11 @@ export class Game {
       evaBanned: port.evaBanned,
       evaActive: this.tasks.evaActive,
       training: !this.coop && port.state.problems.length === 0 && this.intro.active(port.state.sol),
-      crew: ROLES.map((role) => ({ role, place: this.tasks.placeOf(role) })),
+      crew: ROLES.map((role) => ({
+        role,
+        place: this.tasks.placeOf(role),
+        activity: this.tasks.isRoleWorking(role) ? 'working' as const : this.tasks.hasTask(role) ? 'going' as const : 'idle' as const,
+      })),
       problems: port.state.problems
         .filter((p) => p.status !== 'pending')
         .map((p) => ({ uid: p.uid, kind: p.kind, status: p.status, progress: p.progress, worker: this.tasks.workerOf(p.uid), phase: this.tasks.phaseOf(p.uid) })),
@@ -695,6 +700,20 @@ export class Game {
     );
   }
 
+  /** Bateria prevista para depois da noite (a mesma prévia do plano; solo ou servidor). Só para a cena, de dia. */
+  private batteryTarget(): number | undefined {
+    if (this.night || this.phase !== 'day') return undefined;
+    const pv = this.coop
+      ? this.coop.preview
+      : this.mission && this.mission.isPlanValid(this.plan) && !this.mission.state.pendingCard ? this.mission.previewSol(this.plan) : null;
+    return pv?.after.battery;
+  }
+
+  /** Nome curto do papel (plaquinha de quem está trabalhando). */
+  private shortName(role: Role): string {
+    return t(`crew.short.${role}` as StringKey);
+  }
+
   private updateScene(): void {
     const s = this.current;
     this.base.setState({
@@ -709,6 +728,7 @@ export class Game {
       // De noite, o estado já é o do dia seguinte: a sombra que vale é a da noite que está passando.
       shadow: this.night ? this.shadowNight : s.messages.some((m) => m.kind === 'shadowNow'),
       sunlight: this.night ? this.nightSun : this.coop ? 1 : this.mission.sunlightToday() / 100,
+      batteryTarget: this.batteryTarget(),
     });
   }
 
@@ -802,7 +822,10 @@ export class Game {
       this.samplesShown = samples;
       this.hud.setSamplesToday(samples);
     }
-    for (const r of ROLES) this.crew.members[r].setWorking(this.phase === 'day' && this.tasks.isRoleWorking(r));
+    for (const r of ROLES) {
+      const working = this.phase === 'day' && this.tasks.isRoleWorking(r);
+      this.crew.members[r].setWorking(working, working ? this.shortName(r) : '');
+    }
     if (this.motion) {
       this.motion.update(rawDt); // a física tem o próprio limite (MAX_FRAME_DT)
       const motion = this.motion;

@@ -20,6 +20,8 @@ export interface SceneryModel {
   mixer: THREE.AnimationMixer;
   /** Toca um clipe do .glb em loop (ou uma vez) e devolve a ação. Nome desconhecido: não faz nada (null). */
   play(name: string, once?: boolean): THREE.AnimationAction | null;
+  /** Clipe do .glb pelo nome (para ajustar trilhas antes de tocar). */
+  clip(name: string): THREE.AnimationClip | undefined;
 }
 
 export async function loadSceneryModel(url: string): Promise<SceneryModel> {
@@ -40,6 +42,7 @@ export async function loadSceneryModel(url: string): Promise<SceneryModel> {
       action.reset().play();
       return action;
     },
+    clip: (name) => clips.get(name),
   };
 }
 

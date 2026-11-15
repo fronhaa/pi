@@ -23,7 +23,8 @@ export interface DayView {
   evaActive: boolean;
   /** Dia de treino (sóis 1 a 3, sem problemas): o painel só explica que os painéis estão fazendo energia. */
   training?: boolean;
-  crew: { role: RoleId; place: 'inside' | 'airlock' | 'outside' }[];
+  /** Onde cada um está e o que está fazendo (parado, indo para a tarefa ou trabalhando). */
+  crew: { role: RoleId; place: 'inside' | 'airlock' | 'outside'; activity: 'idle' | 'going' | 'working' }[];
   problems: {
     uid: number;
     kind: ProblemKind;
@@ -355,12 +356,15 @@ export class Hud {
     const crewRow = h('div', { class: 'crew-row', role: 'group', 'aria-label': t('eva.crewTitle') },
       h('span', { class: 'crew-row-title' }, 'EVA', helpButton('help.eva', 'EVA')),
       ...v.crew.map((c) => {
-        const where = t(`crew.place.${c.place}` as StringKey);
+        // Ícone mostra o que a pessoa está fazendo agora: 🔧 trabalhando, 🚶 indo, senão onde ela está.
+        const icon = c.place === 'airlock' ? placeIcon.airlock : c.activity === 'working' ? '🔧' : c.activity === 'going' ? '🚶' : placeIcon[c.place];
+        const doing = c.activity === 'idle' ? '' : `, ${t(`crew.doing.${c.activity}` as StringKey)}`;
+        const where = `${t(`crew.place.${c.place}` as StringKey)}${doing}`;
         return h('button', {
           type: 'button', class: `crew-pick ${c.place}`, 'aria-pressed': String(c.role === v.selected),
           'aria-label': `${name(c.role)}, ${where}`, title: `${name(c.role)} · ${where}`,
           onclick: () => this.cb.onSelect(c.role),
-        }, `${placeIcon[c.place]} ${t(`crew.short.${c.role}` as StringKey)}`);
+        }, `${icon} ${t(`crew.short.${c.role}` as StringKey)}`);
       }),
     );
     patchChildren(this.planEl, [
@@ -391,9 +395,11 @@ export class Hud {
   /** Botão ▾/▴ no topo do painel: recolhe ou mostra o conteúdo (o botão principal continua visível). */
   private collapseButton(): HTMLElement {
     const label = () => t(this.planCollapsed ? 'hud.expand' : 'hud.collapse');
-    const btn = h('button', {
+    return h('button', {
       class: 'collapse', type: 'button', 'aria-expanded': String(!this.planCollapsed), 'aria-label': label(), title: label(),
-      onclick: () => {
+      onclick: (e: Event) => {
+        // O botão da tela pode ser um antigo reaproveitado pelo patchChildren: usa o que foi clicado, não `btn`.
+        const btn = e.currentTarget as HTMLElement;
         this.planCollapsed = !this.planCollapsed;
         this.planEl.classList.toggle('collapsed', this.planCollapsed);
         btn.setAttribute('aria-expanded', String(!this.planCollapsed));
@@ -402,7 +408,6 @@ export class Hud {
         btn.textContent = this.planCollapsed ? '▴' : '▾';
       },
     }, this.planCollapsed ? '▴' : '▾');
-    return btn;
   }
 
   private renderPlan(): void {
