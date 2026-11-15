@@ -34,11 +34,12 @@ const ORBIT_R = R + 16;
 const OMEGA = 0.35;
 /** Momentos da viagem (s, a partir da escolha): motor liga, destino aparece, chega ao destino. */
 const T_BURN = 0.6;
-const T_DEST = 1.1;
-const T_ARRIVE = 5.2;
+/** O motor liga em T_BURN e o foguete ganha velocidade dando a volta na Terra; em T_LEAVE sai rumo ao destino. */
+const T_LEAVE = 1.6;
+const T_DEST = 2.0;
+const T_ARRIVE = 5.4;
 export const LAUNCH_SECONDS = 7;
-/** Saída da órbita: velocidade inicial (a da órbita) e aceleração do motor, em unidades do desenho. */
-const V0 = OMEGA * ORBIT_R;
+/** Depois de sair da órbita, o motor continua acelerando (unidades do desenho por s²). */
 const ACCEL = 22;
 const DEST_Z = -60;
 /** Destino um pouco à esquerda: a câmera fica à direita do foguete, então assim ele aparece no meio da tela. */
@@ -156,6 +157,8 @@ export class LaunchScene {
   private readonly view = { x: 0, y: 0, dist: 300 };
   /** Quanto o foguete anda na órbita (rad) até o ponto de saída, entre a escolha e o motor ligar. */
   private thetaSweep = 0;
+  /** Velocidade (unidades/s) com que o foguete sai da órbita: a que ganhou dando a volta. */
+  private vLeave = 0;
   private hover: Place | null = null;
   private readonly path = new THREE.Vector3();
   private readonly tmpA = new THREE.Vector3();
@@ -243,19 +246,19 @@ export class LaunchScene {
   begin(place: Place, reduced = false): void {
     if (this.started !== null) return;
     this.thetaStart = this.idleTheta();
-    if (this.isMap) {
-      // Destino de verdade: a Lua ou Marte onde estão hoje no mapa.
-      this.dir.copy(this.bodies[place].pos).sub(this.bodies.earth.pos).setZ(0).normalize();
-      // Ponto de saída: onde a órbita (sentido horário, tangente = (cos θ, −sen θ)) já aponta para o destino. Até o
-      // motor ligar, o foguete corre na órbita até lá; dali sai em linha reta, sempre se afastando da Terra.
-      const depart = Math.atan2(-this.dir.y, this.dir.x);
-      this.thetaSweep = (((depart - this.thetaStart) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-    } else {
-      // Clássica: segue na órbita no mesmo ritmo e sai pela tangente, de onde estiver.
-      this.thetaSweep = OMEGA * T_BURN;
-      const theta = this.thetaStart + this.thetaSweep;
-      this.dir.set(Math.cos(theta), -Math.sin(theta), 0);
-    }
+    // Destino: no mapa, onde a Lua ou Marte estão hoje; na clássica (celular), o planeta como aparece na tela.
+    const target = this.isMap ? this.bodies[place].pos : this.planets[place].getWorldPosition(this.tmpA);
+    this.dir.copy(target).sub(this.bodies.earth.pos).setZ(0).normalize();
+    // Ganhar velocidade: com o motor ligado (T_BURN a T_LEAVE), o foguete acelera em volta da Terra até o ponto
+    // em que a órbita (sentido horário, tangente = (cos θ, −sen θ)) aponta para o destino, dando pelo menos meia
+    // volta; dali sai em linha reta, sempre se afastando da Terra, com a velocidade que ganhou.
+    const burnAt = this.thetaStart + OMEGA * T_BURN;
+    const depart = Math.atan2(-this.dir.y, this.dir.x);
+    let sweep = (((depart - burnAt) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    if (sweep < Math.PI) sweep += 2 * Math.PI;
+    this.thetaSweep = sweep;
+    const spin = T_LEAVE - T_BURN;
+    this.vLeave = ORBIT_R * (OMEGA + (2 * (sweep - OMEGA * spin)) / spin);
     this.right.set(this.dir.y, -this.dir.x, 0);
     this.buildDestination(place);
     this.buildPhotoCards(['earth', place]);
@@ -305,23 +308,28 @@ export class LaunchScene {
     return -0.6 + ((performance.now() - this.created) / 1000) * OMEGA;
   }
 
-  /** Posição do foguete: na órbita até T_BURN; depois, pela tangente, acelerando. */
+  /** Ponto da órbita de espera no ângulo θ. */
+  private orbitPoint(theta: number, out: THREE.Vector3): THREE.Vector3 {
+    return out.set(Math.sin(theta) * ORBIT_R, -R + Math.cos(theta) * ORBIT_R, 0);
+  }
+
+  /**
+   * Posição do foguete: na órbita, no ritmo de sempre, até o motor ligar (T_BURN); depois acelera em volta da Terra
+   * (ângulo cresce com o quadrado do tempo, sem tranco na largada) até o ponto de saída (T_LEAVE); dali, em linha
+   * reta rumo ao destino, com a velocidade que ganhou e o motor ainda acelerando.
+   */
   private rocketPath(t: number, out: THREE.Vector3): THREE.Vector3 {
-    if (this.started === null) {
-      const theta = this.idleTheta() + t * OMEGA;
-      return out.set(Math.sin(theta) * ORBIT_R, -R + Math.cos(theta) * ORBIT_R, 0);
+    if (this.started === null) return this.orbitPoint(this.idleTheta() + t * OMEGA, out);
+    if (t < T_BURN) return this.orbitPoint(this.thetaStart + OMEGA * t, out);
+    const spin = T_LEAVE - T_BURN;
+    const burnAt = this.thetaStart + OMEGA * T_BURN;
+    if (t < T_LEAVE) {
+      const tau = t - T_BURN;
+      const extra = this.thetaSweep - OMEGA * spin;
+      return this.orbitPoint(burnAt + OMEGA * tau + extra * (tau / spin) ** 2, out);
     }
-    if (t < T_BURN) {
-      const k = this.isMap ? smooth(t / T_BURN) : t / T_BURN;
-      const theta = this.thetaStart + this.thetaSweep * k;
-      return out.set(Math.sin(theta) * ORBIT_R, -R + Math.cos(theta) * ORBIT_R, 0);
-    }
-    // Motor ligado no ponto de saída: a tangente já é a direção do destino; acelera em linha reta.
-    const u = t - T_BURN;
-    const theta = this.thetaStart + this.thetaSweep;
-    return out
-      .set(Math.sin(theta) * ORBIT_R, -R + Math.cos(theta) * ORBIT_R, 0)
-      .addScaledVector(this.dir, V0 * u + ACCEL * u * u);
+    const u = t - T_LEAVE;
+    return this.orbitPoint(burnAt + this.thetaSweep, out).addScaledVector(this.dir, this.vLeave * u + ACCEL * u * u);
   }
 
   /**
@@ -334,7 +342,8 @@ export class LaunchScene {
     const t = idle ? 0 : (at ?? (this.reduced ? 4.6 : Math.min(LAUNCH_SECONDS, elapsed)));
     const path = this.rocketPath(t, this.path);
     /** 0 = vista de longe (Terra e órbita), 1 = câmera atrás do foguete, olhando o destino. */
-    const chase = idle ? 0 : this.isMap ? smooth((t - 0.1) / 1.5) : smooth((t - T_BURN) / 1);
+    // A câmera fica de longe enquanto o foguete ganha velocidade em volta da Terra; desce até ele na saída.
+    const chase = idle ? 0 : this.isMap ? smooth((t - T_LEAVE + 0.4) / 1.4) : smooth((t - T_LEAVE + 0.2) / 1);
 
     // Foguete: aponta para onde vai; no fim entra no destino, diminuindo.
     const arrive = smooth((t - T_ARRIVE) / 1.4);
@@ -351,7 +360,7 @@ export class LaunchScene {
     this.rocket.scale.setScalar((1 - arrive * 0.8) * (1 + (boost - 1) * (1 - chase)));
 
     // Chama: apagada na órbita (só dá a volta); acende forte para sair dela.
-    const fire = idle ? 0 : smooth((t - (T_BURN - 0.3)) / 0.3) * (1 + 0.4 * (1 - smooth((t - (T_BURN + 1)) / 0.6)));
+    const fire = idle ? 0 : smooth((t - (T_BURN - 0.3)) / 0.3) * (1 + 0.4 * (1 - smooth((t - (T_LEAVE + 1)) / 0.6)));
     this.flame.visible = fire > 0.01;
     this.flame.scale.set(fire, fire * (1 + 0.25 * Math.sin(t * 40 + elapsed)), fire);
 
@@ -367,7 +376,7 @@ export class LaunchScene {
     this.dest.rotation.y = t * 0.15;
 
     // Linhas de velocidade depois de sair da órbita (no referencial da viagem).
-    const speed = smooth((t - T_BURN) / 0.6) * (1 - smooth((t - T_ARRIVE) / 0.8));
+    const speed = smooth((t - T_LEAVE) / 0.6) * (1 - smooth((t - T_ARRIVE) / 0.8));
     this.streaks.visible = speed > 0.01;
     if (this.streaks.visible) this.moveStreaks(t, path, speed);
 
@@ -397,7 +406,7 @@ export class LaunchScene {
     this.stars.position.copy(this.camera.position);
 
     if (this.isMap) this.layoutMap(idle, chase);
-    else this.layoutPicker(idle ? 1 : 1 - smooth(t / 0.4));
+    else this.layoutPicker(idle ? 1 : 1 - smooth((t - T_LEAVE + 0.4) / 0.4));
     this.placeCards(t);
   }
 

@@ -7,7 +7,7 @@ import { t } from '@/i18n';
  *
  * Este arquivo é só o texto por cima ("Motor ligado!", fato, "Pular"). O desenho é a cena 3D cartoon
  * src/scene/LaunchScene.ts, que o jogo desenha por trás (fundo transparente aqui). Os tempos do CSS (".launch-*" em
- * src/ui/style.css) seguem os da cena (T_BURN).
+ * src/ui/style.css) seguem os da cena (T_BURN: motor liga; T_LEAVE: sai da órbita).
  * Com "reduzir movimento" no sistema, a cena fica parada perto do destino e aparece só o fato.
  */
 const DURATION_MS = 7200;

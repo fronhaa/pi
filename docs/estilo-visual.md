@@ -179,8 +179,8 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
 - **No celular** (toque como ponteiro principal ou sistema móvel; `?map=0|1` força), a tela de escolha é a
   **clássica**: câmera de longe, a Terra embaixo, a órbita tracejada e o foguete dando a volta; Marte e Lua em 3D
   presos à câmera, a Lua grande perto da Terra e Marte pequeno, no alto e lá no fundo (`PICK_PORTRAIT`,
-  `PICK_LANDSCAPE`). Ao escolher, o foguete sai pela tangente, de onde estiver. Sem os nomes do Sol e da Terra e sem
-  o aviso de escala. Pedido do time: na tela pequena, o mapa ficava miúdo.
+  `PICK_LANDSCAPE`). Sem os nomes do Sol e da Terra e sem o aviso de escala. A viagem é a mesma do computador
+  (abaixo), rumo ao planeta como aparece na tela. Pedido do time: na tela pequena, o mapa ficava miúdo.
 - **No computador, tela de escolha (Marte ou Lua): mapa do Sistema Solar visto de cima**, com as posições de **hoje calculadas**
   (`src/scene/solarSystem.ts`, F38 e F39): o Sol no meio (bola amarela com contorno e halo, a luz da cena sai dele),
   as órbitas tracejadas da Terra (azul) e de Marte (laranja), Marte onde está hoje e a Lua em volta da Terra, na fase
@@ -193,9 +193,11 @@ A tabela completa está no GDD. No código, tudo passa por `BaseScene.setState()
   (`src/ui/PlaceChoice.ts`) do tamanho do planeta, com nome e dica curta; o planeta cresce sob o dedo ou o mouse.
   Com o mouse em cima (ou foco do teclado, ou o primeiro toque no celular), os 3 níveis da missão aparecem embaixo
   do planeta, em botões empilhados (nome da missão e, embaixo, a idade recomendada: Marte 7+, 9+, 11+; Lua 7+, 10+, 12+); o botão do planeta não sai da tela (16 px de margem).
-- **Viagem (~7 s, só visual):** no mapa (computador), ao escolher, o foguete corre na órbita até o ponto em que já aponta para o destino de
-  verdade (a Lua ou Marte no mapa), o motor liga ("Motor ligado!") e ele sai dali em linha reta, sempre se afastando
-  da Terra. A câmera desce do mapa até ele (o mapa some no meio do caminho) e vai para trás dele (o "para cima" da tela vira a direção da
+- **Viagem (~7 s, só visual), igual no celular e no computador:** ao escolher, o motor liga ("Motor ligado!",
+  `T_BURN`) e o foguete **ganha velocidade dando a volta na Terra** (pelo menos meia volta, cada vez mais rápido),
+  com a câmera ainda de longe. No ponto em que a órbita aponta para o destino (no mapa, onde a Lua ou Marte estão
+  hoje; na clássica, o planeta como aparece na tela), ele sai em linha reta com a velocidade que ganhou (`T_LEAVE`),
+  sempre se afastando da Terra. A câmera desce até ele (o mapa some no meio do caminho) e vai para trás dele (o "para cima" da tela vira a direção da
   viagem), aparecem linhas de velocidade e o destino crescendo, e ele entra no planeta.
 - **Sem HUD até a nave chegar:** a classe `pre-mission` no `body` esconde o HUD (`#ui`), balões, setas, guia e avisos
   na tela de escolha e na viagem. Sai quando o foguete chega (`Game.playLaunch`).
